@@ -1,0 +1,56 @@
+// Prisma schema
+//
+// provider:  postgresql
+// connection: configured in prisma.config.ts (DATABASE_URL env var)
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// Application users. The MVP has a single administrator, but the model does
+/// not artificially prevent future multiple users.
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+/// Product categories. A category can contain many products.
+model Category {
+  id        String    @id @default(cuid())
+  name      String
+  slug      String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  products  Product[]
+}
+
+/// A product in the catalog. Belongs to exactly one category.
+/// price is a PostgreSQL numeric to avoid floating-point money.
+model Product {
+  id                String   @id @default(cuid())
+  name              String
+  slug              String   @unique
+  sku               String   @unique
+  description       String?
+  price             Decimal  @db.Decimal(10, 2)
+  stock             Int      @default(0)
+  lowStockThreshold Int      @default(5)
+  imageUrl          String?
+  isActive          Boolean  @default(true)
+  categoryId        String
+  category          Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([categoryId])
+}

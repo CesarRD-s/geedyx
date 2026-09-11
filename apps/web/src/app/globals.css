@@ -1,0 +1,225 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * GEEDYX Design System v1.0 — design tokens (CP12.5).
+ *
+ * Single source of truth for the visual language. These CSS custom properties
+ * are mapped into Tailwind utilities through `@theme inline`, so components
+ * consume **semantic** tokens (bg-surface-subtle, text-muted, border-border,
+ * bg-accent, …) instead of hard-coded palette colors.
+ *
+ * Token groups:
+ *   Neutral   — background, surface, surface-subtle, surface-raised
+ *   Text      — text, text-secondary, text-muted
+ *   Borders   — border, border-strong
+ *   Accent    — accent family (configurable, decoupled from the brand)
+ *   Semantic  — success / warning / danger / info (+ states)
+ *   Misc      — overlay, input, selection, shadow-panel
+ *
+ * Light values live in `:root`; the dark variant lives under `.dark` (also
+ * applied to `<html>` by next-themes). The canonical tokens are documented in
+ * docs/DESIGN-TOKENS.md and enforced by docs/UI.md. As of CP12.6 the CP12
+ * aliases (primary*, surface-muted/elevated, foreground, muted-foreground) have
+ * been removed; all components use canonical names. Never scatter raw hex
+ * values across components.
+ */
+
+:root {
+  /* Neutral surfaces */
+  --background: #f8fafc;
+  --surface: #ffffff;
+  --surface-subtle: #f1f5f9;
+  --surface-raised: #ffffff;
+
+  /* Text */
+  --text: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+
+  /* Borders */
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+
+  /* Accent (configurable — see docs/DESIGN-TOKENS.md "Accent") */
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-active: #1e40af;
+  --accent-foreground: #ffffff;
+  --accent-muted: #eff6ff;
+
+  /* Semantic status */
+  --success: #16a34a;
+  --success-strong: #15803d;
+  --warning: #f59e0b;
+  --warning-strong: #b45309;
+  --danger: #dc2626;
+  --danger-strong: #b91c1c;
+  --info: #2563eb;
+  --info-strong: #1d4ed8;
+
+  /* Misc */
+  --overlay: rgba(15, 23, 42, 0.5);
+  --input: #ffffff;
+  --selection: #dbeafe;
+  --shadow-panel: 0 10px 25px -5px rgb(15 23 42 / 0.15),
+    0 4px 8px -4px rgb(15 23 42 / 0.1);
+}
+
+/*
+ * Alternate accent example — the accent is decoupled from the GEEDYX brand.
+ * Setting data-accent="indigo" on <html> swaps the whole accent family. A
+ * picker UI can drive this in a later checkpoint; the brand stays monochrome.
+ */
+:root[data-accent="indigo"] {
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
+  --accent-active: #3730a3;
+  --accent-foreground: #ffffff;
+  --accent-muted: #eef2ff;
+}
+
+.dark[data-accent="indigo"] {
+  --accent: #6366f1;
+  --accent-hover: #4f46e5;
+  --accent-active: #4338ca;
+  --accent-foreground: #ffffff;
+  --accent-muted: rgb(99 102 241 / 0.16);
+}
+
+.dark {
+  /* Neutral surfaces — deep, toned; never pure OLED black */
+  --background: #0b1220;
+  --surface: #141d2e;
+  --surface-subtle: #1a2437;
+  --surface-raised: #1f2b42;
+
+  /* Text */
+  --text: #e6edf6;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+
+  /* Borders */
+  --border: #223049;
+  --border-strong: #3b4a63;
+
+  /* Accent (brighter on dark) */
+  --accent: #3b82f6;
+  --accent-hover: #2563eb;
+  --accent-active: #1d4ed8;
+  --accent-foreground: #ffffff;
+  --accent-muted: rgb(59 130 246 / 0.14);
+
+  /* Semantic status */
+  --success: #22c55e;
+  --success-strong: #4ade80;
+  --warning: #f59e0b;
+  --warning-strong: #fbbf24;
+  --danger: #ef4444;
+  --danger-strong: #f87171;
+  --info: #60a5fa;
+  --info-strong: #93c5fd;
+
+  /* Misc */
+  --overlay: rgb(2 6 23 / 0.6);
+  --input: #141d2e;
+  --selection: rgb(59 130 246 / 0.35);
+  --shadow-panel: 0 10px 25px -5px rgb(2 6 23 / 0.5),
+    0 4px 8px -4px rgb(2 6 23 / 0.4);
+}
+
+@theme inline {
+  /* Neutral surfaces */
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-subtle: var(--surface-subtle);
+  --color-surface-raised: var(--surface-raised);
+
+  /* Text */
+  --color-foreground: var(--text);
+  --color-secondary: var(--text-secondary);
+  --color-muted: var(--text-muted);
+
+  /* Borders */
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  /* Accent */
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-active: var(--accent-active);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-muted: var(--accent-muted);
+
+  /* Semantic status */
+  --color-success: var(--success);
+  --color-success-strong: var(--success-strong);
+  --color-warning: var(--warning);
+  --color-warning-strong: var(--warning-strong);
+  --color-danger: var(--danger);
+  --color-danger-strong: var(--danger-strong);
+  --color-info: var(--info);
+  --color-info-strong: var(--info-strong);
+
+  /* Misc */
+  --color-overlay: var(--overlay);
+  --color-input: var(--input);
+  --color-selection: var(--selection);
+
+  /* Typography */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo,
+    Consolas, monospace;
+
+  /* Shadows — floating elements only (modal, dropdown, popover, drawer). */
+  --shadow-panel: var(--shadow-panel);
+
+  /* Motion — functional transitions only, 100–150ms. */
+  --duration-fast: 100ms;
+  --duration-normal: 150ms;
+
+  /* Geometry — predominantly straight. rounded-full only when circular
+     meaning exists (dots, avatars). */
+  --radius-none: 0px;
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+  --radius-full: 9999px;
+}
+
+html {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--background);
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+
+::selection {
+  background-color: var(--selection);
+}
+
+/* Keep native scrollbars subtle on dark backgrounds. */
+html {
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+/* GEEDYX is predominantly static. Honor reduced-motion: collapse all
+ * transitions/animations to near-zero for users who request it. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

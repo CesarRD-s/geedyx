@@ -1,0 +1,32 @@
+{
+  "name": "geedyx",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Small but extensible product and inventory management platform",
+  "engines": {
+    "node": ">=20.9.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@11.13.0",
+  "scripts": {
+    "dev:web": "pnpm --filter @geedyx/web dev",
+    "dev:api": "pnpm --filter @geedyx/api start:dev",
+    "dev": "pnpm -r --parallel dev",
+    "build:web": "pnpm --filter @geedyx/web build",
+    "build:api": "pnpm --filter @geedyx/api build",
+    "build": "pnpm run build:api && pnpm run build:web",
+    "lint:web": "pnpm --filter @geedyx/web lint",
+    "lint:api": "pnpm --filter @geedyx/api lint",
+    "lint": "pnpm run lint:web && pnpm run lint:api",
+    "test:api": "pnpm --filter @geedyx/api test",
+    "db:generate": "pnpm --filter @geedyx/api db:generate",
+    "db:migrate": "pnpm --filter @geedyx/api db:migrate",
+    "db:migrate:deploy": "pnpm --filter @geedyx/api db:migrate:deploy",
+    "db:studio": "pnpm --filter @geedyx/api db:studio",
+    "db:status": "pnpm --filter @geedyx/api db:status",
+    "db:users": "pnpm --filter @geedyx/api db:users",
+    "db:reset": "pnpm --filter @geedyx/api db:reset",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down"
+  }
+}

@@ -1,0 +1,23 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: geedyx-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: geedyx
+      POSTGRES_USER: geedyx
+      # Local-only default; override with a real secret via a repo-root .env
+      # (gitignored) or the shell environment. Keep apps/api/.env in sync.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U geedyx -d geedyx"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres-data:
