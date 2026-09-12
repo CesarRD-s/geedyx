@@ -2,6 +2,7 @@ export interface AuthUser {
   id: string;
   username: string;
   email: string;
+  companyId: string;
 }
 
 export interface CategorySummary {

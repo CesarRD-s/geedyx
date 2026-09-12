@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { getSession } from "@/lib/api/server";
+import { getInstallationStatus, getSession } from "@/lib/api/server";
 import { SetupForm } from "@/components/setup-form";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
@@ -10,9 +10,15 @@ export const metadata: Metadata = {
 };
 
 export default async function SetupPage() {
-  const user = await getSession();
+  const [user, installation] = await Promise.all([
+    getSession(),
+    getInstallationStatus(),
+  ]);
   if (user) {
     redirect("/app");
+  }
+  if (installation.installed) {
+    redirect("/login");
   }
 
   return (
@@ -32,7 +38,7 @@ export default async function SetupPage() {
             Configuración inicial
           </h1>
           <p className="mt-1 text-sm text-muted">
-            Crea el administrador principal de esta instalación.
+            Crea la empresa y el administrador principal de esta instalación.
           </p>
           <SetupForm />
         </div>

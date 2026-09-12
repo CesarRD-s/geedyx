@@ -16,12 +16,14 @@ export function SetupForm() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
+    const companyName = String(formData.get("companyName") ?? "").trim();
     const username = String(formData.get("username") ?? "").trim();
     const email = String(formData.get("email") ?? "").trim();
     const password = String(formData.get("password") ?? "");
+    const installationSecret = String(formData.get("installationSecret") ?? "");
 
-    if (!username || !email || !password) {
-      setError("Completa el nombre de usuario, el correo y la contraseña.");
+    if (!companyName || !username || !email || !password || !installationSecret) {
+      setError("Completa los datos de empresa, administrador y el secreto de instalación.");
       return;
     }
 
@@ -30,10 +32,21 @@ export function SetupForm() {
       return;
     }
 
+    if (installationSecret.length < 32) {
+      setError("El secreto de instalación debe tener al menos 32 caracteres.");
+      return;
+    }
+
     setPending(true);
     setError(null);
     try {
-      await setup({ username, email, password });
+      await setup({
+        companyName,
+        username,
+        email,
+        password,
+        installationSecret,
+      });
       router.push("/app");
       router.refresh();
     } catch (cause) {
@@ -73,6 +86,18 @@ export function SetupForm() {
   return (
     <form onSubmit={handleSubmit} noValidate className="mt-6 space-y-4">
       <div>
+        <FieldLabel htmlFor="companyName">Nombre de la empresa</FieldLabel>
+        <Input
+          id="companyName"
+          name="companyName"
+          type="text"
+          autoComplete="organization"
+          required
+          disabled={pending}
+          placeholder="Mi empresa"
+        />
+      </div>
+      <div>
         <FieldLabel htmlFor="username">Nombre de usuario</FieldLabel>
         <Input
           id="username"
@@ -108,6 +133,17 @@ export function SetupForm() {
           placeholder="••••••••"
         />
       </div>
+      <div>
+        <FieldLabel htmlFor="installationSecret">Secreto de instalación</FieldLabel>
+        <Input
+          id="installationSecret"
+          name="installationSecret"
+          type="password"
+          autoComplete="off"
+          required
+          disabled={pending}
+        />
+      </div>
 
       {error && <FieldError>{error}</FieldError>}
 
@@ -119,7 +155,7 @@ export function SetupForm() {
         loading={pending}
         loadingLabel="Configurando…"
       >
-        Crear administrador
+        Crear empresa y administrador
       </Button>
     </form>
   );

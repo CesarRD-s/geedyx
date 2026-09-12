@@ -43,6 +43,16 @@ export const getSession = cache(async (): Promise<AuthUser | null> => {
   }
 });
 
+export async function getInstallationStatus(): Promise<{ installed: boolean }> {
+  const response = await fetch(apiUrl("/auth/installation"), {
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new ApiError(response.status, await readErrorMessage(response));
+  }
+  return (await response.json()) as { installed: boolean };
+}
+
 export async function requireSession(): Promise<AuthUser> {
   const user = await getSession();
   if (!user) {

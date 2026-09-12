@@ -36,9 +36,11 @@ async function clientFetch<T>(path: string, init: RequestInit = {}): Promise<T> 
 }
 
 export async function setup(input: {
+  companyName: string;
   username: string;
   email: string;
   password: string;
+  installationSecret: string;
 }): Promise<AuthUser> {
   return clientFetch<AuthUser>("/auth/setup", {
     method: "POST",
