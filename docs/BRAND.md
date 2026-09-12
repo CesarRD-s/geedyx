@@ -27,17 +27,17 @@ GEEDYX **never** looks like a generic AI-generated SaaS dashboard.
 ## Wordmark
 
 - Written as **GEEDYX** (all caps, always).
-- Sits in the sidebar top and the login card, using the `foreground` text
-  token — the UI `font-sans` stack. It is a mark, not a logo lockup with
-  decoration.
+- The official horizontal Light/Dark PNG assets are used in the expanded
+  sidebar, mobile drawer, login and initial setup. `BrandLogo` selects the
+  correct monochrome variant through the active theme.
+- Do not recreate the wordmark with UI text when the official asset fits.
 
 ## Icon mark
 
-- The favicon (`apps/web/src/app/favicon.ico`) is the current mark. A proper
-  icon mark may be added in a later checkpoint; until then the wordmark at
-  `font-semibold lg:font-bold tracking-tight` is the primary identity.
-- Future icon mark requirements: monochrome, minimum 16×16 legible, works on
-  both `background` and `surface`, zero accent dependency.
+- The official Light/Dark icon PNG assets are used by the contracted sidebar.
+- The matching favicon is installed at `apps/web/src/app/favicon.ico`.
+- All variants remain monochrome, legible at compact sizes and independent of
+  the configurable accent.
 
 ## What not to do
 

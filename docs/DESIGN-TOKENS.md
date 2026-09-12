@@ -39,10 +39,10 @@ same tonal family.
 
 | Token | Utility | Light | Dark | Intent |
 | --- | --- | --- | --- | --- |
-| `--background` | `bg-background` | `#f8fafc` | `#0b1220` | Page background |
-| `--surface` | `bg-surface` | `#ffffff` | `#141d2e` | Primary surfaces (cards, tables, dialogs, header, sidebar) |
-| `--surface-subtle` | `bg-surface-subtle` | `#f1f5f9` | `#1a2437` | Hover fills, muted fills, skeletons |
-| `--surface-raised` | `bg-surface-raised` | `#ffffff` | `#1f2b42` | Elevated surfaces above `surface` |
+| `--background` | `bg-background` | `#fafafa` | `#101114` | Page background |
+| `--surface` | `bg-surface` | `#ffffff` | `#18191c` | Primary surfaces (cards, tables, dialogs, header, sidebar) |
+| `--surface-subtle` | `bg-surface-subtle` | `#f4f4f5` | `#202226` | Hover fills, muted fills, skeletons |
+| `--surface-raised` | `bg-surface-raised` | `#ffffff` | `#282a2f` | Elevated surfaces above `surface` |
 
 ### Text
 
@@ -51,9 +51,9 @@ position** â€” not by arbitrary colors.
 
 | Token | Utility | Light | Dark | Intent |
 | --- | --- | --- | --- | --- |
-| `--text` | `text-foreground` | `#0f172a` | `#e6edf6` | Primary text / titles |
-| `--text-secondary` | `text-secondary` | `#475569` | `#cbd5e1` | Secondary body text |
-| `--text-muted` | `text-muted` | `#64748b` | `#94a3b8` | Labels, captions, meta, placeholders |
+| `--text` | `text-foreground` | `#18181b` | `#f4f4f5` | Primary text / titles |
+| `--text-secondary` | `text-secondary` | `#52525b` | `#d4d4d8` | Secondary body text |
+| `--text-muted` | `text-muted` | `#71717a` | `#a1a1aa` | Labels, captions, meta, placeholders |
 
 > The primary text keeps the utility name `text-foreground` (the name
 > `text-text` is ambiguous); its backing token is `--text`.
@@ -65,8 +65,8 @@ structures, define controls, communicate states.
 
 | Token | Utility | Light | Dark | Intent |
 | --- | --- | --- | --- | --- |
-| `--border` | `border-border` | `#e2e8f0` | `#223049` | Table rows, dividers, container edges |
-| `--border-strong` | `border-border-strong` | `#cbd5e1` | `#3b4a63` | Inputs, button outlines, dashed frames, focus-worthy edges |
+| `--border` | `border-border` | `#e4e4e7` | `#2b2d32` | Table rows, dividers, container edges |
+| `--border-strong` | `border-border-strong` | `#d4d4d8` | `#454850` | Inputs, button outlines, dashed frames, focus-worthy edges |
 
 ### Accent
 
@@ -74,10 +74,11 @@ The accent drives **action, selection, links, focus and interactive meaning** â€
 not the brand. The logo/wordmark is **monochrome** and never uses the accent
 (see `docs/BRAND.md`).
 
-The accent is **configurable**: swap the values in the Accent block of
-`globals.css` (both `:root` and `.dark`), or set `data-accent="indigo"` on
-`<html>` to use the built-in alternate palette. A picker UI can drive the same
-attribute in a later checkpoint.
+The accent is **configurable**: supported picker values are `blue` (default),
+`indigo`, `emerald`, `violet` and `rose`. They swap the whole accent family
+through `data-accent="..."` on `<html>`. The accent is reserved for actions,
+selection, links, focus and indicators; it is never a general page or panel
+background. The brand stays monochrome.
 
 | Token | Utility | Light | Dark | Intent |
 | --- | --- | --- | --- | --- |
@@ -120,8 +121,10 @@ so it can diverge from the accent later.
 
 ## Typography
 
-- UI family: **Inter** (variable, loaded via `next/font/google` in
-  `apps/web/src/app/layout.tsx`, exposed as `--font-inter`).
+- UI family: **Source Sans 3** (variable, loaded via `next/font/google` in
+  `apps/web/src/app/layout.tsx`, exposed as `--font-source`). It provides an
+  open source, enterprise-oriented alternative with a similar clarity to Dell's
+  restrained web typography without using Dell proprietary fonts.
 - Used weights: **300 Light, 400 Regular, 500 Medium, 600 Semibold, 700 Bold**.
 - The wordmark is **independent** of the UI typography (see `docs/BRAND.md`).
 - Mono (`Geist Mono`, `--font-mono`) is kept only for **data identifiers**
@@ -141,14 +144,12 @@ so it can diverge from the accent later.
 
 ## Radius
 
-GEEDYX geometry is **predominantly straight** (`radius-none` is valid and
-frequent).
+GEEDYX uses a compact rounded scale inspired by current productivity software.
+`rounded-none` and `rounded-sm` are intentionally excluded from product UI.
 
 | Token | Value | Use |
 | --- | --- | --- |
-| `--radius-none` | `0px` | Sidebar, header, tables, dividers, layout structures |
-| `--radius-sm` | `2px` | Very small accents |
-| `--radius-md` | `4px` | Inputs, buttons, selects, controls, small surfaces |
+| `--radius-md` | `4px` | Inputs, tables, selects, controls and navigation |
 | `--radius-lg` | `8px` | Larger grouped surfaces |
 | `--radius-full` | `9999px` | Only when circular/pill shape has meaning (dots, avatars) |
 

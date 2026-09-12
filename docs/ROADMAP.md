@@ -1,65 +1,148 @@
 # GEEDYX — Roadmap
 
-Nothing marked as **planned** is implemented yet.
+Nothing marked **planned** is implemented. A phase is completed only after its
+schema migrations, API contract, security review, tests and documentation are
+complete.
 
-## MVP — completed (CP1–CP11)
+## Completed prototype foundation
 
-All MVP capabilities are implemented and verified by automated tests and a full
-smoke run on a real PostgreSQL:
+- Monorepo: Next.js admin console, NestJS API and PostgreSQL/Prisma.
+- Prototype bootstrap/login with Argon2id and JWT cookie.
+- Categories, products, simple stock field and local product images.
+- Private administration screens and basic count dashboard.
 
-- project foundation (monorepo, Next.js + NestJS, Docker PostgreSQL, docs);
-- authentication (single administrator, Argon2id, short-lived JWT in an
-  HttpOnly cookie, bootstrap endpoint locked after setup);
-- categories (API CRUD, public reads, admin UI at `/admin/categories`);
-- products (API CRUD, search/filters/sorting/pagination, stock, activation,
-  admin UI at `/admin/products`);
-- product images (upload/replace/delete with validation, local filesystem
-  storage);
-- public catalog (`/`, `/products/[slug]` — only active products);
-- v1 dashboard (real counts only; no invented statistics).
+## Phase 1 — Secure platform foundation
 
-Checkpoint 11 — “MVP hardening and release” — audited architecture, auth,
-CORS, environment, uploads, public/admin separation, UI/UX, accessibility and
-error handling; fixed real issues (JWT_SECRET fail-fast, TRUST_PROXY, Node
-engine requirement, a stray lockfile, an unlabeled price input, stale docs);
-and verified everything with lint, builds, unit tests, API e2e and the smoke
-test. See [CHANGELOG.md](../CHANGELOG.md).
+**Active milestone.** Work is delivered in the following order. A slice is not
+complete until its migration, API behavior, tests and documentation agree.
 
-The advanced inventory dashboard and its statistics were intentionally left out
-of the MVP scope (no invented metrics). They belong to V1/V2.
+### P1.0 — Contract and current-state baseline
 
-## V1 — Inventory (planned)
+**Complete.**
 
-- Inventory movements.
-- Stock history.
-- Stock adjustments.
-- Low-stock rules.
+- Product scope fixed as an internal, single-company ERP with an external API
+  for storefronts and approved integrations.
+- Official UI contract, semantic tokens, responsive behavior and collapsible
+  administration navigation documented and applied to the current screens.
+- Prototype capabilities and security limitations explicitly recorded.
 
-## V2 — Operations (planned)
+### P1.1 — API and operational baseline
 
-- Suppliers.
-- Purchases.
-- Orders.
-- Reports.
+**Complete.**
 
-## V3 — Administration (planned)
+- Move maintained endpoints to `/api/v1` without silently extending prototype
+  routes.
+- Move the authenticated web workspace from `/admin` to role-neutral `/app`
+  and remove the prototype routes before they become a compatibility burden.
+- Generate OpenAPI from DTOs and document pagination, sorting and filtering.
+- Standardize safe error envelopes, stable error codes and request IDs.
+- Validate runtime configuration at startup and fail fast on missing secrets.
+- Add liveness/readiness health endpoints and structured application logs.
 
-- Users (multi-account).
-- Roles.
-- Permissions.
-- Audit logs.
+### P1.2 — Installation and organization identity
 
-## V4 — Platform (planned)
+**Planned.**
 
-- Warehouses.
-- Advanced reports.
-- Notifications.
-- Multi-tenancy evaluation.
+- Add persisted installation state and the initial company record.
+- Protect setup with a one-time installation secret.
+- Create company, owner and first session in one database transaction.
+- Make setup permanently unavailable after successful installation.
 
-## Notes
+### P1.3 — Users, roles and permissions
 
-- Scope changes require explicit approval (see [AGENTS.md](../AGENTS.md)).
-- Nothing in this roadmap is implemented until it is.
-- V1 and beyond will not be started automatically.
-- Local image storage is an MVP decision; cloud storage (Supabase/S3) is a
-  future migration (ADR-006/007).
+**Planned.**
+
+- Add display name, optional profile image, locale/time zone, account status,
+  password-change timestamp and last-login metadata.
+- Define roles and granular permissions; enforce permissions in NestJS rather
+  than hiding UI controls only.
+- Add user creation, activation, suspension and role assignment with audit.
+
+### P1.4 — Professional authentication and sessions
+
+**Planned.**
+
+- Replace JWT-cookie authentication with random opaque server-side sessions;
+  persist only token hashes.
+- Enforce idle and absolute expiration, rotation, logout revocation and session
+  limits per account.
+- Add current-device listing, revoke-one and revoke-other-sessions flows.
+- Add password change, secure reset tokens and reauthentication for sensitive
+  operations.
+- Enforce browser origin/CSRF controls and durable rate limiting; keep the data
+  model ready for MFA without blocking the first internal release.
+
+### P1.5 — Audit, integration and files foundation
+
+**Planned.**
+
+- Add append-only audit events for authentication, authorization, configuration
+  and security-sensitive mutations.
+- Add integration clients with hashed scoped credentials, rotation, revocation
+  and idempotency records.
+- Define signed inbound/outbound webhook envelopes and replay protection.
+- Replace product-only image handling with private `FileAsset` metadata and a
+  provider interface: local development storage plus S3-compatible production
+  storage.
+
+### P1.6 — Release gate
+
+**Planned.**
+
+- Isolated e2e database and tests for setup, login, expiry, revocation,
+  authorization, CSRF and audit trails.
+- CI checks for build, lint, tests, migrations and generated API contract.
+- Backup and tested restore procedure, dependency/security review and production
+  deployment checklist.
+- No unresolved critical/high security findings and no undocumented endpoint or
+  schema behavior.
+
+Phase 1 deliberately excludes variants, warehouses, orders, payments,
+accounting and the public storefront. Those domains begin only after P1.6.
+
+## Phase 2 — Master data and inventory
+
+**Planned.**
+
+- Product variants, units, price lists, tax configuration and currencies.
+- Warehouses and locations.
+- Immutable inventory movements, adjustments, transfers, reservations and
+  stock history.
+- Low-stock rules and operational inventory reports.
+- Suppliers and customer records.
+
+## Phase 3 — Commerce integration
+
+**Planned.**
+
+- Read-only catalog and availability resources for external stores.
+- Customer and order ingestion with idempotency.
+- Order lifecycle, fulfillment, returns and cancellation.
+- Inventory reservation/release rules.
+- Outbound webhooks and connector patterns for external commerce platforms.
+
+## Phase 4 — Payments and invoicing
+
+**Planned.**
+
+- Payment attempts, provider adapters, signed webhook processing, refunds and
+  dispute records.
+- Hosted checkout integrations; GEEDYX will not store cardholder data.
+- Invoice and credit-note lifecycle, numbering and tax snapshots.
+- Country-specific fiscal providers isolated behind adapters.
+
+## Phase 5 — Finance and reporting
+
+**Planned.**
+
+- Accounts receivable/payable, cash and bank reconciliation.
+- Double-entry ledger, accounting periods and controlled closing.
+- Operational, inventory, sales and financial reports.
+- Exports and reporting permissions.
+
+## Deferred until a concrete need
+
+- Built-in public storefront.
+- Multi-company SaaS tenancy.
+- POS, manufacturing, HR, CRM and project management.
+- Saved payment methods and recurring payments.

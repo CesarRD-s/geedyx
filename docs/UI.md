@@ -22,8 +22,8 @@ Token values and the full token reference live in
 
 - **CP7** — first administration experience: `/login` and the protected admin
   shell.
-- **CP8** — categories CRUD at `/admin/categories`.
-- **CP9** — products CRUD at `/admin/products` (list, filters, sorting,
+- **CP8** — categories CRUD, now served at `/app/categories`.
+- **CP9** — products CRUD, now served at `/app/products` (list, filters, sorting,
   pagination, dialogs, images, stock).
 - **CP10** — public catalog: `/` landing and `/products/[slug]`.
 - **CP12** — **Design System established**: semantic tokens + Light/Dark/System
@@ -31,17 +31,17 @@ Token values and the full token reference live in
   colors removed, and this document converted into the official contract.
 - **CP12.1** — **initial admin setup**: `/setup` completes the first-run
   experience (create the primary administrator via the existing
-  `POST /auth/setup`), reusing the `/login` layout pattern.
+  `POST /api/v1/auth/setup`), reusing the `/login` layout pattern.
 - **CP12.2** — public catalog removed (`/` is now a session redirect to
-  `/admin` or `/login`); `/login` no longer exposes the `/setup` entry point.
+  `/app` or `/login`); `/login` no longer exposes the `/setup` entry point.
 - **CP12.5** — **Design System v1.0**: canonical token nomenclature
   (neutral/text/border/accent/semantic), configurable accent decoupled from the
-  brand, Inter UI typography, straight-geometry radius scale, and motion/borders
+  brand, Source Sans 3 UI typography, compact radius scale, and motion/borders
   rules formalized. Token source of truth moved to `docs/DESIGN-TOKENS.md`;
   identity rules live in `docs/BRAND.md`. CP12 names became deprecated
   compatibility aliases.
 - **CP12.6** — **GEEDYX Design System applied to the existing UI**: every screen
-  (`/setup`, `/login`, `/admin*`) and shared component migrated to canonical
+  (`/setup`, `/login`, `/app*`) and shared component migrated to canonical
   tokens; CP12 aliases (`primary*`, `surface-muted`, `surface-elevated`,
   `muted-foreground`, `foreground`) **removed** from `globals.css`. Tables gain a
   subtle header band (§12), the nav active state adds a 2px accent indicator
@@ -49,7 +49,7 @@ Token values and the full token reference live in
 
 Two distinct experiences share one visual system:
 
-- **Administration console** (`/setup`, `/login`, `/admin*`) — density-first,
+- **Internal workspace** (`/setup`, `/login`, `/app*`) — density-first,
   batched workflows, tables, filters, fast actions (AWS Console inspiration).
 - **Public catalog** (`/`, `/products/[slug]`) — product presentation and
   readability (Dell product-site inspiration).
@@ -199,9 +199,9 @@ tokens. If a color needs a dark variant, change the token in `globals.css`.
 
 ## 3. Typography
 
-Fonts: **Inter** (UI family, variable font, weights 300–700) + **Geist Mono**
+Fonts: **Source Sans 3** (UI family, variable font, weights 300–700) + **Geist Mono**
 (data identifiers only), loaded via `next/font/google` in the root layout as
-`--font-inter` (mapped to `--font-sans`) / `--font-geist-mono` (mapped to
+`--font-source` (mapped to `--font-sans`) / `--font-geist-mono` (mapped to
 `--font-mono`).
 
 Recommended scale (administrative, density-first — titles are not huge):
@@ -247,17 +247,12 @@ Don't invent `p-3`/`p-7`/`gap-7` variations without a reason.
 
 ## 5. Border radius
 
-GEEDYX is **not** an over-rounded interface. Geometry is predominantly straight
-(`radius-none` is valid and frequent).
+GEEDYX uses three intentional shapes. `rounded-none` and `rounded-sm` are not
+part of the product vocabulary.
 
-- Layout structures (sidebar, header, tables, dividers, shell): `rounded-none`.
-- Controls (buttons, inputs, selects, chips): `rounded-md` (`--radius-md` 4px).
-- Cards, tables, dialogs, containers: `rounded-md`.
-- Large grouped surfaces: `rounded-lg` (8px) — rarely.
-- Badges: `rounded-full` only for the small status *dot*; the badge row itself
-  is text + dot, not a pill.
-- `rounded-full` (:careful: pills) and `rounded-lg` are reserved for truly
-  circular elements (avatars, dots).
+- `rounded-md`: inputs, selects, tables, navigation and grouped controls.
+- `rounded-lg`: dialogs and larger elevated panels.
+- `rounded-full`: buttons, icon buttons, badges, status dots and avatars.
 - Never use arbitrary `rounded-[20px]`, `rounded-3xl`, or `rounded-[…]`.
 
 ---
@@ -338,7 +333,9 @@ Rules:
 - Buttons that are links use `secondaryButtonClass` (exported from
   `styles.ts`) so links match the secondary button exactly.
 - `Button` supports `loading` + `loadingLabel`: it disables and announces
-  `aria-busy`, used for every async submit/mutation.
+  `aria-busy`, used for every async submit/mutation. Normal children render
+  directly inside the flex container so icon + text combinations remain
+  horizontally aligned and can be reused consistently.
 
 ---
 
@@ -457,14 +454,20 @@ invent a new color per page; reuse the tones above.
 
 ## 14. Navigation / Admin shell
 
-`AdminShell` (`src/components/admin-shell.tsx`) provides the administration
-identity (AWS-Console-like density).
+`WorkspaceShell` (`src/components/workspace-shell.tsx`) provides the internal
+workspace identity and compact operational density.
 
-- **Desktop**: fixed sidebar (`w-60`) with the GEEDYX brand, an icon + label
-  nav list (Dashboard / Products / Categories). Active item =
+- **Desktop**: fixed sidebar expanded at `w-60` with the GEEDYX brand and an
+  icon + label navigation list (Panel / Productos / Categorías). A labeled
+  icon button contracts it to `w-16`; the compact header becomes a single
+  clickable GEEDYX icon that expands the menu, while navigation keeps icons,
+  accessible names and native tooltips. The preference persists locally as
+  presentation state. Active item =
   `bg-accent-muted` + `text-accent` plus a **2px accent indicator bar**
   (`w-0.5 h-4 rounded-full bg-accent`) absolute on the link's left edge
   (`navLinkClass`); hover = `surface-subtle`.
+- The content offset follows the selected width (`md:pl-60` expanded,
+  `md:pl-16` contracted). Width changes do not use animation.
 - **Header** (h-14, sticky): mobile menu button, current section title, signed-in
   user (initial avatar + username + muted email), `ThemeToggle`, and a **ghost
   icon + text** logout button (`LogOut` icon) — the last item before logout stays
@@ -552,8 +555,9 @@ No giant decorative illustrations; one small icon is allowed when it helps.
   a "Reintentar" button. Page shells wrap it in their own layout (admin shell /
   catalog header) so the error stays on-brand.
 - **Form/API errors**: inline `FieldError` near the field; banner-level API
-  errors use `successBannerClass` / `errorBannerClass` (transient, 4 s
-  auto-dismiss).
+  errors use `successBannerClass` / `errorBannerClass` with icon + text and no
+  decorative border or fill. Transient notices auto-dismiss only when the
+  context remains recoverable.
 - Errors are clear Spanish messages mapped by status; never raw stacks, Prisma
   codes or internals.
 - Failure after a successful save degrades to a banner and never breaks the
@@ -642,12 +646,64 @@ build an internal framework; add a component when it stops duplication.
 
 ---
 
-## 24. Dependency policy
+## 24. Interaction, persistence and feedback
+
+Every interactive control follows the same lifecycle:
+
+1. **Idle**: action is available and its label explains the result.
+2. **Pending**: disable the triggering action, preserve the entered values and
+   announce progress with `aria-busy` or a status message.
+3. **Success**: keep the user in context, refresh the affected query and show a
+   brief icon + text notification.
+4. **Failure**: keep recoverable input, associate validation with its field and
+   show a concise Spanish explanation with a retry action when appropriate.
+
+Mutations must be idempotent from the UI perspective: prevent double submits,
+invalidate stale server data after success and never pretend persistence
+completed before the API confirms it. Destructive actions require a Dialog with
+the object name, consequence and explicit confirm/cancel actions. Closing a
+dialog without saving discards only local draft state.
+
+Preferences such as theme and accent may persist in local storage because they
+are presentation-only. Business data, authentication, permissions and drafts
+must persist through the API and database; never use local storage as a source
+of truth for them. Toasts are short-lived and supplementary: important errors
+remain next to the affected content and are never communicated by color alone.
+
+Events must have one visible outcome. Use `onChange` for local field state,
+`onBlur` for lightweight validation, `onSubmit` for mutations and explicit
+`onConfirm` callbacks for destructive operations. Avoid global event listeners
+unless the shared primitive owns cleanup (Escape, focus trap, scroll lock).
+
+## 25. Accent and semantic color contract
+
+The configurable accent is reserved for actions, links, focus, selection and
+progress. Success, warning, danger and info always use their independent
+semantic tokens, so changing `data-accent` cannot recolor an error into a
+success or reduce status contrast. New accent palettes must provide light and
+dark values for the complete accent family and pass WCAG AA against the target
+surface before they are added to the picker.
+
+Do not compose status colors with accent opacity, gradients or decorative fills.
+Use the semantic icon plus a text label; status meaning must survive grayscale,
+color-vision differences and theme changes.
+
+## 26. Library policy
 
 - Icons: `lucide-react` (added in CP12 as part of the Design System).
 - Themes: `next-themes` (added in CP12; Light/Dark/System).
-- No UI kits, component libraries, animation/state/form libraries. Tailwind +
-  React + Next.js handle everything else.
+- No generic UI kits or animation libraries. Tailwind + React + Next.js handle
+  layout and effects while the shared primitives keep the GEEDYX identity.
+- **React Hook Form + Zod** are the preferred form and schema pair when forms
+  become multi-step or need server-error mapping; use the existing primitives
+  as their rendered controls.
+- **TanStack Query** is the preferred REST cache/invalidation layer once the
+  screens need optimistic updates or coordinated refetching.
+- **next-themes** remains the theme persistence layer; presentation preferences
+  may use a small typed storage adapter rather than ad-hoc calls.
+- **Prisma** remains the persistence boundary in NestJS. File uploads should
+  use provider-neutral presigned uploads before choosing S3, Supabase or
+  Cloudinary.
 
 New dependencies require justification per AGENTS.md.
 
@@ -660,15 +716,15 @@ must feel like part of the same product as `/login`:
   wordmark above, `ThemeToggle` top-right, `bg-background` full-height main.
   Do not invent a different onboarding aesthetic.
 - **Behavior**: the Server Component calls `getSession()`; with an active
-  session it `redirect("/admin")` (an authenticated admin never sees the
+  session it `redirect("/app")` (an authenticated user never sees the
   form). Without one it renders the `SetupForm`.
 - **Form**: `SetupForm` reuses `Input`/`FieldLabel`/`FieldError`/`Button`
   (primary, `md`, full-width, `loading`/`loadingLabel`). Fields are username,
   email and password with visible labels; client validation is minimal
   (required + password ≥ 8, matching the API DTO), the backend stays the
-  authority. On success the component navigates to `/admin` (the backend has
+  authority. On success the component navigates to `/app` (the backend has
   already set the HttpOnly cookie).
-- **Already configured**: a `403` from `POST /auth/setup` is an expected state,
+- **Already configured**: a `403` from `POST /api/v1/auth/setup` is an expected state,
   not an error banner — render an honest message and a primary "Ir a iniciar
   sesión" action to `/login`. Network/`400` failures use the standard
   error-mapping rules (§ 19) and keep the form retryable.

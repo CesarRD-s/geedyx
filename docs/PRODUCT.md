@@ -1,51 +1,54 @@
 # GEEDYX — Product
 
-## What is GEEDYX
+## Purpose
 
-GEEDYX is a small but extensible product and inventory management platform.
+GEEDYX is a private, single-company ERP. It is the operational source of truth
+for a business: products, inventory, customers, orders, payments, invoices and
+finance will be managed here over time.
 
-It is designed to grow from a focused MVP into a broader product/inventory
-administration platform without being rebuilt along the way.
+GEEDYX does **not** provide a public storefront. A business may use its own
+website, mobile app, Shopify, WooCommerce or another commerce system. Those
+systems integrate with GEEDYX through a versioned API and signed webhooks.
 
-## MVP
+## Users and boundaries
 
-### Administrator capabilities
+Internal users are employees or trusted operators. They use the private admin
+console and receive permissions for the work they perform.
 
-The initial MVP allows an administrator to:
+External buyers are customers of the business, not GEEDYX administrative users.
+Their accounts, if the external store has them, remain owned by that store.
+GEEDYX stores the customer and order data that it needs to operate the business.
 
-- Authenticate.
-- Manage products.
-- Manage categories.
-- Manage stock.
-- Upload product images.
-- View inventory statistics.
+One deployment serves one company. Multi-tenancy, a hosted SaaS control plane,
+and a built-in storefront are out of scope.
 
-## Primary user
+## Product principles
 
-The primary (and only) MVP user is the administrator. GEEDYX is a private
-administrative application; there are no public-facing views as of CP12.2.
+- PostgreSQL is the source of truth for business facts.
+- Published operational and financial documents are traceable and corrected by
+  reversal, not silently overwritten.
+- Inventory changes are movements, not direct edits of a balance.
+- External integrations receive the least privilege needed and never access the
+  administration API.
+- The API contract is versioned, documented and stable for integrators.
+- Security, auditability and recoverability take priority over feature count.
 
-## Scope decisions
+## Current implementation
 
-- The MVP has a single administrator and no registration flow.
-- There are no roles, permissions, or multi-user features in the MVP.
-- The public catalog (product browsing, search, detail pages) was removed in
-  CP12.2 — GEEDYX is a private admin application with no public views.
-- Future evolution may expand GEEDYX into a broader product/inventory
-  administration platform.
-- Future features are described in [ROADMAP.md](./ROADMAP.md). Nothing that is
-  not yet implemented is presented here as done.
+The current repository contains a prototype foundation:
 
-## Status
+- a Next.js private administration console;
+- a NestJS REST API backed by PostgreSQL and Prisma;
+- a first-run administrator flow, login, a JWT cookie and rate limiting;
+- category and product CRUD, including simple `stock` values;
+- local product-image upload and a basic dashboard.
 
-The API foundation is in place: authentication, category CRUD, product CRUD
-(browse, search, view details, manage products/categories/stock) and product
-images (upload/replace/delete with local filesystem storage) are
-**implemented** on the backend. The administration UI (checkpoints 07–09), the
-MVP hardening/release pass (checkpoint 11), the Design System / UI refinement
-(checkpoint 12) and the bootstrap + dev-tooling pass (checkpoints 12.1–12.2)
-are **implemented** in the workspace; the advanced inventory dashboard and its
-statistics remain planned (V1). The public catalog was removed in CP12.2 —
-GEEDYX exposes only the administration console to the browser.
-See [ARCHITECTURE.md](./ARCHITECTURE.md), [UI.md](./UI.md),
-[API.md](./API.md) and [ROADMAP.md](./ROADMAP.md).
+These capabilities are implemented but are not yet the production platform
+defined in this document. In particular, there are no persistent sessions,
+multiple internal users, permissions, audit logs, API versioning, integration
+credentials, inventory movements, orders, payments or financial records.
+
+## Product phases
+
+The planned work and its order are defined in [ROADMAP.md](./ROADMAP.md).
+Architecture and security decisions are documented before their implementation.
