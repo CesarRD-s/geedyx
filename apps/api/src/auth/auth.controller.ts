@@ -24,6 +24,7 @@ const LOGIN_ATTEMPTS = { default: { limit: 5, ttl: 60_000 } };
 export interface AuthenticatedUser {
   id: string;
   email: string;
+  companyId: string;
 }
 
 interface AuthenticatedRequest extends Request {
@@ -47,6 +48,11 @@ export class AuthController {
     const session = await this.authService.setup(dto);
     this.setSessionCookie(res, session.token, session.cookieMaxAge);
     return session.user;
+  }
+
+  @Get('installation')
+  async installation() {
+    return this.authService.getInstallationStatus();
   }
 
   @Post('login')

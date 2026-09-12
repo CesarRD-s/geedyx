@@ -3,6 +3,7 @@ import { validateEnvironment } from './environment.js';
 const VALID_ENVIRONMENT: Record<string, unknown> = {
   DATABASE_URL: 'postgresql://user:password@localhost:5432/geedyx',
   JWT_SECRET: 'a-secure-development-secret-with-32-chars',
+  INSTALLATION_SECRET: 'another-secure-development-secret-32-chars',
   CORS_ORIGINS: 'http://localhost:3000',
 };
 
@@ -27,6 +28,12 @@ describe('validateEnvironment', () => {
     expect(() =>
       validateEnvironment({ ...VALID_ENVIRONMENT, JWT_SECRET: 'short' }),
     ).toThrow('JWT_SECRET must contain at least 32 characters');
+  });
+
+  it('rejects short installation secrets', () => {
+    expect(() =>
+      validateEnvironment({ ...VALID_ENVIRONMENT, INSTALLATION_SECRET: 'short' }),
+    ).toThrow('INSTALLATION_SECRET must contain at least 32 characters');
   });
 
   it('rejects CORS entries that contain a path', () => {

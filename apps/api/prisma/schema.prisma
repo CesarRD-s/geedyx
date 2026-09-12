@@ -13,15 +13,41 @@ datasource db {
   provider = "postgresql"
 }
 
-/// Application users. The MVP has a single administrator, but the model does
-/// not artificially prevent future multiple users.
+/// The single internal company configured during installation.
+model Company {
+  id           String         @id @default(cuid())
+  name         String
+  users        User[]
+  installation Installation?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+}
+
+/// Immutable singleton that records the completed installation.
+/// Its existence prevents the bootstrap endpoint from reopening.
+model Installation {
+  id          String   @id @default("singleton")
+  installedAt DateTime @default(now())
+  companyId   String   @unique
+  ownerId     String   @unique
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  owner       User     @relation("InstallationOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+}
+
+/// Internal user identity. Future users belong to the company created during
+/// installation.
 model User {
   id           String   @id @default(cuid())
   username     String   @unique
   email        String   @unique
   passwordHash String
+  companyId    String
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  installation Installation? @relation("InstallationOwner")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  @@index([companyId])
 }
 
 /// Product categories. A category can contain many products.

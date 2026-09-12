@@ -9,6 +9,7 @@ export const AUTH_COOKIE_NAME = 'geedyx_session';
 export interface JwtPayload {
   sub: string;
   email: string;
+  companyId: string;
 }
 
 function cookieExtractor(req: Request): string | null {
@@ -29,7 +30,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  validate(payload: JwtPayload): { id: string; email: string } {
-    return { id: payload.sub, email: payload.email };
+  validate(payload: JwtPayload): { id: string; email: string; companyId: string } {
+    return { id: payload.sub, email: payload.email, companyId: payload.companyId };
   }
 }

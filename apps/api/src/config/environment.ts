@@ -66,11 +66,16 @@ export function validateEnvironment(
   if (jwtSecret.length < 32) {
     throw new Error('JWT_SECRET must contain at least 32 characters');
   }
+  const installationSecret = requiredString(environment, 'INSTALLATION_SECRET');
+  if (installationSecret.length < 32) {
+    throw new Error('INSTALLATION_SECRET must contain at least 32 characters');
+  }
 
   return {
     ...environment,
     DATABASE_URL: requiredString(environment, 'DATABASE_URL'),
     JWT_SECRET: jwtSecret,
+    INSTALLATION_SECRET: installationSecret,
     PORT: integerValue(environment, 'PORT', 3001, 1, 65_535),
     MAX_IMAGE_SIZE_MB: String(
       integerValue(environment, 'MAX_IMAGE_SIZE_MB', 5, 1, 25),
