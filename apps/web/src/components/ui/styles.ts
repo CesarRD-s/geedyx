@@ -10,7 +10,7 @@ export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 export type ButtonSize = "sm" | "md";
 
 const BUTTON_BASE =
-  "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-60";
+  "inline-flex items-center justify-center rounded-full text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-60";
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {
   sm: "px-3 py-1.5 gap-1.5",
@@ -38,7 +38,7 @@ export function buttonClassName(
 
 /* Icon-only buttons: always rendered with aria-label + title by consumers. */
 export const iconButtonClass =
-  "inline-flex items-center justify-center rounded-md p-2 text-muted transition-colors hover:bg-surface-subtle hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:pointer-events-none disabled:opacity-60";
+  "inline-flex items-center justify-center rounded-full p-2 text-muted transition-colors hover:bg-surface-subtle hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:pointer-events-none disabled:opacity-60";
 
 /* Form controls */
 export const formInputClass =
@@ -70,9 +70,9 @@ export const mobileListClass =
 
 /* Status banners */
 export const successBannerClass =
-  "rounded-md border border-success/25 bg-success/10 px-3 py-2 text-sm text-success-strong";
+  "px-3 py-2 text-sm text-success-strong";
 export const errorBannerClass =
-  "rounded-md border border-danger/25 bg-danger/10 px-3 py-2 text-sm text-danger-strong";
+  "px-3 py-2 text-sm text-danger-strong";
 
 /* Navigation link (admin sidebar).
  * Active = subtle accent-muted fill, accent text and a 2px accent indicator

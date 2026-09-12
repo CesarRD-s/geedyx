@@ -27,7 +27,6 @@ export function Button({
   ...props
 }: ButtonProps) {
   const isDisabled = disabled || loading;
-  const content = loading ? loadingLabel : children;
   return (
     <button
       type={props.type ?? "button"}
@@ -36,7 +35,7 @@ export function Button({
       aria-busy={loading}
       className={buttonClassName(variant, size, className)}
     >
-      <span className="truncate">{content}</span>
+      {loading ? <span className="truncate">{loadingLabel}</span> : children}
     </button>
   );
 }

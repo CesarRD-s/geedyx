@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
-import { Inter, Geist_Mono } from "next/font/google";
+import { Source_Sans_3, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/ui/theme-provider";
 import "./globals.css";
 
-// Inter is the GEEDYX UI family (variable font; 300–700 used). The wordmark is
+// Source Sans 3 is the GEEDYX UI family (variable font; 300–700 used). The wordmark is
 // independent of the UI typography (see docs/BRAND.md). Geist Mono is kept only
 // for data identifiers (SKU, slug, prices).
-const inter = Inter({
-  variable: "--font-inter",
+const sourceSans = Source_Sans_3({
+  variable: "--font-source",
   subsets: ["latin"],
 });
 
@@ -26,7 +26,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="es"
       suppressHydrationWarning
-      className={`${inter.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${sourceSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <ThemeProvider>{children}</ThemeProvider>

@@ -34,7 +34,7 @@ export function SetupForm() {
     setError(null);
     try {
       await setup({ username, email, password });
-      router.push("/admin");
+      router.push("/app");
       router.refresh();
     } catch (cause) {
       if (cause instanceof ApiError && cause.status === 403) {

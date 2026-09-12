@@ -27,7 +27,7 @@ export function LoginForm() {
     setError(null);
     try {
       await login({ email, password });
-      router.push("/admin");
+      router.push("/app");
       router.refresh();
     } catch (cause) {
       setError(toLoginError(cause));

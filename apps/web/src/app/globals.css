@@ -28,19 +28,19 @@
 
 :root {
   /* Neutral surfaces */
-  --background: #f8fafc;
+  --background: #fafafa;
   --surface: #ffffff;
-  --surface-subtle: #f1f5f9;
+  --surface-subtle: #f4f4f5;
   --surface-raised: #ffffff;
 
   /* Text */
-  --text: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #64748b;
+  --text: #18181b;
+  --text-secondary: #52525b;
+  --text-muted: #71717a;
 
   /* Borders */
-  --border: #e2e8f0;
-  --border-strong: #cbd5e1;
+  --border: #e4e4e7;
+  --border-strong: #d4d4d8;
 
   /* Accent (configurable — see docs/DESIGN-TOKENS.md "Accent") */
   --accent: #2563eb;
@@ -69,8 +69,8 @@
 
 /*
  * Alternate accent example — the accent is decoupled from the GEEDYX brand.
- * Setting data-accent="indigo" on <html> swaps the whole accent family. A
- * picker UI can drive this in a later checkpoint; the brand stays monochrome.
+ * Setting data-accent="indigo|emerald|violet|rose" on <html> swaps the whole
+ * accent family; the default is blue. The brand stays monochrome.
  */
 :root[data-accent="indigo"] {
   --accent: #4f46e5;
@@ -88,21 +88,69 @@
   --accent-muted: rgb(99 102 241 / 0.16);
 }
 
+:root[data-accent="emerald"] {
+  --accent: #059669;
+  --accent-hover: #047857;
+  --accent-active: #065f46;
+  --accent-foreground: #ffffff;
+  --accent-muted: #ecfdf5;
+}
+
+.dark[data-accent="emerald"] {
+  --accent: #34d399;
+  --accent-hover: #10b981;
+  --accent-active: #059669;
+  --accent-foreground: #06281d;
+  --accent-muted: rgb(52 211 153 / 0.15);
+}
+
+:root[data-accent="violet"] {
+  --accent: #7c3aed;
+  --accent-hover: #6d28d9;
+  --accent-active: #5b21b6;
+  --accent-foreground: #ffffff;
+  --accent-muted: #f5f3ff;
+}
+
+.dark[data-accent="violet"] {
+  --accent: #a78bfa;
+  --accent-hover: #8b5cf6;
+  --accent-active: #7c3aed;
+  --accent-foreground: #1e103f;
+  --accent-muted: rgb(167 139 250 / 0.16);
+}
+
+:root[data-accent="rose"] {
+  --accent: #e11d48;
+  --accent-hover: #be123c;
+  --accent-active: #9f1239;
+  --accent-foreground: #ffffff;
+  --accent-muted: #fff1f2;
+}
+
+.dark[data-accent="rose"] {
+  --accent: #fb7185;
+  --accent-hover: #f43f5e;
+  --accent-active: #e11d48;
+  --accent-foreground: #4c0519;
+  --accent-muted: rgb(251 113 133 / 0.16);
+}
+
 .dark {
   /* Neutral surfaces — deep, toned; never pure OLED black */
-  --background: #0b1220;
-  --surface: #141d2e;
-  --surface-subtle: #1a2437;
-  --surface-raised: #1f2b42;
+  --background: #101114;
+  --surface: #18191c;
+  --surface-subtle: #202226;
+  --surface-raised: #282a2f;
 
   /* Text */
-  --text: #e6edf6;
-  --text-secondary: #cbd5e1;
-  --text-muted: #94a3b8;
+  --text: #f4f4f5;
+  --text-secondary: #d4d4d8;
+  --text-muted: #a1a1aa;
 
   /* Borders */
-  --border: #223049;
-  --border-strong: #3b4a63;
+  --border: #2b2d32;
+  --border-strong: #454850;
 
   /* Accent (brighter on dark) */
   --accent: #3b82f6;
@@ -122,7 +170,7 @@
   --info-strong: #93c5fd;
 
   /* Misc */
-  --overlay: rgb(2 6 23 / 0.6);
+  --overlay: rgb(0 0 0 / 0.62);
   --input: #141d2e;
   --selection: rgb(59 130 246 / 0.35);
   --shadow-panel: 0 10px 25px -5px rgb(2 6 23 / 0.5),
@@ -168,7 +216,7 @@
   --color-selection: var(--selection);
 
   /* Typography */
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-source), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo,
     Consolas, monospace;
 

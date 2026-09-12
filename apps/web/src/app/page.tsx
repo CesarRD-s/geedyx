@@ -3,5 +3,5 @@ import { getSession } from "@/lib/api/server";
 
 export default async function HomePage() {
   const user = await getSession();
-  redirect(user ? "/admin" : "/login");
+  redirect(user ? "/app" : "/login");
 }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/api/server";
 import { LoginForm } from "@/components/login-form";
+import { BrandLogo } from "@/components/ui/brand-logo";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 export const metadata: Metadata = {
@@ -11,7 +12,7 @@ export const metadata: Metadata = {
 export default async function LoginPage() {
   const user = await getSession();
   if (user) {
-    redirect("/admin");
+    redirect("/app");
   }
 
   return (
@@ -21,9 +22,7 @@ export default async function LoginPage() {
       </div>
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
-          <p className="text-2xl font-semibold tracking-tight text-foreground">
-            GEEDYX
-          </p>
+          <BrandLogo priority size="lg" className="justify-center" />
           <p className="mt-1 text-sm text-muted">
             Administración de productos e inventario
           </p>
