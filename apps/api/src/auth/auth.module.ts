@@ -6,7 +6,6 @@ import { PrismaModule } from '../prisma/prisma.module.js';
 import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
 import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
-import { OptionalJwtAuthGuard } from './guards/optional-jwt-auth.guard.js';
 import { durationToSeconds } from './duration.js';
 import { JwtStrategy } from './strategies/jwt.strategy.js';
 
@@ -44,7 +43,7 @@ function requireJwtSecret(config: ConfigService): string {
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, JwtAuthGuard, OptionalJwtAuthGuard],
-  exports: [JwtAuthGuard, OptionalJwtAuthGuard, PassportModule],
+  providers: [AuthService, JwtStrategy, JwtAuthGuard],
+  exports: [JwtAuthGuard, PassportModule],
 })
 export class AuthModule {}

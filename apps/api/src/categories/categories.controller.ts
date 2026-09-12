@@ -11,11 +11,14 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
+import { ApiCookieAuth } from '@nestjs/swagger';
 import { CategoriesService } from './categories.service.js';
 import { CreateCategoryDto } from './dto/create-category.dto.js';
 import { UpdateCategoryDto } from './dto/update-category.dto.js';
 
 @Controller('categories')
+@UseGuards(JwtAuthGuard)
+@ApiCookieAuth()
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
@@ -35,20 +38,17 @@ export class CategoriesController {
   }
 
   @Post()
-  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.CREATED)
   create(@Body() dto: CreateCategoryDto) {
     return this.categoriesService.create(dto);
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard)
   update(@Param('id') id: string, @Body() dto: UpdateCategoryDto) {
     return this.categoriesService.update(id, dto);
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(@Param('id') id: string) {
     await this.categoriesService.remove(id);

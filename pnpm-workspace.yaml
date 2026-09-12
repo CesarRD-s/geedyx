@@ -6,3 +6,4 @@ allowBuilds:
   "prisma": true
   "@prisma/engines": true
   "argon2": true
+  "@scarf/scarf": false

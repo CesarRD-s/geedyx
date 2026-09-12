@@ -1,4 +1,9 @@
-import { Module } from '@nestjs/common';
+import {
+  MiddlewareConsumer,
+  Module,
+  RequestMethod,
+  type NestModule,
+} from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
@@ -8,10 +13,16 @@ import { AuthModule } from './auth/auth.module.js';
 import { CategoriesModule } from './categories/categories.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { ProductsModule } from './products/products.module.js';
+import { validateEnvironment } from './config/environment.js';
+import { RequestContextMiddleware } from './http/request-context.middleware.js';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      cache: true,
+      validate: validateEnvironment,
+    }),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
     PrismaModule,
     AuthModule,
@@ -24,4 +35,10 @@ import { ProductsModule } from './products/products.module.js';
     { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer
+      .apply(RequestContextMiddleware)
+      .forRoutes({ path: '{*path}', method: RequestMethod.ALL });
+  }
+}

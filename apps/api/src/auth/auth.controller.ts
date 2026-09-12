@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
+import { ApiCookieAuth } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service.js';
 import { LoginDto } from './dto/login.dto.js';
@@ -62,6 +63,7 @@ export class AuthController {
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
+  @ApiCookieAuth()
   async me(@Req() req: AuthenticatedRequest) {
     return this.authService.getProfile(req.user.id);
   }
@@ -84,7 +86,7 @@ export class AuthController {
   }
 
   private cookieOptions() {
-    const secure = this.configService.get<string>('COOKIE_SECURE') === 'true';
+    const secure = this.configService.get<boolean>('COOKIE_SECURE', false);
     return {
       httpOnly: true,
       secure,

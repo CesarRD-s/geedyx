@@ -9,6 +9,7 @@ export class ApiError extends Error {
 }
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+const API_VERSION_PREFIX = "/api/v1";
 
 export function apiUrl(path: string): string {
   if (!API_BASE_URL) {
@@ -17,7 +18,7 @@ export function apiUrl(path: string): string {
       "NEXT_PUBLIC_API_URL no está configurada. Revisa apps/web/.env.local y .env.example.",
     );
   }
-  return `${API_BASE_URL}${path}`;
+  return `${API_BASE_URL}${API_VERSION_PREFIX}${path}`;
 }
 
 export async function readErrorMessage(response: Response): Promise<string> {

@@ -10,33 +10,28 @@ import {
   Patch,
   Post,
   Query,
-  Req,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import type { Request } from 'express';
+import { ApiBody, ApiConsumes, ApiCookieAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
-import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard.js';
 import { CreateProductDto } from './dto/create-product.dto.js';
 import { ListProductsDto } from './dto/list-products.dto.js';
 import { UpdateProductDto } from './dto/update-product.dto.js';
 import { ProductsService } from './products.service.js';
 import type { ImageUploadFile } from './products.service.js';
 
-interface ProductsRequest extends Request {
-  user?: { id: string; email: string };
-}
-
 @Controller('products')
+@UseGuards(JwtAuthGuard)
+@ApiCookieAuth()
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
   @Get()
-  @UseGuards(OptionalJwtAuthGuard)
-  findAll(@Query() query: ListProductsDto, @Req() req: ProductsRequest) {
-    return this.productsService.findAll(query, req.user !== undefined);
+  findAll(@Query() query: ListProductsDto) {
+    return this.productsService.findAll(query, true);
   }
 
   @Get('slug/:slug')
@@ -45,34 +40,37 @@ export class ProductsController {
   }
 
   @Get(':id')
-  @UseGuards(OptionalJwtAuthGuard)
-  findOne(@Param('id') id: string, @Req() req: ProductsRequest) {
-    return this.productsService.findOne(id, req.user !== undefined);
+  findOne(@Param('id') id: string) {
+    return this.productsService.findOne(id, true);
   }
 
   @Post()
-  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.CREATED)
   create(@Body() dto: CreateProductDto) {
     return this.productsService.create(dto);
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard)
   update(@Param('id') id: string, @Body() dto: UpdateProductDto) {
     return this.productsService.update(id, dto);
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(@Param('id') id: string) {
     await this.productsService.remove(id);
   }
 
   @Post(':id/image')
-  @UseGuards(JwtAuthGuard)
   @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: { file: { type: 'string', format: 'binary' } },
+    },
+  })
   @HttpCode(HttpStatus.OK)
   uploadImage(
     @Param('id') id: string,
@@ -85,7 +83,6 @@ export class ProductsController {
   }
 
   @Delete(':id/image')
-  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteImage(@Param('id') id: string) {
     await this.productsService.deleteImage(id);
