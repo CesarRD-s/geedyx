@@ -56,8 +56,10 @@ Maintained endpoints use the `/api/v1` prefix. In development,
 liveness and readiness are available at `/api/v1/health/live` and
 `/api/v1/health/ready`.
 
-The current first-run screen is available at `/setup`. It is prototype behavior
-and will be replaced by the installation flow defined in the roadmap.
+The first-run screen is available at `/setup`. It creates the company and its
+initial owner only when the API is not installed. Set a distinct
+`INSTALLATION_SECRET` in `apps/api/.env` and enter it once in the form; it is
+never exposed to the frontend configuration or returned by the API.
 
 ## Validation
 

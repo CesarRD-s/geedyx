@@ -67,9 +67,11 @@ first-class threats. Each new domain documents its threat model before release.
 Implemented controls include Argon2id hashing, a short-lived JWT in an HttpOnly
 cookie, CORS allowlist, DTO validation, in-memory throttling, validated image
 uploads, fail-fast runtime configuration validation and safe API error
-responses. Requests receive correlation IDs and structured access logs. Every
-current category and product endpoint requires authentication; no catalog route
-is anonymously exposed.
+responses. Installation requires a distinct server-side secret and writes the
+company, owner and immutable installation state in one transaction. Requests
+receive correlation IDs and structured access logs. Every current category and
+product endpoint requires authentication; no catalog route is anonymously
+exposed.
 
 These controls do not yet provide server-side session revocation, granular
 permissions, CSRF protection, MFA, audit events, integration credentials or

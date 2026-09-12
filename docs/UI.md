@@ -29,8 +29,8 @@ Token values and the full token reference live in
 - **CP12** — **Design System established**: semantic tokens + Light/Dark/System
   themes, shared UI component set, dialog/overlay fixes, hard-coded palette
   colors removed, and this document converted into the official contract.
-- **CP12.1** — **initial admin setup**: `/setup` completes the first-run
-  experience (create the primary administrator via the existing
+- **CP12.1** — **initial installation**: `/setup` completes the first-run
+  experience (create the company and primary administrator via
   `POST /api/v1/auth/setup`), reusing the `/login` layout pattern.
 - **CP12.2** — public catalog removed (`/` is now a session redirect to
   `/app` or `/login`); `/login` no longer exposes the `/setup` entry point.
@@ -719,15 +719,16 @@ must feel like part of the same product as `/login`:
   session it `redirect("/app")` (an authenticated user never sees the
   form). Without one it renders the `SetupForm`.
 - **Form**: `SetupForm` reuses `Input`/`FieldLabel`/`FieldError`/`Button`
-  (primary, `md`, full-width, `loading`/`loadingLabel`). Fields are username,
-  email and password with visible labels; client validation is minimal
-  (required + password ≥ 8, matching the API DTO), the backend stays the
-  authority. On success the component navigates to `/app` (the backend has
-  already set the HttpOnly cookie).
-- **Already configured**: a `403` from `POST /api/v1/auth/setup` is an expected state,
-  not an error banner — render an honest message and a primary "Ir a iniciar
-  sesión" action to `/login`. Network/`400` failures use the standard
-  error-mapping rules (§ 19) and keep the form retryable.
+  (primary, `md`, full-width, `loading`/`loadingLabel`). Fields are company
+  name, username, email, password and installation secret with visible labels;
+  client validation is minimal (required, password ≥ 8 and secret ≥ 32), while
+  the backend remains the authority. On success the component navigates to
+  `/app` after the API sets the HttpOnly cookie.
+- **Already configured**: the page first reads `GET /api/v1/auth/installation`
+  and redirects to `/login` when installation is complete. A concurrent `403`
+  from `POST /api/v1/auth/setup` is handled as the same state. Network/`400`
+  failures use the standard error-mapping rules (§ 19) and keep the form
+  retryable.
 - `/setup` is not linked from `/login` (as of CP12.2); it is reached by
   direct navigation only. The page exists at a known, stable path.
 - No password hashing, localStorage tokens or new auth state on this screen;

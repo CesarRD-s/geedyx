@@ -6,8 +6,21 @@ PostgreSQL is the source of truth. Only the NestJS API accesses it through
 Prisma. Every schema change uses a reviewed Prisma migration; the Next.js admin
 application never reads it directly.
 
-The current schema contains `User`, `Category` and `Product`. It represents the
-prototype, not the target ERP schema.
+The current schema contains `Installation`, `Company`, `User`, `Category` and
+`Product`. `Installation` is a singleton that closes bootstrap permanently;
+every user belongs to the one configured company.
+
+## Implemented identity foundation
+
+| Model | Purpose |
+| --- | --- |
+| `Installation` | Immutable singleton recording the completed installation, company and owner. |
+| `Company` | The legal and operational business configured during installation. |
+| `User` | Internal credential identity; it belongs to one company. |
+
+The installation transaction creates all three records together. The migration
+also preserves pre-existing development users by assigning them to a legacy
+company and writing the installation singleton, so setup does not reopen.
 
 ## Foundation data model — planned
 
@@ -15,9 +28,6 @@ Phase 1 introduces the following models before business modules are expanded:
 
 | Model | Purpose |
 | --- | --- |
-| `Installation` | One immutable installation state; prevents bootstrap reopening. |
-| `Company` | Legal and operational configuration for the single business. |
-| `User` | Internal identity, credentials, status and security timestamps. |
 | `UserProfile` | Display name, locale, timezone and optional avatar asset. |
 | `Role`, `Permission`, `UserRole` | Internal authorization. |
 | `Session` | Hashed opaque token, expiry, device data and revocation state. |

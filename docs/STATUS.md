@@ -9,7 +9,7 @@ Last reviewed: 2026-09-12
 ## Active milestone
 
 **Phase 1 — Secure platform foundation**
-Current slice: **P1.2 — Installation and organization identity**
+Current slice: **P1.3 — Users, roles and permissions**
 
 ## Implemented
 
@@ -30,6 +30,9 @@ Current slice: **P1.2 — Installation and organization identity**
   HTTP logs and liveness/readiness endpoints form the operational baseline.
 - Every current category and product route is private and requires a valid
   authenticated session.
+- Installation persists a singleton state plus the first company and owner in
+  one transaction. Its server-side installation secret is required only once;
+  completed installations redirect `/setup` to `/login`.
 - Official GEEDYX UI contract: semantic colors, configurable accent,
   Light/Dark/System, Source Sans 3 and `md`/`lg`/`full` radius vocabulary.
 - Official Light/Dark brand assets applied to the sidebar, mobile drawer and
@@ -39,8 +42,6 @@ Current slice: **P1.2 — Installation and organization identity**
 
 ## Prototype limitations to remove in Phase 1
 
-- Setup availability is inferred from users instead of persisted installation
-  state and is not protected by a one-time installation secret.
 - Authentication uses a self-contained JWT and cannot revoke individual
   sessions server-side.
 - Users have no account state, profile, roles or permissions.
@@ -52,9 +53,9 @@ Current slice: **P1.2 — Installation and organization identity**
 
 ## Next deliverable
 
-P1.2 adds persisted installation state and the first company record. Setup will
-require a one-time installation secret and will create the company, owner and
-first session atomically before becoming permanently unavailable.
+P1.3 adds internal user profile data, account state, roles and permissions.
+Authorization will be enforced by the API rather than by hiding workspace
+controls.
 
 ## Documentation rule
 

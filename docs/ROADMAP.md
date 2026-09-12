@@ -41,7 +41,7 @@ complete until its migration, API behavior, tests and documentation agree.
 
 ### P1.2 — Installation and organization identity
 
-**Planned.**
+**Complete.**
 
 - Add persisted installation state and the initial company record.
 - Protect setup with a one-time installation secret.

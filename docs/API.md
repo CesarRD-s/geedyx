@@ -39,9 +39,15 @@ consume only intentionally public, rate-limited data.
 
 - `GET /api/v1/health/live` reports process liveness.
 - `GET /api/v1/health/ready` checks API readiness, including PostgreSQL.
-- `POST /api/v1/auth/setup`, `POST /api/v1/auth/login` and
-  `POST /api/v1/auth/logout` implement the temporary Phase 1 authentication
-  flow; `GET /api/v1/auth/me` requires its HttpOnly session cookie.
+- `GET /api/v1/auth/installation` returns the public, non-sensitive
+  installation state used by the first-run screen.
+- `POST /api/v1/auth/setup` creates the company, initial owner and temporary
+  JWT-cookie session in one transaction. It requires `companyName`, `username`,
+  `email`, `password` and the server-configured `installationSecret`; it is
+  permanently unavailable after installation.
+- `POST /api/v1/auth/login` and `POST /api/v1/auth/logout` implement the
+  temporary Phase 1 authentication flow; `GET /api/v1/auth/me` requires its
+  HttpOnly session cookie.
 - `/api/v1/categories` and `/api/v1/products` expose the current CRUD and image
   operations. Every category and product operation requires authentication.
 
