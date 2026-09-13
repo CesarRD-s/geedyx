@@ -5,13 +5,20 @@ import { describe, expect, it, vi } from 'vitest';
 import { PermissionCode } from '../authorization/permissions.js';
 import { PermissionsGuard } from './permissions.guard.js';
 
-function contextWithPermissions(permissions: PermissionCode[]): ExecutionContext {
+function contextWithPermissions(
+  permissions: PermissionCode[],
+): ExecutionContext {
   return {
     getHandler: () => PermissionsGuard,
     getClass: () => PermissionsGuard,
     switchToHttp: () => ({
       getRequest: () => ({
-        user: { id: 'user', email: 'user@example.com', companyId: 'company', permissions },
+        user: {
+          id: 'user',
+          email: 'user@example.com',
+          companyId: 'company',
+          permissions,
+        },
       }),
     }),
   } as unknown as ExecutionContext;
@@ -20,10 +27,12 @@ function contextWithPermissions(permissions: PermissionCode[]): ExecutionContext
 describe('PermissionsGuard', () => {
   it('allows a request with every required permission', () => {
     const reflector = {
-      getAllAndOverride: vi.fn().mockReturnValue([
-        PermissionCode.CatalogRead,
-        PermissionCode.CatalogManage,
-      ]),
+      getAllAndOverride: vi
+        .fn()
+        .mockReturnValue([
+          PermissionCode.CatalogRead,
+          PermissionCode.CatalogManage,
+        ]),
     } as unknown as Reflector;
     const guard = new PermissionsGuard(reflector);
 

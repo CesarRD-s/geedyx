@@ -81,10 +81,7 @@ export class ProductsController {
     },
   })
   @HttpCode(HttpStatus.OK)
-  uploadImage(
-    @Param('id') id: string,
-    @UploadedFile() file?: ImageUploadFile,
-  ) {
+  uploadImage(@Param('id') id: string, @UploadedFile() file?: ImageUploadFile) {
     if (!file) {
       throw new BadRequestException('Image file is required');
     }

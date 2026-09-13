@@ -10,7 +10,12 @@ import { PermissionsGuard } from './guards/permissions.guard.js';
 @Module({
   imports: [PrismaModule],
   controllers: [AuthController],
-  providers: [AuthService, SessionAuthGuard, AccountStatusGuard, PermissionsGuard],
+  providers: [
+    AuthService,
+    SessionAuthGuard,
+    AccountStatusGuard,
+    PermissionsGuard,
+  ],
   exports: [SessionAuthGuard, AccountStatusGuard, PermissionsGuard],
 })
 export class AuthModule {}

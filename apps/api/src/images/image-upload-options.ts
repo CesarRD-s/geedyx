@@ -32,7 +32,8 @@ export function asImageUploadConfig(
 export function getMaxImageBytes(config: ImageUploadConfigReader): number {
   const raw = config.get('MAX_IMAGE_SIZE_MB', '5') ?? '5';
   const megabytes = Number(raw);
-  const safeMegabytes = Number.isFinite(megabytes) && megabytes >= 1 ? megabytes : 5;
+  const safeMegabytes =
+    Number.isFinite(megabytes) && megabytes >= 1 ? megabytes : 5;
   return Math.floor(safeMegabytes * 1024 * 1024);
 }
 
@@ -60,5 +61,8 @@ export function imageMimeFileFilter(
     callback(null, true);
     return;
   }
-  callback(new BadRequestException('Only JPEG, PNG and WebP images are allowed'), false);
+  callback(
+    new BadRequestException('Only JPEG, PNG and WebP images are allowed'),
+    false,
+  );
 }

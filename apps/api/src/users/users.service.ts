@@ -41,9 +41,21 @@ export class UsersService {
       ...(query.search
         ? {
             OR: [
-              { username: { contains: query.search, mode: 'insensitive' as const } },
-              { email: { contains: query.search, mode: 'insensitive' as const } },
-              { displayName: { contains: query.search, mode: 'insensitive' as const } },
+              {
+                username: {
+                  contains: query.search,
+                  mode: 'insensitive' as const,
+                },
+              },
+              {
+                email: { contains: query.search, mode: 'insensitive' as const },
+              },
+              {
+                displayName: {
+                  contains: query.search,
+                  mode: 'insensitive' as const,
+                },
+              },
             ],
           }
         : {}),
@@ -93,7 +105,9 @@ export class UsersService {
 
   async create(companyId: string, dto: CreateUserDto) {
     const roleIds = await this.validateAssignableRoles(companyId, dto.roleIds);
-    const passwordHash = await argon2.hash(dto.password, { type: argon2.argon2id });
+    const passwordHash = await argon2.hash(dto.password, {
+      type: argon2.argon2id,
+    });
 
     try {
       const user = await this.prisma.user.create({
@@ -141,7 +155,9 @@ export class UsersService {
       installation.ownerId === userId &&
       (dto.status !== undefined || dto.roleIds !== undefined)
     ) {
-      throw new ForbiddenException('The installation owner cannot be suspended or reassigned');
+      throw new ForbiddenException(
+        'The installation owner cannot be suspended or reassigned',
+      );
     }
     if (actorUserId === userId && dto.status === 'SUSPENDED') {
       throw new BadRequestException('You cannot suspend your own account');
@@ -153,7 +169,9 @@ export class UsersService {
     const user = await this.prisma.user.update({
       where: { id: userId },
       data: {
-        ...(dto.displayName !== undefined ? { displayName: dto.displayName || null } : {}),
+        ...(dto.displayName !== undefined
+          ? { displayName: dto.displayName || null }
+          : {}),
         ...(dto.locale !== undefined ? { locale: dto.locale } : {}),
         ...(dto.timeZone !== undefined ? { timeZone: dto.timeZone } : {}),
         ...(dto.status !== undefined ? { status: dto.status } : {}),
@@ -197,7 +215,9 @@ export class UsersService {
     lastLoginAt: Date | null;
     createdAt: Date;
     updatedAt: Date;
-    roles: { role: { id: string; code: string; name: string; isSystem: boolean } }[];
+    roles: {
+      role: { id: string; code: string; name: string; isSystem: boolean };
+    }[];
   }) {
     return {
       id: user.id,

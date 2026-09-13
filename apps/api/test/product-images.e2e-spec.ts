@@ -75,10 +75,14 @@ describe('Product images (e2e)', () => {
     return request(app.getHttpServer()).get(`/products/${id}`).expect(200);
   }
 
-  function uploadImage(productId: string, buffer: Buffer, options?: {
-    filename?: string;
-    contentType?: string;
-  }) {
+  function uploadImage(
+    productId: string,
+    buffer: Buffer,
+    options?: {
+      filename?: string;
+      contentType?: string;
+    },
+  ) {
     const filename = options?.filename ?? 'upload.bin';
     const contentType = options?.contentType ?? 'image/jpeg';
     return request(app.getHttpServer())
@@ -122,7 +126,9 @@ describe('Product images (e2e)', () => {
 
     prisma = app.get(PrismaService);
     config = app.get(ConfigService);
-    uploadDir = path.resolve(config.get<string>('UPLOAD_DIR', 'uploads') ?? 'uploads');
+    uploadDir = path.resolve(
+      config.get<string>('UPLOAD_DIR', 'uploads') ?? 'uploads',
+    );
     maxImageBytes = getMaxImageBytes(asImageUploadConfig(config));
 
     await prisma.product.deleteMany({
@@ -194,7 +200,6 @@ describe('Product images (e2e)', () => {
         /^\/uploads\/products\/[0-9a-f-]{36}\.jpg$/,
       );
 
-
       const product = await getProduct(id);
       expect(product.body.imageUrl).toBe(res.body.imageUrl);
 
@@ -204,7 +209,9 @@ describe('Product images (e2e)', () => {
         .get(res.body.imageUrl as string)
         .expect(200);
       expect(served.headers['content-type']).toBe('image/jpeg');
-      expect(String(served.headers['cache-control'] ?? '')).toContain('immutable');
+      expect(String(served.headers['cache-control'] ?? '')).toContain(
+        'immutable',
+      );
     });
 
     it('uploads a PNG', async () => {
@@ -277,7 +284,9 @@ describe('Product images (e2e)', () => {
       expect(url).toMatch(/^\/uploads\/products\/[0-9a-f-]{36}\.jpg$/);
       expect(url).not.toContain('escaped');
 
-      expect(await pathExists(path.join(uploadDir, '..', 'escaped.jpg'))).toBe(false);
+      expect(await pathExists(path.join(uploadDir, '..', 'escaped.jpg'))).toBe(
+        false,
+      );
       expect(await pathExists(storedFilePath(url))).toBe(true);
     });
   });
@@ -408,7 +417,9 @@ describe('Product images (e2e)', () => {
 
     it('rejects non-image content even with an allowed MIME type', async () => {
       const id = await createProduct('SPOOFED');
-      const svgSpoofed = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"></svg>');
+      const svgSpoofed = Buffer.from(
+        '<svg xmlns="http://www.w3.org/2000/svg"></svg>',
+      );
       const res = await uploadImage(id, svgSpoofed, {
         filename: 'x.png',
         contentType: 'image/png',

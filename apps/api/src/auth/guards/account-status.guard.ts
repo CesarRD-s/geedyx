@@ -31,7 +31,9 @@ export class AccountStatusGuard implements CanActivate {
           select: {
             role: {
               select: {
-                permissions: { select: { permission: { select: { code: true } } } },
+                permissions: {
+                  select: { permission: { select: { code: true } } },
+                },
               },
             },
           },

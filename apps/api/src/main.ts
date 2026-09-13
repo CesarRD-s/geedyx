@@ -47,7 +47,9 @@ async function bootstrap() {
   if (config.get<boolean>('OPENAPI_ENABLED', false)) {
     const openApiConfig = new DocumentBuilder()
       .setTitle('GEEDYX API')
-      .setDescription('Versioned REST contract for the GEEDYX internal workspace and integrations.')
+      .setDescription(
+        'Versioned REST contract for the GEEDYX internal workspace and integrations.',
+      )
       .setVersion('1.0')
       .addCookieAuth('geedyx_session')
       .build();

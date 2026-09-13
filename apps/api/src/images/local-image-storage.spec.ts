@@ -41,7 +41,9 @@ describe('LocalImageStorage', () => {
 
     it('creates the products directory when missing', async () => {
       const url = await storage.save(Buffer.from('bytes'), 'png');
-      await expect(access(absolutePath(url), constants.F_OK)).resolves.toBeUndefined();
+      await expect(
+        access(absolutePath(url), constants.F_OK),
+      ).resolves.toBeUndefined();
     });
 
     it('generates a unique name for every save', async () => {
@@ -56,7 +58,9 @@ describe('LocalImageStorage', () => {
       const url = await storage.save(Buffer.from('bytes'), 'webp');
       expect(await storage.exists(url)).toBe(true);
       expect(
-        await storage.exists('/uploads/products/00000000-0000-0000-0000-000000000000.webp'),
+        await storage.exists(
+          '/uploads/products/00000000-0000-0000-0000-000000000000.webp',
+        ),
       ).toBe(false);
     });
 
@@ -76,7 +80,9 @@ describe('LocalImageStorage', () => {
 
     it('is idempotent for a missing file', async () => {
       await expect(
-        storage.delete('/uploads/products/00000000-0000-0000-0000-000000000000.png'),
+        storage.delete(
+          '/uploads/products/00000000-0000-0000-0000-000000000000.png',
+        ),
       ).resolves.toBeUndefined();
     });
 

@@ -34,7 +34,10 @@ function exceptionMessages(exception: HttpException): string[] {
     if (typeof message === 'string') {
       return [message];
     }
-    if (Array.isArray(message) && message.every((item) => typeof item === 'string')) {
+    if (
+      Array.isArray(message) &&
+      message.every((item) => typeof item === 'string')
+    ) {
       return message;
     }
   }
@@ -56,8 +59,12 @@ export class ApiExceptionFilter implements ExceptionFilter {
     const details = isHttpException ? exceptionMessages(exception) : undefined;
 
     if (!isHttpException) {
-      const trace = exception instanceof Error ? exception.stack : String(exception);
-      this.logger.error(`Unhandled error requestId=${request.requestId}`, trace);
+      const trace =
+        exception instanceof Error ? exception.stack : String(exception);
+      this.logger.error(
+        `Unhandled error requestId=${request.requestId}`,
+        trace,
+      );
     }
 
     response.status(statusCode).json({
@@ -66,7 +73,7 @@ export class ApiExceptionFilter implements ExceptionFilter {
       message:
         statusCode === HttpStatus.INTERNAL_SERVER_ERROR
           ? 'Ocurrió un error interno.'
-          : details?.[0] ?? 'La solicitud no pudo completarse.',
+          : (details?.[0] ?? 'La solicitud no pudo completarse.'),
       ...(details && details.length > 1 ? { details } : {}),
       requestId: request.requestId,
       timestamp: new Date().toISOString(),

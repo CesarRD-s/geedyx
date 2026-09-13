@@ -354,9 +354,9 @@ describe('Products (e2e)', () => {
         (p: { slug: string }) => p.slug,
       ) as string[];
       expect(slugs).not.toContain('e2e-mouse');
-      expect(res.body.data.every((p: { isActive: boolean }) => p.isActive)).toBe(
-        true,
-      );
+      expect(
+        res.body.data.every((p: { isActive: boolean }) => p.isActive),
+      ).toBe(true);
       expect(Object.keys(res.body.data[0]).sort()).toEqual([
         'category',
         'createdAt',

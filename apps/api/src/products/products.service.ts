@@ -218,7 +218,10 @@ export class ProductsService {
     //    anything below fails.
     let newImageUrl: string;
     try {
-      newImageUrl = await this.images.save(file.buffer, this.imageExtension(file.buffer));
+      newImageUrl = await this.images.save(
+        file.buffer,
+        this.imageExtension(file.buffer),
+      );
     } catch (error) {
       this.logger.error(`Failed to store image for product ${id}`, error);
       throw new InternalServerErrorException('Could not store the image');
@@ -234,7 +237,10 @@ export class ProductsService {
         // 2. The DB update failed after the new file was written: clean the new
         //    file up so it does not become orphaned.
         this.images.delete(newImageUrl).catch((cleanupError) => {
-          this.logger.error(`Failed to clean up image ${newImageUrl}`, cleanupError);
+          this.logger.error(
+            `Failed to clean up image ${newImageUrl}`,
+            cleanupError,
+          );
         });
         throw error;
       });
@@ -243,7 +249,10 @@ export class ProductsService {
     //    thrown, so it never reverts the product or fails the request.
     if (existing.imageUrl !== null) {
       await this.images.delete(existing.imageUrl).catch((error) => {
-        this.logger.error(`Failed to delete old image ${existing.imageUrl}`, error);
+        this.logger.error(
+          `Failed to delete old image ${existing.imageUrl}`,
+          error,
+        );
       });
     }
 
@@ -281,7 +290,9 @@ export class ProductsService {
       );
     }
     if (!ALLOWED_IMAGE_MIME_TYPES.includes(file.mimetype)) {
-      throw new BadRequestException('Only JPEG, PNG and WebP images are allowed');
+      throw new BadRequestException(
+        'Only JPEG, PNG and WebP images are allowed',
+      );
     }
     if (detectImageFormat(file.buffer) === null) {
       throw new BadRequestException(

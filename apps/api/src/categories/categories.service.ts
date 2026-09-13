@@ -33,7 +33,9 @@ function normalizedSlug(name: string): string {
   }
   const slug = slugify(normalized);
   if (!slug) {
-    throw new BadRequestException('Category name must produce a URL-friendly slug');
+    throw new BadRequestException(
+      'Category name must produce a URL-friendly slug',
+    );
   }
   return slug;
 }
@@ -155,9 +157,7 @@ export class CategoriesService {
     try {
       await this.prisma.category.delete({ where: { id } });
     } catch (error) {
-      if (
-        isPrismaError(error, FOREIGN_KEY_VIOLATION, RELATION_VIOLATION)
-      ) {
+      if (isPrismaError(error, FOREIGN_KEY_VIOLATION, RELATION_VIOLATION)) {
         throw new ConflictException(
           'Cannot delete a category that has associated products',
         );

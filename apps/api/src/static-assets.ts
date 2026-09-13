@@ -10,7 +10,9 @@ import path from 'node:path';
  */
 export function configureStaticAssets(app: NestExpressApplication): void {
   const config = app.get(ConfigService);
-  const uploadDir = path.resolve(config.get<string>('UPLOAD_DIR', 'uploads') ?? 'uploads');
+  const uploadDir = path.resolve(
+    config.get<string>('UPLOAD_DIR', 'uploads') ?? 'uploads',
+  );
 
   app.useStaticAssets(uploadDir, {
     prefix: '/uploads/',
