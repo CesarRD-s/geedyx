@@ -19,6 +19,7 @@ import { AccountStatusGuard } from '../auth/guards/account-status.guard.js';
 import { SessionAuthGuard } from '../auth/guards/session-auth.guard.js';
 import { PermissionsGuard } from '../auth/guards/permissions.guard.js';
 import { RecentAuthenticationGuard } from '../auth/guards/recent-authentication.guard.js';
+import { requestAuditContext } from '../audit/request-audit-context.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { ListUsersDto } from './dto/list-users.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
@@ -51,7 +52,12 @@ export class UsersController {
   @UseGuards(RecentAuthenticationGuard)
   @HttpCode(HttpStatus.CREATED)
   create(@Req() request: AuthenticatedRequest, @Body() dto: CreateUserDto) {
-    return this.usersService.create(request.user.companyId, dto);
+    return this.usersService.create(
+      request.user.companyId,
+      request.user.id,
+      dto,
+      requestAuditContext(request),
+    );
   }
 
   @Patch(':id')
@@ -67,6 +73,7 @@ export class UsersController {
       request.user.id,
       id,
       dto,
+      requestAuditContext(request),
     );
   }
 }

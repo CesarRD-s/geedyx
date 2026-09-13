@@ -6,7 +6,15 @@ function context() {
   return {
     switchToHttp: () => ({
       getRequest: () => ({
-        user: { id: 'user-1', sessionId: 'session-1' },
+        requestId: 'request-1',
+        ip: '127.0.0.1',
+        socket: { remoteAddress: '127.0.0.1' },
+        header: vi.fn().mockReturnValue(undefined),
+        user: {
+          id: 'user-1',
+          companyId: 'company-1',
+          sessionId: 'session-1',
+        },
       }),
     }),
   } as never;
@@ -23,12 +31,14 @@ describe('RecentAuthenticationGuard', () => {
         },
       } as never,
       { get: vi.fn().mockReturnValue('10m') } as never,
+      { record: vi.fn() } as never,
     );
 
     await expect(guard.canActivate(context())).resolves.toBe(true);
   });
 
   it('rejects a session outside the confirmation window', async () => {
+    const audit = { record: vi.fn().mockResolvedValue({}) };
     const guard = new RecentAuthenticationGuard(
       {
         session: {
@@ -38,10 +48,18 @@ describe('RecentAuthenticationGuard', () => {
         },
       } as never,
       { get: vi.fn().mockReturnValue('10m') } as never,
+      audit as never,
     );
 
     await expect(guard.canActivate(context())).rejects.toBeInstanceOf(
       ForbiddenException,
+    );
+    expect(audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'authorization.deny',
+        outcome: 'DENIED',
+        metadata: { reason: 'recent_authentication_required' },
+      }),
     );
   });
 });

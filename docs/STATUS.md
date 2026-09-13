@@ -71,7 +71,7 @@ Current slice: **P1.5 - Audit, integration and files foundation**
 
 ## Prototype limitations to remove in Phase 1
 
-- Domain audit coverage and integration credentials are not implemented.
+- Broad domain audit coverage and integration credentials are not implemented.
   Password-reset delivery requires an external HTTPS adapter in
   production; local development intentionally leaves delivery disabled unless
   configured.
@@ -110,9 +110,10 @@ recovery codes without exposing an incomplete MFA flow. P1.4c is complete.
 P1.5a.1 adds an append-only PostgreSQL audit ledger and a typed transactional
 writer with metadata safeguards. P1.5a.2 records installation, successful and
 failed login, password recovery, password changes, reauthentication, logout and
-session revocation with request context. Successful state changes and their
-events share one transaction. Next: cover identity, company configuration and
-authorization denials.
+session revocation with request context. P1.5a.3 adds internal-user creation and
+updates, company configuration changes, and authorization denials. Successful
+state changes and their events share one transaction. Next: cover the remaining
+security-sensitive domain mutations.
 
 ## Documentation rule
 

@@ -13,6 +13,10 @@ function contextWithPermissions(
     getClass: () => PermissionsGuard,
     switchToHttp: () => ({
       getRequest: () => ({
+        requestId: 'request-1',
+        ip: '127.0.0.1',
+        socket: { remoteAddress: '127.0.0.1' },
+        header: vi.fn().mockReturnValue(undefined),
         user: {
           id: 'user',
           email: 'user@example.com',
@@ -25,7 +29,7 @@ function contextWithPermissions(
 }
 
 describe('PermissionsGuard', () => {
-  it('allows a request with every required permission', () => {
+  it('allows a request with every required permission', async () => {
     const reflector = {
       getAllAndOverride: vi
         .fn()
@@ -34,26 +38,36 @@ describe('PermissionsGuard', () => {
           PermissionCode.CatalogManage,
         ]),
     } as unknown as Reflector;
-    const guard = new PermissionsGuard(reflector);
+    const audit = { record: vi.fn() };
+    const guard = new PermissionsGuard(reflector, audit as never);
 
-    expect(
+    await expect(
       guard.canActivate(
         contextWithPermissions([
           PermissionCode.CatalogRead,
           PermissionCode.CatalogManage,
         ]),
       ),
-    ).toBe(true);
+    ).resolves.toBe(true);
   });
 
-  it('rejects a request missing a required permission', () => {
+  it('records and rejects a request missing a required permission', async () => {
     const reflector = {
       getAllAndOverride: vi.fn().mockReturnValue([PermissionCode.UsersManage]),
     } as unknown as Reflector;
-    const guard = new PermissionsGuard(reflector);
+    const audit = { record: vi.fn().mockResolvedValue({}) };
+    const guard = new PermissionsGuard(reflector, audit as never);
 
-    expect(() =>
+    await expect(
       guard.canActivate(contextWithPermissions([PermissionCode.UsersRead])),
-    ).toThrow(ForbiddenException);
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'authorization.deny',
+        outcome: 'DENIED',
+        targetId: PermissionCode.UsersManage,
+        metadata: { reason: 'insufficient_permissions' },
+      }),
+    );
   });
 });

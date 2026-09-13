@@ -146,6 +146,12 @@ session lifecycle writes. Failed attempts are recorded separately with the
 same public response semantics; submitted identities are hashed and secret
 credentials never become event fields or metadata.
 
+P1.5a.3 applies the same transaction rule to internal-user and company-settings
+writes. Permission, account-status and recent-authentication guards record their
+denials before returning the existing safe response. Their metadata identifies a
+stable reason only; it does not contain request bodies, credentials or settings
+values.
+
 ## Legacy decisions
 
 The previous single-administrator, stateless JWT, public-catalog and local-image

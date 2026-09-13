@@ -7,6 +7,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
+import {
+  AuditAction,
+  AuditActor,
+  AuditResult,
+  AuditService,
+  type AuditRequestContext,
+} from '../audit/audit.service.js';
 import { SystemRoleCode } from '../auth/authorization/permissions.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { ListUsersDto } from './dto/list-users.dto.js';
@@ -32,7 +39,10 @@ const USER_SELECT = {
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   async findAll(companyId: string, query: ListUsersDto) {
     const where = {
@@ -103,25 +113,46 @@ export class UsersService {
     return roles;
   }
 
-  async create(companyId: string, dto: CreateUserDto) {
+  async create(
+    companyId: string,
+    actorUserId: string,
+    dto: CreateUserDto,
+    auditContext: AuditRequestContext,
+  ) {
     const roleIds = await this.validateAssignableRoles(companyId, dto.roleIds);
     const passwordHash = await argon2.hash(dto.password, {
       type: argon2.argon2id,
     });
 
     try {
-      const user = await this.prisma.user.create({
-        data: {
-          companyId,
-          username: dto.username,
-          email: dto.email,
-          passwordHash,
-          displayName: dto.displayName || null,
-          roles: { create: roleIds.map((roleId) => ({ roleId })) },
-        },
-        select: USER_SELECT,
+      return await this.prisma.$transaction(async (transaction) => {
+        const user = await transaction.user.create({
+          data: {
+            companyId,
+            username: dto.username,
+            email: dto.email,
+            passwordHash,
+            displayName: dto.displayName || null,
+            roles: { create: roleIds.map((roleId) => ({ roleId })) },
+          },
+          select: USER_SELECT,
+        });
+        await this.audit.record(
+          {
+            companyId,
+            actorType: AuditActor.InternalUser,
+            actorId: actorUserId,
+            action: AuditAction.UserCreate,
+            outcome: AuditResult.Succeeded,
+            targetType: 'user',
+            targetId: user.id,
+            ...auditContext,
+            metadata: { roleCount: roleIds.length },
+          },
+          transaction,
+        );
+        return this.toUserResponse(user);
       });
-      return this.toUserResponse(user);
     } catch (error) {
       if (isUniqueConstraintError(error)) {
         throw new ConflictException('Username or email is already in use');
@@ -135,6 +166,7 @@ export class UsersService {
     actorUserId: string,
     userId: string,
     dto: UpdateUserDto,
+    auditContext: AuditRequestContext,
   ) {
     const target = await this.prisma.user.findFirst({
       where: { id: userId, companyId },
@@ -166,25 +198,45 @@ export class UsersService {
     const roleIds = dto.roleIds
       ? await this.validateAssignableRoles(companyId, dto.roleIds)
       : undefined;
-    const user = await this.prisma.user.update({
-      where: { id: userId },
-      data: {
-        ...(dto.displayName !== undefined
-          ? { displayName: dto.displayName || null }
-          : {}),
-        ...(dto.status !== undefined ? { status: dto.status } : {}),
-        ...(roleIds
-          ? {
-              roles: {
-                deleteMany: {},
-                create: roleIds.map((roleId) => ({ roleId })),
-              },
-            }
-          : {}),
-      },
-      select: USER_SELECT,
+    return this.prisma.$transaction(async (transaction) => {
+      const user = await transaction.user.update({
+        where: { id: userId },
+        data: {
+          ...(dto.displayName !== undefined
+            ? { displayName: dto.displayName || null }
+            : {}),
+          ...(dto.status !== undefined ? { status: dto.status } : {}),
+          ...(roleIds
+            ? {
+                roles: {
+                  deleteMany: {},
+                  create: roleIds.map((roleId) => ({ roleId })),
+                },
+              }
+            : {}),
+        },
+        select: USER_SELECT,
+      });
+      await this.audit.record(
+        {
+          companyId,
+          actorType: AuditActor.InternalUser,
+          actorId: actorUserId,
+          action: AuditAction.UserUpdate,
+          outcome: AuditResult.Succeeded,
+          targetType: 'user',
+          targetId: user.id,
+          ...auditContext,
+          metadata: {
+            roleAssignmentChanged: roleIds !== undefined,
+            statusChanged: dto.status !== undefined,
+            displayNameChanged: dto.displayName !== undefined,
+          },
+        },
+        transaction,
+      );
+      return this.toUserResponse(user);
     });
-    return this.toUserResponse(user);
   }
 
   private async validateAssignableRoles(companyId: string, roleIds: string[]) {

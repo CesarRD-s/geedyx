@@ -91,9 +91,11 @@ explicit product decision; the boundary never chooses an offset silently.
   critical counters are persisted in PostgreSQL and keyed by hashed IP plus a
   hashed account, session or token subject as applicable.
 - Installation, login, logout, password recovery, password changes,
-  reauthentication and session revocation produce immutable audit events with
-  the request ID and outcome. Raw passwords, reset tokens, session values and
-  CSRF values never enter audit metadata. Audit records have no read API yet.
+  reauthentication, session revocation, internal-user changes and company
+  settings changes produce immutable audit events with the request ID and
+  outcome. Permission, suspended-account and recent-authentication denials also
+  produce events. Raw passwords, reset tokens, session values and CSRF values
+  never enter audit metadata. Audit records have no read API yet.
 - Every non-safe request authenticated by a browser session must send an
   `Origin` that exactly matches `CORS_ORIGINS` and the current CSRF token in
   `X-CSRF-Token`. Successful password changes also rotate both credentials

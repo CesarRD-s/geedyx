@@ -11,10 +11,20 @@ import {
   isPermissionCode,
   type PermissionCode,
 } from '../authorization/permissions.js';
+import {
+  AuditAction,
+  AuditActor,
+  AuditResult,
+  AuditService,
+} from '../../audit/audit.service.js';
+import { requestAuditContext } from '../../audit/request-audit-context.js';
 
 @Injectable()
 export class AccountStatusGuard implements CanActivate {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
@@ -42,9 +52,11 @@ export class AccountStatusGuard implements CanActivate {
     });
 
     if (!user) {
+      await this.recordDenial(request, 'user_not_found');
       throw new UnauthorizedException('User not found');
     }
     if (user.status === 'SUSPENDED') {
+      await this.recordDenial(request, 'account_suspended');
       throw new ForbiddenException('Account is suspended');
     }
 
@@ -61,5 +73,22 @@ export class AccountStatusGuard implements CanActivate {
     request.user.companyId = user.companyId;
     request.user.permissions = [...permissions];
     return true;
+  }
+
+  private recordDenial(
+    request: AuthenticatedRequest,
+    reason: string,
+  ): Promise<{ id: string; sequence: bigint }> {
+    return this.audit.record({
+      companyId: request.user.companyId,
+      actorType: AuditActor.InternalUser,
+      actorId: request.user.id,
+      action: AuditAction.AuthorizationDeny,
+      outcome: AuditResult.Denied,
+      targetType: 'user',
+      targetId: request.user.id,
+      ...requestAuditContext(request),
+      metadata: { reason },
+    });
   }
 }

@@ -7,6 +7,7 @@ import { AccountStatusGuard } from '../auth/guards/account-status.guard.js';
 import { SessionAuthGuard } from '../auth/guards/session-auth.guard.js';
 import { PermissionsGuard } from '../auth/guards/permissions.guard.js';
 import { RecentAuthenticationGuard } from '../auth/guards/recent-authentication.guard.js';
+import { requestAuditContext } from '../audit/request-audit-context.js';
 import { CompanyService } from './company.service.js';
 import { UpdateCompanySettingsDto } from './dto/update-company-settings.dto.js';
 
@@ -25,6 +26,11 @@ export class CompanyController {
     @Req() req: AuthenticatedRequest,
     @Body() dto: UpdateCompanySettingsDto,
   ) {
-    return this.service.update(req.user.companyId, dto);
+    return this.service.update(
+      req.user.companyId,
+      req.user.id,
+      dto,
+      requestAuditContext(req),
+    );
   }
 }

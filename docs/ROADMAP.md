@@ -140,8 +140,10 @@ enforced consistently.
   and security-sensitive mutations. P1.5a.1 adds the immutable PostgreSQL
   ledger and typed transactional writer. P1.5a.2 records installation, login,
   logout, password recovery, password changes, reauthentication and session
-  revocation. Identity, configuration and authorization coverage follows in
-  the remaining P1.5a slices.
+  revocation. P1.5a.3 records internal-user creation and updates, company
+  settings changes, and authorization denials from permission, account-status
+  and recent-authentication checks. Remaining sensitive domain mutations follow
+  in later P1.5a slices.
 - Add integration clients with hashed scoped credentials, rotation, revocation
   and idempotency records.
 - Define signed inbound/outbound webhook envelopes and replay protection.

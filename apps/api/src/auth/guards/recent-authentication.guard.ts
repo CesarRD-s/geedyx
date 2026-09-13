@@ -8,18 +8,27 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import type { AuthenticatedRequest } from '../authorization/authenticated-request.js';
 import { durationToMs } from '../duration.js';
+import {
+  AuditAction,
+  AuditActor,
+  AuditResult,
+  AuditService,
+} from '../../audit/audit.service.js';
+import { requestAuditContext } from '../../audit/request-audit-context.js';
 
 @Injectable()
 export class RecentAuthenticationGuard implements CanActivate {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
+    private readonly audit: AuditService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const sessionId = request.user.sessionId;
     if (!sessionId) {
+      await this.recordDenial(request);
       throw this.requiredException();
     }
 
@@ -38,6 +47,7 @@ export class RecentAuthenticationGuard implements CanActivate {
       );
 
     if (!session || session.reauthenticatedAt.getTime() < threshold) {
+      await this.recordDenial(request);
       throw this.requiredException();
     }
     return true;
@@ -47,6 +57,22 @@ export class RecentAuthenticationGuard implements CanActivate {
     return new ForbiddenException({
       code: 'REAUTHENTICATION_REQUIRED',
       message: 'Recent authentication required',
+    });
+  }
+
+  private recordDenial(
+    request: AuthenticatedRequest,
+  ): Promise<{ id: string; sequence: bigint }> {
+    return this.audit.record({
+      companyId: request.user.companyId,
+      actorType: AuditActor.InternalUser,
+      actorId: request.user.id,
+      action: AuditAction.AuthorizationDeny,
+      outcome: AuditResult.Denied,
+      targetType: 'session',
+      targetId: request.user.sessionId,
+      ...requestAuditContext(request),
+      metadata: { reason: 'recent_authentication_required' },
     });
   }
 }
