@@ -9,7 +9,7 @@ Last reviewed: 2026-09-13
 ## Active milestone
 
 **Phase 1 - Secure platform foundation**
-Current slice: **P1.5 - Audit, integration and files foundation**
+Current slice: **P1.4b - Password recovery and sensitive-operation reauthentication**
 
 ## Implemented
 
@@ -54,6 +54,9 @@ Current slice: **P1.5 - Audit, integration and files foundation**
   authentication screens; the compact sidebar uses the icon mark.
 - Shared buttons render icon + label content in one horizontal flex row; the
   compact sidebar exposes a single clickable brand icon to expand it.
+- The workspace header shows the current date and time with the effective
+  language and time zone. Compact headers show time only; the UI omits city,
+  zone abbreviation, seconds and calendar actions.
 
 ## Prototype limitations to remove in Phase 1
 
@@ -78,7 +81,12 @@ P1.4a.5 completes the account and temporal foundation with strict UTC instant
 parsing, explicit IANA-zone conversion in both directions and regional instant
 formatting. Nonexistent and ambiguous local times are rejected instead of being
 silently adjusted. Session activity now consumes the shared formatter. P1.4a
-does not add operational calendar or scheduling. Next: P1.5 audit foundation.
+does not add operational calendar or scheduling. P1.4a.6 adds the current date
+and time to the workspace header without displaying a city, zone abbreviation
+or seconds. The compact mobile header shows time only and the value refreshes at
+minute boundaries. Next: complete P1.4b password recovery and
+sensitive-operation reauthentication, then P1.4c authentication hardening
+before P1.5.
 
 ## Documentation rule
 

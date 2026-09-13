@@ -692,6 +692,14 @@ must handle every discriminated result and may submit only `status: "ok"`.
 and overlaps remain visible validation states. A form must not resolve them with
 the browser's implicit zone or JavaScript date normalization.
 
+The workspace header clock displays the current date and time using the
+effective locale and time zone from the authenticated regional context. It uses
+minute precision and updates at the next minute boundary. The desktop header
+shows date and time; the compact mobile header shows time only. It does not show
+a city, time-zone abbreviation, seconds, calendar controls or scheduling
+actions. Its first server render reserves the same space with a nonverbal
+placeholder so hydration cannot present server-local time as user-local time.
+
 Every interactive control follows the same lifecycle:
 
 1. **Idle**: action is available and its label explains the result.

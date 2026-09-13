@@ -95,8 +95,34 @@ enforced consistently.
   in P1.4a.4.
 - Persist instants in UTC and convert only at display or local-input boundaries.
   Completed in P1.4a.5.
+- Show the current date and time in the workspace header using the effective
+  locale and time zone. The compact mobile presentation shows time only. No
+  city, time-zone abbreviation or seconds are displayed. Completed in
+  P1.4a.6.
 - Defer an operational calendar until a business domain owns appointments,
   deadlines or scheduled work.
+
+### P1.4b - Password recovery and sensitive-operation reauthentication
+
+**Planned.**
+
+- Complete password change and require recent reauthentication for sensitive
+  account and administration operations.
+- Add single-use, expiring password-reset tokens without exposing stored token
+  values.
+- Define a delivery boundary for recovery messages and the audit events that
+  P1.5 will persist for recovery and reauthentication outcomes.
+
+### P1.4c - Authentication hardening
+
+**Planned.**
+
+- Persist rate-limit state for authentication, recovery and other sensitive
+  endpoints so process restarts cannot clear enforcement.
+- Verify session rotation, idle and absolute expiry, revocation, browser origin
+  and CSRF behavior as one documented security contract.
+- Keep the account model ready for a later MFA implementation without exposing
+  an incomplete enrollment flow.
 
 ### P1.5 - Audit, integration and files foundation
 
