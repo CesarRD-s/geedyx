@@ -80,18 +80,21 @@ enforced consistently.
 
 ### P1.4a - Account context and temporal foundation
 
-**Active.**
+**Complete.**
 
 - Establish parent modules and child routes for `Mi cuenta` and
-  `Administración` before adding more workspace domains.
+  `Administración` before adding more workspace domains. Completed.
 - Centralize personal profile, personal preferences and security so each value
-  has one owner and one write path.
+  has one owner and one write path. Completed in P1.4a.2.
 - Define company defaults and personal overrides for language and time zone;
-  retain base currency as a company-wide setting.
+  retain base currency as a company-wide setting. Completed in P1.4a.2.
 - Implement real `es` and `en` catalogs before exposing an effective language
-  selector.
-- Create shared accessible date, time and date-range input primitives.
+  selector. Completed in P1.4a.3 for the secure platform shell and account,
+  company and security surfaces.
+- Create shared accessible date, time and date-range input primitives. Completed
+  in P1.4a.4.
 - Persist instants in UTC and convert only at display or local-input boundaries.
+  Completed in P1.4a.5.
 - Defer an operational calendar until a business domain owns appointments,
   deadlines or scheduled work.
 

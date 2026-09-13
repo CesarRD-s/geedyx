@@ -167,8 +167,8 @@ export async function getCurrentUser(): Promise<AuthUser> {
 
 export async function updateProfile(input: {
   displayName?: string;
-  locale?: "es" | "en";
-  timeZone?: string;
+  locale?: "es" | "en" | null;
+  timeZone?: string | null;
 }): Promise<AuthUser> {
   return clientFetch<AuthUser>("/auth/profile", {
     method: "PATCH",

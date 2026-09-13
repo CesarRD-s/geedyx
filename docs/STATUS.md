@@ -4,18 +4,20 @@ This file is the living handoff for development. Update it in the same change
 whenever a milestone, schema, public API contract, security control or shared UI
 pattern changes. Detailed decisions remain in their domain document.
 
-Last reviewed: 2026-09-12
+Last reviewed: 2026-09-13
 
 ## Active milestone
 
 **Phase 1 - Secure platform foundation**
-Current slice: **P1.4a - Account context and temporal foundation**
+Current slice: **P1.5 - Audit, integration and files foundation**
 
 ## Implemented
 
 - pnpm monorepo with separate Next.js and NestJS applications.
 - PostgreSQL through Prisma migrations owned by the API.
 - Setup/login/logout/me with Argon2id and persisted opaque browser sessions.
+  Concurrent login retains existing sessions within the configured limit and
+  revokes only the oldest excess sessions.
 - Prototype category and product CRUD, simple stock and local product images.
 - Private administration shell, responsive drawer and persistent collapsible
   sidebar.
@@ -34,15 +36,16 @@ Current slice: **P1.4a - Account context and temporal foundation**
   in one transaction. It asks only for the owner account and confirmation of
   its password; completed installations redirect `/setup` to `/app` for an
   active session or `/login` otherwise.
-- Company name, default language (`es` or `en`), time zone and base currency
-  are optional database settings. They are managed at `/app/settings` by users
+- Company name, stored default language (`es` or `en`), time zone and base currency
+  are optional database settings. They are managed at `/app/administration/company` by users
   with `company.manage`; pending values never block access to the workspace.
 - Internal users have display name, locale, time zone, account state and login
   metadata. System roles and database-backed permissions protect catalog and
   user operations; suspended users lose protected access immediately.
-- `/app/profile` lets each authenticated user update their own display name,
-  language and time zone. These individual preferences do not alter company defaults.
-- `/app/users` provides permission-aware administration of internal users,
+- `/app/account/profile` owns display name; `/app/account/preferences` owns
+  personal language and time zone. Individual preferences do not alter company
+  defaults; `es` and `en` are active for the documented platform surfaces.
+- `/app/administration/users` provides permission-aware administration of internal users,
   account status and role assignments. The installation owner is protected from
   suspension and reassignment.
 - Official GEEDYX UI contract: semantic colors, configurable accent,
@@ -62,8 +65,20 @@ Current slice: **P1.4a - Account context and temporal foundation**
 
 ## Next deliverable
 
-Centralize account configuration, regional context and reusable date inputs.
-This slice does not add an operational calendar or business scheduling.
+P1.4a.1 reorganized the workspace around `Mi cuenta` and `Administración`.
+P1.4a.2 implements effective regional context, nullable personal overrides,
+validated time zones and a single personal preference write path. Session dates
+use the shared display context. Existing preferences are preserved by migration.
+P1.4a.3 adds type-checked es/en catalogs for the secure platform shell, dashboard,
+account, company and security surfaces. Personal and company language selectors
+are active, inheritance refreshes server context and the document language follows
+the effective locale. P1.4a.4 adds shared accessible date, time and inclusive
+date-range fields plus strict calendar-value parsing and stable formatting.
+P1.4a.5 completes the account and temporal foundation with strict UTC instant
+parsing, explicit IANA-zone conversion in both directions and regional instant
+formatting. Nonexistent and ambiguous local times are rejected instead of being
+silently adjusted. Session activity now consumes the shared formatter. P1.4a
+does not add operational calendar or scheduling. Next: P1.5 audit foundation.
 
 ## Documentation rule
 

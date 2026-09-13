@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Source_Sans_3, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/ui/theme-provider";
+import { getSession } from "@/lib/api/server";
 import "./globals.css";
 
 // Source Sans 3 is the GEEDYX UI family (variable font; 300–700 used). The wordmark is
@@ -21,10 +22,11 @@ export const metadata: Metadata = {
   description: "Product and inventory management platform",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const user = await getSession();
   return (
     <html
-      lang="es"
+      lang={user?.regionalContext.locale ?? "es"}
       suppressHydrationWarning
       className={`${sourceSans.variable} ${geistMono.variable} h-full antialiased`}
     >

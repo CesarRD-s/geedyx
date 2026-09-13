@@ -83,3 +83,11 @@ short-lived signed URLs.
 - Production backups require documented restore verification.
 - Migrations run before application rollout and must be backward compatible
   during rolling deployments.
+
+## Personal regional inheritance (P1.4a.2)
+
+User locale and timeZone are nullable, without database defaults. Null means
+inherit the current company setting, then es/UTC if absent. The migration
+preserves existing explicit values, including es and UTC, because their intent
+cannot be inferred. New accounts inherit; existing users can restore inheritance
+in Preferences. Currency remains company-owned and may be pending.

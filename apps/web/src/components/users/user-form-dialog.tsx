@@ -33,8 +33,6 @@ export function UserFormDialog({
   const [email, setEmail] = useState(user?.email ?? "");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState(user?.displayName ?? "");
-  const [locale, setLocale] = useState(user?.locale ?? "es");
-  const [timeZone, setTimeZone] = useState(user?.timeZone ?? "UTC");
   const [status, setStatus] = useState<"ACTIVE" | "SUSPENDED">(
     user?.status ?? "ACTIVE",
   );
@@ -78,8 +76,6 @@ export function UserFormDialog({
       if (isEdit) {
         await onSave({
           displayName: cleanDisplayName || undefined,
-          locale: locale.trim(),
-          timeZone: timeZone.trim(),
           ...(isOwner ? {} : { status, roleIds }),
         });
       } else {
@@ -129,7 +125,12 @@ export function UserFormDialog({
         </>
       }
     >
-      <form id="user-form" onSubmit={handleSubmit} noValidate className="space-y-5">
+      <form
+        id="user-form"
+        onSubmit={handleSubmit}
+        noValidate
+        className="space-y-5"
+      >
         {!isEdit ? (
           <fieldset className="grid gap-4 md:grid-cols-2">
             <div>
@@ -153,7 +154,9 @@ export function UserFormDialog({
               />
             </div>
             <div className="sm:col-span-2">
-              <FieldLabel htmlFor="user-password">Contraseña temporal</FieldLabel>
+              <FieldLabel htmlFor="user-password">
+                Contraseña temporal
+              </FieldLabel>
               <Input
                 id="user-password"
                 type="password"
@@ -162,7 +165,8 @@ export function UserFormDialog({
                 autoComplete="new-password"
               />
               <p className="mt-1 text-xs text-muted">
-                Debe tener al menos 12 caracteres. El cambio obligatorio de contraseña llega en P1.4.
+                Debe tener al menos 12 caracteres. El cambio obligatorio de
+                contraseña llega en P1.4.
               </p>
             </div>
           </fieldset>
@@ -194,38 +198,24 @@ export function UserFormDialog({
               </Select>
             </div>
           ) : null}
-          {isEdit ? (
-            <>
-              <div>
-                <FieldLabel htmlFor="user-locale">Idioma</FieldLabel>
-                <Input
-                  id="user-locale"
-                  value={locale}
-                  onChange={(event) => setLocale(event.target.value)}
-                />
-              </div>
-              <div>
-                <FieldLabel htmlFor="user-time-zone">Zona horaria</FieldLabel>
-                <Input
-                  id="user-time-zone"
-                  value={timeZone}
-                  onChange={(event) => setTimeZone(event.target.value)}
-                />
-              </div>
-            </>
-          ) : null}
         </fieldset>
 
         {isOwner ? (
           <p className="text-sm text-muted">
-            El propietario de instalación conserva su rol y estado para evitar perder el control de la empresa.
+            El propietario de instalación conserva su rol y estado para evitar
+            perder el control de la empresa.
           </p>
         ) : (
           <fieldset>
-            <legend className="text-sm font-medium text-foreground">Roles</legend>
+            <legend className="text-sm font-medium text-foreground">
+              Roles
+            </legend>
             <div className="mt-2 space-y-2">
               {roles.map((role) => (
-                <label key={role.id} className="flex items-start gap-2 text-sm text-foreground">
+                <label
+                  key={role.id}
+                  className="flex items-start gap-2 text-sm text-foreground"
+                >
                   <input
                     type="checkbox"
                     checked={roleIds.includes(role.id)}
@@ -235,7 +225,9 @@ export function UserFormDialog({
                   <span>
                     <span className="font-medium">{role.name}</span>
                     {role.description ? (
-                      <span className="ml-1 text-muted">- {role.description}</span>
+                      <span className="ml-1 text-muted">
+                        - {role.description}
+                      </span>
                     ) : null}
                   </span>
                 </label>

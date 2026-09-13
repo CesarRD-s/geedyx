@@ -35,6 +35,21 @@ consume only intentionally public, rate-limited data.
 - Requests and responses use UTF-8 JSON, ISO 8601 UTC timestamps and stable
   opaque IDs.
 
+Temporal contracts distinguish values that represent different concepts:
+
+- calendar dates use `YYYY-MM-DD` and never imply UTC or a time zone;
+- local wall-clock times use 24-hour `HH:mm` at minute precision;
+- date ranges use inclusive `start` and `end` calendar dates, with `start <= end`;
+- instants use ISO 8601 UTC strings ending in `Z`.
+
+An endpoint must name and document which contract each field uses. It must not
+parse a calendar date as midnight UTC or accept an ambiguous local date-time.
+At a local-input boundary, the client combines `YYYY-MM-DD`, `HH:mm` and an
+explicit IANA time zone. A valid unique result is submitted as canonical UTC
+with millisecond precision, for example `2026-09-13T15:30:00.000Z`. A daylight
+saving gap or overlap is a validation result and requires correction or an
+explicit product decision; the boundary never chooses an offset silently.
+
 ## Current endpoints
 
 - `GET /api/v1/health/live` reports process liveness.
@@ -123,3 +138,12 @@ their raw request body and provider signature before any business write occurs.
 
 The current authentication and business endpoints remain internal prototype
 behavior. They are not an integration contract for a third-party store.
+
+## Regional context (P1.4a.2)
+
+Authentication responses include `regionalContext`: effective `locale`, `timeZone`,
+`timeZoneSource` (`user`, `company`, `system`), `companyTimeZone` and company
+`currency` (nullable). Raw user `locale` and `timeZone` are nullable overrides.
+`PATCH /auth/profile` accepts null to restore inheritance; omitted fields stay
+unchanged. Time zones must be valid IANA identifiers. User administration no
+longer accepts personal locale or time zone. All paths use `/api/v1`.

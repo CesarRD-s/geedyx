@@ -172,8 +172,6 @@ export class UsersService {
         ...(dto.displayName !== undefined
           ? { displayName: dto.displayName || null }
           : {}),
-        ...(dto.locale !== undefined ? { locale: dto.locale } : {}),
-        ...(dto.timeZone !== undefined ? { timeZone: dto.timeZone } : {}),
         ...(dto.status !== undefined ? { status: dto.status } : {}),
         ...(roleIds
           ? {
@@ -209,8 +207,8 @@ export class UsersService {
     username: string;
     email: string;
     displayName: string | null;
-    locale: string;
-    timeZone: string;
+    locale: string | null;
+    timeZone: string | null;
     status: string;
     lastLoginAt: Date | null;
     createdAt: Date;

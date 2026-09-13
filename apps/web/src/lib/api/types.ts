@@ -11,8 +11,9 @@ export interface AuthUser {
   email: string;
   companyId: string;
   displayName: string | null;
-  locale: string;
-  timeZone: string;
+  locale: "es" | "en" | null;
+  timeZone: string | null;
+  regionalContext: RegionalContext;
   permissions: PermissionCode[];
 }
 
@@ -130,8 +131,8 @@ export interface InternalUser {
   username: string;
   email: string;
   displayName: string | null;
-  locale: string;
-  timeZone: string;
+  locale: string | null;
+  timeZone: string | null;
   status: "ACTIVE" | "SUSPENDED";
   lastLoginAt: string | null;
   createdAt: string;
@@ -161,8 +162,14 @@ export interface UserInput {
 
 export interface UserUpdateInput {
   displayName?: string;
-  locale?: string;
-  timeZone?: string;
   status?: "ACTIVE" | "SUSPENDED";
   roleIds?: string[];
+}
+
+export interface RegionalContext {
+  locale: string;
+  timeZone: string;
+  timeZoneSource: string;
+  companyTimeZone: string;
+  currency: string | null;
 }

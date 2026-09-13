@@ -1,7 +1,5 @@
-import { requireSession } from "@/lib/api/server";
-import { SecurityView } from "@/components/security/security-view";
+import { redirect } from "next/navigation";
 
-export default async function SecurityPage() {
-  await requireSession();
-  return <SecurityView />;
+export default function SecurityPage() {
+  redirect("/app/account/security");
 }

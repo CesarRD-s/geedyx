@@ -55,8 +55,8 @@ model User {
   company      Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
   installation Installation? @relation("InstallationOwner")
   displayName  String?
-  locale       String   @default("es")
-  timeZone     String   @default("UTC")
+  locale       String?
+  timeZone     String?
   status       UserStatus @default(ACTIVE)
   passwordChangedAt DateTime @default(now())
   lastLoginAt  DateTime?

@@ -1,5 +1,6 @@
 "use client";
 
+import { useRegionalContext } from "@/components/preferences/regional-context";
 import { useEffect, useState, type FormEvent } from "react";
 import {
   changePassword,
@@ -12,8 +13,12 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { FieldError, FieldLabel, Input } from "@/components/ui/field";
 import { PageHeader } from "@/components/ui/page-header";
+import { useTranslations } from "@/components/preferences/translation-context";
+import { formatUtcInstant, parseUtcInstant } from "@/lib/temporal/instant";
 
 export function SecurityView() {
+  const regional = useRegionalContext();
+  const t = useTranslations();
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -33,19 +38,19 @@ export function SecurityView() {
         if (active) setSessions(value);
       })
       .catch(() => {
-        if (active) setError("No se pudieron cargar las sesiones.");
+        if (active) setError(t("security.loadError"));
       });
     return () => {
       active = false;
     };
-  }, []);
+  }, [t]);
 
   async function handlePassword(
     event: FormEvent<HTMLFormElement>,
   ): Promise<void> {
     event.preventDefault();
     if (newPassword !== confirmPassword) {
-      setError("Las contraseñas no coinciden.");
+      setError(t("security.mismatch"));
       return;
     }
     setPending(true);
@@ -56,10 +61,10 @@ export function SecurityView() {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      setMessage("Contraseña actualizada. Las demás sesiones fueron cerradas.");
+      setMessage(t("security.updated"));
       await refresh();
     } catch {
-      setError("No se pudo actualizar la contraseña.");
+      setError(t("security.updateError"));
     } finally {
       setPending(false);
     }
@@ -68,8 +73,8 @@ export function SecurityView() {
   return (
     <section className="space-y-6">
       <PageHeader
-        title="Seguridad"
-        description="Gestiona tu contraseña y sesiones activas."
+        title={t("security.title")}
+        description={t("security.description")}
         action={
           <Button
             onClick={() => {
@@ -77,7 +82,7 @@ export function SecurityView() {
               setChangeOpen(true);
             }}
           >
-            Cambiar contraseña
+            {t("security.changePassword")}
           </Button>
         }
       />
@@ -89,13 +94,13 @@ export function SecurityView() {
       <div className="space-y-3 border-t border-border pt-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-base font-semibold text-foreground">
-            Sesiones activas
+            {t("security.sessions")}
           </h3>
           <Button
             variant="secondary"
             onClick={() => void revokeOtherSessions().then(refresh)}
           >
-            Cerrar las demás
+            {t("security.closeOthers")}
           </Button>
         </div>
         <ul className="divide-y divide-border rounded-md border border-border">
@@ -107,12 +112,16 @@ export function SecurityView() {
               <div>
                 <p className="text-sm font-medium text-foreground">
                   {session.current
-                    ? "Este dispositivo"
-                    : (session.userAgent ?? "Dispositivo desconocido")}
+                    ? t("security.thisDevice")
+                    : (session.userAgent ?? t("security.unknownDevice"))}
                 </p>
                 <p className="text-xs text-muted">
-                  Último uso:{" "}
-                  {new Date(session.lastUsedAt).toLocaleString("es")}
+                  {t("security.lastUsed")}:{" "}
+                  {formatSessionInstant(
+                    session.lastUsedAt,
+                    regional.locale,
+                    regional.timeZone,
+                  )}
                 </p>
               </div>
               {!session.current ? (
@@ -120,7 +129,7 @@ export function SecurityView() {
                   variant="secondary"
                   onClick={() => void revokeSession(session.id).then(refresh)}
                 >
-                  Cerrar sesión
+                  {t("security.closeSession")}
                 </Button>
               ) : null}
             </li>
@@ -129,8 +138,8 @@ export function SecurityView() {
       </div>
       {changeOpen ? (
         <Dialog
-          title="Cambiar contraseña"
-          description="Cerrarás las demás sesiones activas."
+          title={t("security.changePassword")}
+          description={t("security.changeDescription")}
           onClose={() => setChangeOpen(false)}
           size="md"
           footer={
@@ -140,15 +149,15 @@ export function SecurityView() {
                 onClick={() => setChangeOpen(false)}
                 disabled={pending}
               >
-                Cancelar
+                {t("common.cancel")}
               </Button>
               <Button
                 type="submit"
                 form="change-password"
                 loading={pending}
-                loadingLabel="Actualizando…"
+                loadingLabel={t("security.updating")}
               >
-                Actualizar contraseña
+                {t("security.updatePassword")}
               </Button>
             </>
           }
@@ -161,7 +170,7 @@ export function SecurityView() {
             >
               <div className="md:col-span-2">
                 <FieldLabel htmlFor="current-password">
-                  Contraseña actual
+                  {t("security.currentPassword")}
                 </FieldLabel>
                 <Input
                   id="current-password"
@@ -173,7 +182,9 @@ export function SecurityView() {
                 />
               </div>
               <div>
-                <FieldLabel htmlFor="new-password">Nueva contraseña</FieldLabel>
+                <FieldLabel htmlFor="new-password">
+                  {t("security.newPassword")}
+                </FieldLabel>
                 <Input
                   id="new-password"
                   type="password"
@@ -186,7 +197,7 @@ export function SecurityView() {
               </div>
               <div>
                 <FieldLabel htmlFor="confirm-password">
-                  Confirmar contraseña
+                  {t("security.confirmPassword")}
                 </FieldLabel>
                 <Input
                   id="confirm-password"
@@ -209,4 +220,13 @@ export function SecurityView() {
       ) : null}
     </section>
   );
+}
+
+function formatSessionInstant(
+  value: string,
+  locale: string,
+  timeZone: string,
+): string {
+  const instant = parseUtcInstant(value);
+  return instant ? formatUtcInstant(instant, locale, timeZone) : value;
 }

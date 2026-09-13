@@ -1,7 +1,5 @@
-import { SettingsView } from "@/components/settings/settings-view";
-import { requirePermission } from "@/lib/api/server";
+import { redirect } from "next/navigation";
 
-export default async function SettingsPage() {
-  await requirePermission("company.manage");
-  return <SettingsView />;
+export default function SettingsPage() {
+  redirect("/app/administration/company");
 }

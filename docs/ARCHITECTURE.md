@@ -55,6 +55,18 @@ Persisted instants are UTC. The company time zone governs business rules,
 documents and reporting. A user's time zone changes only that user's display.
 A shared date input is not an operational calendar or scheduling module.
 
+P1.4a.4 defines three frontend boundary values: calendar date (`YYYY-MM-DD`),
+local wall-clock time (`HH:mm`) and inclusive date range. Shared native input
+primitives keep these values as strings. They do not call `new Date(value)` or
+attach an implicit browser/UTC zone. Only an explicitly documented instant may
+cross the REST boundary as an ISO 8601 UTC value.
+
+P1.4a.5 centralizes instant boundaries in `lib/temporal/instant.ts`. Conversion
+from local input requires calendar date, local time and IANA zone. It resolves
+all matching offsets around the target wall time and returns a discriminated
+result, rejecting DST gaps and overlaps. Conversion from UTC always requires the
+display zone. Session timestamps use this shared parser and formatter.
+
 ## Authentication and authorization target
 
 The browser presents one random opaque token in an HttpOnly cookie. PostgreSQL
@@ -79,3 +91,16 @@ The repository currently has `auth`, `company`, `users`, `categories`,
 current catalog, company and users resources. Browser sessions are persisted in
 PostgreSQL. Audit, integrations, files and later business modules remain
 planned.
+
+The API resolves regional context from user overrides, company defaults and
+es/UTC fallbacks, independently per field. Invalid legacy values fall through.
+The authenticated workspace provides this result to client components; session
+dates consume it with an explicit time zone. Successful preference/company
+updates refresh the server context. Browser locale and time zone are never
+implicit defaults.
+
+P1.4a.3 implements the workspace translation boundary in Next.js. The API remains
+the authority for the effective locale. A server-safe catalog resolver and one
+client provider consume that value; both catalogs implement the same TypeScript
+key set. This keeps persistence and fallback rules in NestJS while presentation
+copy remains owned by the web application.

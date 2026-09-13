@@ -1,5 +1,5 @@
-import { ProfileView } from "@/components/profile/profile-view";
+import { redirect } from "next/navigation";
 
 export default function ProfilePage() {
-  return <ProfileView />;
+  redirect("/app/account/profile");
 }

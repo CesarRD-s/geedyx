@@ -4,13 +4,15 @@ import { getAdminStats, requireSession } from "@/lib/api/server";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { SummaryCard } from "@/components/summary-card";
+import { getTranslations } from "@/lib/i18n/catalogs";
 
 export const metadata: Metadata = {
   title: "Dashboard · GEEDYX",
 };
 
 export default async function AdminDashboardPage() {
-  await requireSession();
+  const user = await requireSession();
+  const t = getTranslations(user.regionalContext.locale);
   const stats = await getAdminStats();
   if (!stats) {
     redirect("/login");
@@ -21,35 +23,38 @@ export default async function AdminDashboardPage() {
   return (
     <section className="space-y-6">
       <PageHeader
-        title="Inventario"
-        description="Resumen de productos y categorías."
+        title={t("dashboard.title")}
+        description={t("dashboard.description")}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <SummaryCard label="Productos" value={productCounts.total} />
         <SummaryCard
-          label="Activos"
+          label={t("dashboard.products")}
+          value={productCounts.total}
+        />
+        <SummaryCard
+          label={t("dashboard.active")}
           value={productCounts.active}
-          detail="Disponibles en el catálogo público"
+          detail={t("dashboard.activeDetail")}
         />
         <SummaryCard
-          label="Inactivos"
+          label={t("dashboard.inactive")}
           value={productCounts.inactive}
-          detail="Ocultos del catálogo público"
+          detail={t("dashboard.inactiveDetail")}
         />
-        <SummaryCard label="Categorías" value={categoryCount} />
+        <SummaryCard label={t("dashboard.categories")} value={categoryCount} />
       </div>
 
       {productCounts.total === 0 && (
         <EmptyState
-          title="Aún no hay productos"
-          description="Cuando se registren productos, aquí aparecerán las cantidades."
+          title={t("dashboard.noProducts")}
+          description={t("dashboard.noProductsDescription")}
         />
       )}
       {categoryCount === 0 && (
         <EmptyState
-          title="Aún no hay categorías"
-          description="Los productos se organizan por categorías."
+          title={t("dashboard.noCategories")}
+          description={t("dashboard.noCategoriesDescription")}
         />
       )}
     </section>

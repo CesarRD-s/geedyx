@@ -17,22 +17,6 @@ export class UpdateUserDto {
   @MaxLength(120)
   displayName?: string;
 
-  @Transform(({ value }: { value: unknown }) =>
-    typeof value === 'string' ? value.trim() : value,
-  )
-  @IsOptional()
-  @IsString()
-  @MaxLength(16)
-  locale?: string;
-
-  @Transform(({ value }: { value: unknown }) =>
-    typeof value === 'string' ? value.trim() : value,
-  )
-  @IsOptional()
-  @IsString()
-  @MaxLength(64)
-  timeZone?: string;
-
   @IsOptional()
   @IsIn(['ACTIVE', 'SUSPENDED'])
   status?: 'ACTIVE' | 'SUSPENDED';

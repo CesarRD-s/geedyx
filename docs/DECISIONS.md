@@ -108,3 +108,36 @@ an operational calendar waits for a business domain that owns scheduled data.
 The previous single-administrator, stateless JWT, public-catalog and local-image
 MVP decisions describe prototype code only. They are superseded by the roadmap
 above and remain until migration work replaces them.
+
+### ADR-030 implementation: P1.4a.2
+
+Nullable overrides express inheritance without guessing whether existing es/UTC
+values were deliberately selected. Preserve them during migration. Resolve
+context in NestJS and deliver it through the authenticated profile; Next.js
+consumes it through one workspace provider. Company currency has no personal
+override or invented fallback. Language selection waits for real catalogs.
+
+### ADR-030 implementation: P1.4a.3
+
+The web application owns static interface catalogs. Spanish defines the key set
+and English must satisfy that set at compile time. The effective API locale chooses
+the catalog at the authenticated layout boundary. No translation dependency or
+client-only locale store is introduced. Language changes persist through the same
+profile or company API paths as the regional context and refresh server state.
+
+### ADR-030 implementation: P1.4a.4
+
+Calendar dates, local times and instants are different types at the application
+boundary. Native date and time controls expose stable local strings. Calendar
+formatting constructs a UTC-backed display-only date and fixes the formatter to
+UTC, so the host environment cannot move the chosen day. Converting a local date
+and time to an instant requires an explicit IANA zone and belongs to the next
+boundary slice. No calendar library is added before a business workflow needs it.
+
+### ADR-030 implementation: P1.4a.5
+
+UTC instant strings require an explicit `Z` and are normalized to millisecond
+precision. Local date/time conversion requires an IANA zone and enumerates the
+offsets valid around that wall time. Zero matches is a DST gap; multiple matches
+is an overlap. Both are rejected as typed outcomes. GEEDYX will not select the
+earlier or later offset until a future business domain documents that policy.

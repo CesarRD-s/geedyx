@@ -646,6 +646,7 @@ Shared primitives in `src/components/ui/` (single source of truth):
 | `Button` | `button.tsx` | primary/secondary/ghost/danger, sm/md, loading |
 | `IconButton` | `icon-button.tsx` | icon-only, mandatory `label` |
 | `Input`/`Select`/`Textarea`/`FieldLabel`/`FieldError` | `field.tsx` | forms |
+| `DateField`/`TimeField`/`DateRangeField` | `temporal-field.tsx` | local calendar and time input |
 | `Dialog` | `dialog.tsx` | accessible modal, sizes sm/md/lg |
 | `Badge` | `badge.tsx` | compact status indicator |
 | `EmptyState` | `empty-state.tsx` | dashed panel + action |
@@ -671,14 +672,25 @@ build an internal framework; add a component when it stops duplication.
 
 ## 24a. Account context and temporal inputs
 
-The future workspace navigation groups `Mi cuenta` (Perfil, Preferencias,
-Seguridad) and `Administración` (Empresa, Usuarios, Roles, Auditoría). These
-are parent modules with child routes, not independent duplicated settings.
+Workspace navigation groups `Mi cuenta` (Perfil, Preferencias, Seguridad) and
+`Administración` (Empresa, Usuarios, later Roles and Auditoría). These are
+parent modules with child routes, not independent duplicated settings.
 
-Date, time and date-range controls will be shared accessible primitives. They
+`DateField`, `TimeField` and `DateRangeField` are shared accessible primitives
+in `components/ui/temporal-field.tsx`. They use native controls with visible
+labels, controlled string values, disabled/required support and associated error
+messages. Date ranges constrain each endpoint with `min`/`max`; domain validation
+still calls `isValidDateRange` before submission. They
 accept local user input, preserve the selected calendar date without implicit
 UTC shifts and submit a documented API value. They are not an agenda, schedule
 or operational calendar.
+
+`localDateTimeToUtc` is the only supported local-input conversion helper. Forms
+must handle every discriminated result and may submit only `status: "ok"`.
+`utcInstantToLocal` prepares a persisted instant for the date/time controls;
+`formatUtcInstant` renders it with the effective locale and time zone. DST gaps
+and overlaps remain visible validation states. A form must not resolve them with
+the browser's implicit zone or JavaScript date normalization.
 
 Every interactive control follows the same lifecycle:
 
@@ -817,3 +829,16 @@ surfaces, delimit structures, define controls and communicate states.
 - [DESIGN-TOKENS.md](./DESIGN-TOKENS.md)
 - [DECISIONS.md](./DECISIONS.md) (ADR-027, ADR-029)
 - [AGENTS.md](../AGENTS.md)
+
+P1.4a.2: Preferences is the sole editor of personal time zone, with an explicit
+company-inheritance option and a saved effective-context summary. Profile edits
+identity only; user administration no longer edits regional preferences. Language
+selectors remain hidden in Preferences and Company until es/en catalogs exist.
+Security session timestamps use the shared regional context.
+
+P1.4a.3 provides type-checked `es` and `en` catalogs for the secure platform
+shell, dashboard, account, company and security surfaces. The effective locale
+selects one complete catalog, updates the document `lang` attribute and formats
+regional values. Preferences and Company expose their language selectors. A
+missing or unsupported stored locale resolves to Spanish; catalog keys cannot
+silently fall back at runtime.

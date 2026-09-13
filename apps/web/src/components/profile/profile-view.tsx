@@ -4,10 +4,12 @@ import { useEffect, useState, type FormEvent } from "react";
 import { getCurrentUser, updateProfile } from "@/lib/api/client";
 import type { AuthUser } from "@/lib/api/types";
 import { Button } from "@/components/ui/button";
-import { FieldError, FieldLabel, Input, Select } from "@/components/ui/field";
+import { FieldError, FieldLabel, Input } from "@/components/ui/field";
 import { PageHeader } from "@/components/ui/page-header";
+import { useTranslations } from "@/components/preferences/translation-context";
 
 export function ProfileView() {
+  const t = useTranslations();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -15,8 +17,8 @@ export function ProfileView() {
   useEffect(() => {
     void getCurrentUser()
       .then(setUser)
-      .catch(() => setError("No se pudo cargar tu perfil."));
-  }, []);
+      .catch(() => setError(t("profile.loadError")));
+  }, [t]);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!user) return;
@@ -24,16 +26,10 @@ export function ProfileView() {
     setSaved(false);
     setError(null);
     try {
-      setUser(
-        await updateProfile({
-          displayName: user.displayName ?? "",
-          locale: user.locale as "es" | "en",
-          timeZone: user.timeZone,
-        }),
-      );
+      setUser(await updateProfile({ displayName: user.displayName ?? "" }));
       setSaved(true);
     } catch {
-      setError("No se pudo guardar tu perfil.");
+      setError(t("profile.saveError"));
     } finally {
       setSaving(false);
     }
@@ -41,8 +37,8 @@ export function ProfileView() {
   return (
     <section className="space-y-6">
       <PageHeader
-        title="Mi perfil"
-        description="Administra tus preferencias personales."
+        title={t("profile.title")}
+        description={t("profile.description")}
       />
       {user ? (
         <form
@@ -51,7 +47,9 @@ export function ProfileView() {
           aria-busy={saving}
         >
           <div className="md:col-span-2">
-            <FieldLabel htmlFor="profile-name">Nombre visible</FieldLabel>
+            <FieldLabel htmlFor="profile-name">
+              {t("profile.displayName")}
+            </FieldLabel>
             <Input
               id="profile-name"
               value={user.displayName ?? ""}
@@ -61,41 +59,13 @@ export function ProfileView() {
               }
             />
           </div>
-          <div>
-            <FieldLabel htmlFor="profile-locale">Idioma</FieldLabel>
-            <Select
-              id="profile-locale"
-              value={user.locale}
-              onChange={(event) =>
-                setUser({ ...user, locale: event.target.value })
-              }
-            >
-              <option value="es">Español</option>
-              <option value="en">English</option>
-            </Select>
-          </div>
-          <div>
-            <FieldLabel htmlFor="profile-zone">Zona horaria</FieldLabel>
-            <Select
-              id="profile-zone"
-              value={user.timeZone}
-              onChange={(event) =>
-                setUser({ ...user, timeZone: event.target.value })
-              }
-            >
-              <option value="UTC">UTC</option>
-              <option value="America/Tegucigalpa">America/Tegucigalpa</option>
-              <option value="America/Mexico_City">America/Mexico_City</option>
-              <option value="America/Bogota">America/Bogota</option>
-            </Select>
-          </div>
           <div className="md:col-span-2">
             <Button
               type="submit"
               loading={saving}
-              loadingLabel="Guardando perfil"
+              loadingLabel={t("profile.saving")}
             >
-              Guardar perfil
+              {t("profile.save")}
             </Button>
           </div>
         </form>
@@ -103,7 +73,7 @@ export function ProfileView() {
       {error ? <FieldError>{error}</FieldError> : null}
       {saved ? (
         <p role="status" className="text-sm text-success-strong">
-          Perfil guardado.
+          {t("profile.saved")}
         </p>
       ) : null}
     </section>

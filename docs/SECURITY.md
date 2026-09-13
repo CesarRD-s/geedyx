@@ -27,6 +27,9 @@ database.
   `SameSite=Lax` unless a reviewed use case requires another policy.
 - Sessions have idle and absolute expiry, rotation, logout revocation and a
   “revoke other devices” action.
+- Login enforces the configured per-user session limit by revoking only the
+  oldest sessions that exceed capacity. Existing sessions remain valid while
+  capacity is available.
 - Password, email, MFA and privilege changes require reauthentication and revoke
   affected sessions.
 - Secrets, passwords, raw session values and reset tokens are never logged.

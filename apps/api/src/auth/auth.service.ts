@@ -1,3 +1,4 @@
+import { resolveRegionalContext } from './regional-context.js';
 import argon2 from 'argon2';
 import {
   BadRequestException,
@@ -26,8 +27,9 @@ export interface AuthUser {
   email: string;
   companyId: string;
   displayName: string | null;
-  locale: string;
-  timeZone: string;
+  locale: string | null;
+  timeZone: string | null;
+  regionalContext: ReturnType<typeof resolveRegionalContext>;
   permissions: PermissionCode[];
 }
 
@@ -49,6 +51,11 @@ function toAuthUser(
     | 'locale'
     | 'timeZone'
   >,
+  company: {
+    locale: string | null;
+    timeZone: string | null;
+    currency: string | null;
+  },
   permissions: PermissionCode[] = [],
 ): AuthUser {
   return {
@@ -59,6 +66,7 @@ function toAuthUser(
     displayName: user.displayName,
     locale: user.locale,
     timeZone: user.timeZone,
+    regionalContext: resolveRegionalContext(user, company),
     permissions,
   };
 }
@@ -201,6 +209,7 @@ export class AuthService {
         displayName: true,
         locale: true,
         timeZone: true,
+        company: { select: { locale: true, timeZone: true, currency: true } },
         roles: {
           select: {
             role: {
@@ -225,7 +234,7 @@ export class AuthService {
         return isPermissionCode(code) ? [code] : [];
       }),
     );
-    return toAuthUser(user, [...new Set(permissions)]);
+    return toAuthUser(user, user.company, [...new Set(permissions)]);
   }
 
   async updateProfile(
@@ -351,9 +360,9 @@ export class AuthService {
       select: { id: true },
       orderBy: { lastUsedAt: 'asc' },
     });
-    const sessionsToRevoke = activeSessions.slice(
-      Math.max(0, activeSessions.length - maximumSessions + 1),
-    );
+    const overflow = activeSessions.length - maximumSessions + 1;
+    const sessionsToRevoke =
+      overflow > 0 ? activeSessions.slice(0, overflow) : [];
     if (sessionsToRevoke.length > 0) {
       await this.prisma.session.updateMany({
         where: { id: { in: sessionsToRevoke.map((session) => session.id) } },
@@ -375,6 +384,10 @@ export class AuthService {
       },
     });
 
-    return { user: toAuthUser(user), token, csrfToken, cookieMaxAge };
+    const company = await this.prisma.company.findUniqueOrThrow({
+      where: { id: user.companyId },
+      select: { locale: true, timeZone: true, currency: true },
+    });
+    return { user: toAuthUser(user, company), token, csrfToken, cookieMaxAge };
   }
 }
