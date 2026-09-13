@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -77,6 +77,13 @@ export function WorkspaceShell({ user, children }: WorkspaceShellProps) {
   }
 
   return (
+    <>
+      <a
+        href="#main-content"
+        className="sr-only fixed left-4 top-4 z-50 rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-foreground focus:not-sr-only focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+      >
+        Saltar al contenido principal
+      </a>
     <div className="flex min-h-screen bg-background">
       <aside className={`fixed inset-y-0 left-0 z-20 hidden flex-col border-r border-border bg-surface md:flex ${sidebarCollapsed ? "w-16" : "w-60"}`}>
         <Brand collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
@@ -127,7 +134,7 @@ export function WorkspaceShell({ user, children }: WorkspaceShellProps) {
           </div>
         </header>
 
-        <main className="flex-1 p-4 sm:p-6">{children}</main>
+        <main id="main-content" tabIndex={-1} className="flex-1 p-4 sm:p-6">{children}</main>
       </div>
 
       {drawerOpen && (
@@ -138,6 +145,7 @@ export function WorkspaceShell({ user, children }: WorkspaceShellProps) {
         />
       )}
     </div>
+    </>
   );
 }
 
@@ -228,9 +236,49 @@ function MobileDrawer({
   user: AuthUser;
   onClose: () => void;
 }) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    closeButtonRef.current?.focus();
+
+    return () => {
+      previouslyFocused?.focus();
+    };
+  }, []);
+
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (event.key === "Escape") {
+      event.preventDefault();
       onClose();
+      return;
+    }
+    if (event.key !== "Tab") {
+      return;
+    }
+
+    const panel = panelRef.current;
+    if (!panel) {
+      return;
+    }
+    const focusable = Array.from(
+      panel.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ),
+    );
+    if (focusable.length === 0) {
+      return;
+    }
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
     }
   }
 
@@ -242,6 +290,7 @@ function MobileDrawer({
         aria-hidden="true"
       />
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-label="Menú de administración"
@@ -249,7 +298,12 @@ function MobileDrawer({
       >
         <div className="flex h-14 items-center justify-between border-b border-border pl-4 pr-3">
           <BrandLogo priority />
-          <IconButton label="Cerrar menú" tooltip="Cerrar menú" onClick={onClose}>
+          <IconButton
+            ref={closeButtonRef}
+            label="Cerrar menú"
+            tooltip="Cerrar menú"
+            onClick={onClose}
+          >
             <X className="h-5 w-5" aria-hidden="true" />
           </IconButton>
         </div>

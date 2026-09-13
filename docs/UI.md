@@ -609,12 +609,18 @@ right on phones and tablets.
 
 ## 22. Accessibility
 
-Minimum bar (CP12):
+Accessibility is a release requirement for every screen and flow, including
+authentication and security settings. The target is WCAG 2.2 AA for the
+application interface.
+
+Minimum bar:
 
 - visible `focus-visible` ring on every interactive element
   (`focus-visible:ring-2 focus-visible:ring-accent/40`)
-- full keyboard navigation: dialogs (focus trap + Escape + restore), drawers,
-  pagination, filters
+- a visible-on-focus skip link leads to the main content of the workspace
+- full keyboard navigation: dialogs and drawers trap focus, support Escape and
+  restore focus to their trigger; pagination, filters and actions use native
+  controls
 - labels on all fields; `aria-label` on all icon-only buttons
 - contrast meeting WCAG AA in both themes (token pairs)
 - clear disabled states
@@ -622,6 +628,12 @@ Minimum bar (CP12):
 - dialogs: `role="dialog"`, `aria-modal`, `aria-label`, trapped focus
 - no information conveyed by color alone (dot + text on badges, icon + label
   on actions)
+
+Keyboard shortcuts are optional enhancements, never the sole way to complete
+an action. Do not use `accesskey`, override browser or assistive-technology
+shortcuts, or bind global keys without a documented, discoverable purpose. A
+shortcut must work only when it does not intercept typing in a field, and must
+be disabled while a dialog or drawer owns focus.
 
 ---
 
