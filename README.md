@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="apps/web/src/assets/geedyx-logo-horizontal-light.png" alt="GEEDYX" width="360" />
+  <img src="apps/web/src/assets/geedyx-logo-horizontal-dark.png" alt="GEEDYX" width="360" />
 </p>
 
 # GEEDYX
