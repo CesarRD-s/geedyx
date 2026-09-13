@@ -30,4 +30,3 @@ export class SessionAuthGuard implements CanActivate {
     return true;
   }
 }
-
