@@ -26,6 +26,12 @@ describe('validateEnvironment', () => {
     expect(() =>
       validateEnvironment({ ...VALID_ENVIRONMENT, SESSION_IDLE_TTL: 'never' }),
     ).toThrow('SESSION_IDLE_TTL');
+    expect(() =>
+      validateEnvironment({
+        ...VALID_ENVIRONMENT,
+        REAUTHENTICATION_TTL: 'forever',
+      }),
+    ).toThrow('REAUTHENTICATION_TTL');
   });
 
   it('rejects invalid session limits', () => {

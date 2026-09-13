@@ -1,4 +1,4 @@
-import { ApiError, apiUrl, readErrorMessage } from "./http";
+import { ApiError, apiUrl, readErrorResponse } from "./http";
 import type {
   AuthUser,
   CategorySummary,
@@ -46,7 +46,8 @@ async function clientFetch<T>(
   }
 
   if (!response.ok) {
-    throw new ApiError(response.status, await readErrorMessage(response));
+    const error = await readErrorResponse(response);
+    throw new ApiError(response.status, error.message, error.code);
   }
 
   if (response.status === 204) {
@@ -198,6 +199,18 @@ export async function changePassword(input: {
     method: "POST",
     body: JSON.stringify(input),
   });
+}
+
+export async function reauthenticate(password: string): Promise<{
+  reauthenticatedUntil: string;
+}> {
+  return clientFetch<{ reauthenticatedUntil: string }>(
+    "/auth/reauthenticate",
+    {
+      method: "POST",
+      body: JSON.stringify({ password }),
+    },
+  );
 }
 
 export async function getCompanySettings(): Promise<CompanySettings> {

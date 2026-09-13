@@ -700,6 +700,13 @@ a city, time-zone abbreviation, seconds, calendar controls or scheduling
 actions. Its first server render reserves the same space with a nonverbal
 placeholder so hydration cannot present server-local time as user-local time.
 
+When the API returns `REAUTHENTICATION_REQUIRED`, the current sensitive action
+keeps its recoverable draft and asks for the current password. A successful
+confirmation retries that same action once. Company settings use the shared
+reauthentication dialog; the existing user dialog reveals an inline password
+field so dialogs are never stacked. The browser does not calculate or persist
+the recent-authentication window.
+
 Every interactive control follows the same lifecycle:
 
 1. **Idle**: action is available and its label explains the result.

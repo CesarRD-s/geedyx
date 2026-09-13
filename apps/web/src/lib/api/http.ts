@@ -2,6 +2,7 @@ export class ApiError extends Error {
   constructor(
     readonly status: number | null,
     message: string,
+    readonly code?: string,
   ) {
     super(message);
     this.name = "ApiError";
@@ -22,23 +23,32 @@ export function apiUrl(path: string): string {
 }
 
 export async function readErrorMessage(response: Response): Promise<string> {
+  return (await readErrorResponse(response)).message;
+}
+
+export async function readErrorResponse(
+  response: Response,
+): Promise<{ message: string; code?: string }> {
   try {
     const body: unknown = await response.json();
     if (isErrorBody(body)) {
-      return body.message;
+      return { message: body.message, code: body.code };
     }
   } catch {
     // Malformed error body; fall through to the status-based fallback.
   }
-  return `La solicitud falló con el estado ${response.status}.`;
+  return { message: `La solicitud falló con el estado ${response.status}.` };
 }
 
-function isErrorBody(body: unknown): body is { message: string } {
+function isErrorBody(
+  body: unknown,
+): body is { message: string; code?: string } {
   return (
     typeof body === "object" &&
     body !== null &&
     "message" in body &&
-    typeof body.message === "string"
+    typeof body.message === "string" &&
+    (!("code" in body) || typeof body.code === "string")
   );
 }
 

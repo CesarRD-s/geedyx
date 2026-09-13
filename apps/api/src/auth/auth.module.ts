@@ -5,6 +5,7 @@ import { AuthService } from './auth.service.js';
 import { AccountStatusGuard } from './guards/account-status.guard.js';
 import { SessionAuthGuard } from './guards/session-auth.guard.js';
 import { PermissionsGuard } from './guards/permissions.guard.js';
+import { RecentAuthenticationGuard } from './guards/recent-authentication.guard.js';
 
 @Global()
 @Module({
@@ -15,7 +16,13 @@ import { PermissionsGuard } from './guards/permissions.guard.js';
     SessionAuthGuard,
     AccountStatusGuard,
     PermissionsGuard,
+    RecentAuthenticationGuard,
   ],
-  exports: [SessionAuthGuard, AccountStatusGuard, PermissionsGuard],
+  exports: [
+    SessionAuthGuard,
+    AccountStatusGuard,
+    PermissionsGuard,
+    RecentAuthenticationGuard,
+  ],
 })
 export class AuthModule {}

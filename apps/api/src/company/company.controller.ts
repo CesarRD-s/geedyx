@@ -6,6 +6,7 @@ import { RequirePermissions } from '../auth/authorization/require-permissions.de
 import { AccountStatusGuard } from '../auth/guards/account-status.guard.js';
 import { SessionAuthGuard } from '../auth/guards/session-auth.guard.js';
 import { PermissionsGuard } from '../auth/guards/permissions.guard.js';
+import { RecentAuthenticationGuard } from '../auth/guards/recent-authentication.guard.js';
 import { CompanyService } from './company.service.js';
 import { UpdateCompanySettingsDto } from './dto/update-company-settings.dto.js';
 
@@ -18,7 +19,7 @@ export class CompanyController {
     return this.service.get(req.user.companyId);
   }
   @Patch('settings')
-  @UseGuards(PermissionsGuard)
+  @UseGuards(PermissionsGuard, RecentAuthenticationGuard)
   @RequirePermissions(PermissionCode.CompanyManage)
   update(
     @Req() req: AuthenticatedRequest,

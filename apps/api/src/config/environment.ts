@@ -99,6 +99,11 @@ export function validateEnvironment(
       1,
       20,
     ),
+    REAUTHENTICATION_TTL: durationValue(
+      environment,
+      'REAUTHENTICATION_TTL',
+      '10m',
+    ),
     PORT: integerValue(environment, 'PORT', 3001, 1, 65_535),
     MAX_IMAGE_SIZE_MB: String(
       integerValue(environment, 'MAX_IMAGE_SIZE_MB', 5, 1, 25),

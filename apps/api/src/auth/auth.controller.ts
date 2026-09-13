@@ -21,6 +21,7 @@ import { LoginDto } from './dto/login.dto.js';
 import { SetupDto } from './dto/setup.dto.js';
 import { ChangePasswordDto } from './dto/change-password.dto.js';
 import { UpdateProfileDto } from './dto/update-profile.dto.js';
+import { ReauthenticateDto } from './dto/reauthenticate.dto.js';
 import { SessionAuthGuard } from './guards/session-auth.guard.js';
 import { AccountStatusGuard } from './guards/account-status.guard.js';
 import { AUTH_COOKIE_NAME, CSRF_COOKIE_NAME } from './session.constants.js';
@@ -137,6 +138,21 @@ export class AuthController {
       dto.currentPassword,
       dto.newPassword,
       req.user.sessionId ?? '',
+    );
+  }
+
+  @Post('reauthenticate')
+  @HttpCode(HttpStatus.OK)
+  @Throttle(LOGIN_ATTEMPTS)
+  @UseGuards(SessionAuthGuard, AccountStatusGuard)
+  async reauthenticate(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: ReauthenticateDto,
+  ) {
+    return this.authService.reauthenticate(
+      req.user.id,
+      req.user.sessionId ?? '',
+      dto.password,
     );
   }
 

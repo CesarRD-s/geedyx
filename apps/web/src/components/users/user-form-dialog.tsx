@@ -11,6 +11,7 @@ import type {
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { FieldError, FieldLabel, Input, Select } from "@/components/ui/field";
+import { reauthenticate } from "@/lib/api/client";
 
 const CHECKBOX_CLASS =
   "h-4 w-4 rounded border-border-strong text-accent focus:ring-accent/40";
@@ -41,6 +42,8 @@ export function UserFormDialog({
   );
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [needsReauthentication, setNeedsReauthentication] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
   const isEdit = user !== undefined;
   const isOwner = user?.roles.some((role) => role.code === "OWNER") ?? false;
 
@@ -59,6 +62,10 @@ export function UserFormDialog({
       setError("Selecciona al menos un rol.");
       return;
     }
+    if (needsReauthentication && !currentPassword) {
+      setError("Ingresa tu contraseña actual.");
+      return;
+    }
     if (!isEdit) {
       if (!username.trim() || !email.trim() || !password) {
         setError("Completa el usuario, correo y contraseña temporal.");
@@ -73,6 +80,9 @@ export function UserFormDialog({
     setPending(true);
     setError(null);
     try {
+      if (needsReauthentication) {
+        await reauthenticate(currentPassword);
+      }
       if (isEdit) {
         await onSave({
           displayName: cleanDisplayName || undefined,
@@ -88,7 +98,21 @@ export function UserFormDialog({
         });
       }
     } catch (cause) {
-      if (cause instanceof ApiError && cause.status === 409) {
+      if (
+        cause instanceof ApiError &&
+        cause.code === "REAUTHENTICATION_REQUIRED"
+      ) {
+        setNeedsReauthentication(true);
+        setError(
+          "Confirma tu contraseña actual para completar esta operación sensible.",
+        );
+      } else if (
+        needsReauthentication &&
+        cause instanceof ApiError &&
+        cause.status === 401
+      ) {
+        setError("No se pudo confirmar la contraseña.");
+      } else if (cause instanceof ApiError && cause.status === 409) {
         setError("El usuario o correo ya está en uso.");
       } else {
         setError(apiErrorMessage(cause));
@@ -235,6 +259,22 @@ export function UserFormDialog({
             </div>
           </fieldset>
         )}
+
+        {needsReauthentication ? (
+          <div>
+            <FieldLabel htmlFor="user-current-password">
+              Contraseña actual
+            </FieldLabel>
+            <Input
+              id="user-current-password"
+              type="password"
+              value={currentPassword}
+              onChange={(event) => setCurrentPassword(event.target.value)}
+              autoComplete="current-password"
+              required
+            />
+          </div>
+        ) : null}
 
         {error ? <FieldError>{error}</FieldError> : null}
       </form>

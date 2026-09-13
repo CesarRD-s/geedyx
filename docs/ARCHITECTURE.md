@@ -77,6 +77,12 @@ External integrations use independently revocable, scoped credentials.
 JWTs may later be used for a separate machine-to-machine or mobile strategy;
 they are not the planned browser-session mechanism.
 
+Recent authentication is session-scoped. Sensitive controllers compose the
+normal session and account guards with `RecentAuthenticationGuard`; the guard
+reads the persisted confirmation timestamp and configured validity window.
+Password verification stays in the authentication domain and browser state is
+never an authorization input.
+
 ## Files and asynchronous work
 
 Files are stored by an adapter and described by `FileAsset`. Business rows refer

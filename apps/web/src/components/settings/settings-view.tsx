@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { FieldError, FieldLabel, Input, Select } from "@/components/ui/field";
 import { PageHeader } from "@/components/ui/page-header";
 import { useTranslations } from "@/components/preferences/translation-context";
+import { ApiError } from "@/lib/api/http";
+import { ReauthenticationDialog } from "@/components/security/reauthentication-dialog";
 
 const emptySettings: CompanySettings = {
   name: null,
@@ -25,6 +27,7 @@ export function SettingsView() {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [reauthenticationOpen, setReauthenticationOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -46,8 +49,7 @@ export function SettingsView() {
     };
   }, [t]);
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function saveSettings(): Promise<void> {
     setError(null);
     setSaved(false);
     setSaving(true);
@@ -63,10 +65,22 @@ export function SettingsView() {
       setSaved(true);
       router.refresh();
     } catch (cause) {
-      setError(apiErrorMessage(cause));
+      if (
+        cause instanceof ApiError &&
+        cause.code === "REAUTHENTICATION_REQUIRED"
+      ) {
+        setReauthenticationOpen(true);
+      } else {
+        setError(apiErrorMessage(cause));
+      }
     } finally {
       setSaving(false);
     }
+  }
+
+  function submit(event: FormEvent<HTMLFormElement>): void {
+    event.preventDefault();
+    void saveSettings();
   }
 
   return (
@@ -169,6 +183,15 @@ export function SettingsView() {
         <p role="status" className="text-sm text-success-strong">
           {t("company.saved")}
         </p>
+      ) : null}
+      {reauthenticationOpen ? (
+        <ReauthenticationDialog
+          onClose={() => setReauthenticationOpen(false)}
+          onAuthenticated={async () => {
+            setReauthenticationOpen(false);
+            await saveSettings();
+          }}
+        />
       ) : null}
     </section>
   );

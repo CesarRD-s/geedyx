@@ -81,6 +81,7 @@ model Session {
   ipAddress      String?
   createdAt      DateTime @default(now())
   lastUsedAt     DateTime @default(now())
+  reauthenticatedAt DateTime
   idleExpiresAt  DateTime
   expiresAt      DateTime
   revokedAt      DateTime?

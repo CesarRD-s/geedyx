@@ -32,6 +32,10 @@ database.
   capacity is available.
 - Password, email, MFA and privilege changes require reauthentication and revoke
   affected sessions.
+- A successful login starts the recent-authentication window for that session.
+  `POST /auth/reauthenticate` can renew it after verifying the current password.
+  The API enforces `REAUTHENTICATION_TTL` against the persisted session
+  timestamp; the frontend cannot extend the window itself.
 - Secrets, passwords, raw session values and reset tokens are never logged.
 
 ### Authorization and APIs
@@ -86,4 +90,6 @@ or stripped of its role by the user-management API.
 
 These controls do not yet provide MFA, audit events, integration credentials or
 durable multi-instance rate limiting. Password reset storage is ready but its
-delivery flow and reauthentication for sensitive actions remain planned.
+request, delivery and consumption flow remains planned. Recent authentication
+is enforced for company settings and internal-user mutations; additional
+sensitive domains must adopt the same guard when they are introduced.

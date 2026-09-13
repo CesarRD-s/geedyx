@@ -331,7 +331,39 @@ export class AuthService {
         where: { userId, id: { not: currentSessionId }, revokedAt: null },
         data: { revokedAt: now },
       }),
+      this.prisma.session.update({
+        where: { id: currentSessionId },
+        data: { reauthenticatedAt: now },
+      }),
     ]);
+  }
+
+  async reauthenticate(
+    userId: string,
+    sessionId: string,
+    password: string,
+  ): Promise<{ reauthenticatedUntil: Date }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { passwordHash: true },
+    });
+    if (!user || !(await argon2Verify(user.passwordHash, password))) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const reauthenticatedAt = new Date();
+    await this.prisma.session.updateMany({
+      where: { id: sessionId, userId, revokedAt: null },
+      data: { reauthenticatedAt },
+    });
+    return {
+      reauthenticatedUntil: new Date(
+        reauthenticatedAt.getTime() +
+          durationToMs(
+            this.configService.get<string>('REAUTHENTICATION_TTL', '10m'),
+          ),
+      ),
+    };
   }
 
   private async buildSession(
@@ -374,6 +406,7 @@ export class AuthService {
         userId: user.id,
         tokenHash: createHash('sha256').update(token).digest('hex'),
         csrfTokenHash: createHash('sha256').update(csrfToken).digest('hex'),
+        reauthenticatedAt: now,
         idleExpiresAt: new Date(
           now.getTime() +
             durationToMs(

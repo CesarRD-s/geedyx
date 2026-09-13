@@ -34,6 +34,11 @@ management API.
 Company `locale` and `timeZone` are defaults. User `locale` and `timeZone` are
 personal overrides. Timestamps remain UTC; neither field changes stored data.
 
+`Session.reauthenticatedAt` contains the last successful password confirmation
+for that session. The API updates it only after login, password change or
+explicit reauthentication. Authorization never trusts a browser timestamp for
+this decision.
+
 ## Foundation data model - planned
 
 Phase 1 introduces the following models before business modules are expanded:

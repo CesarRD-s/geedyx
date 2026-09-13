@@ -31,6 +31,11 @@ whose hash is stored in PostgreSQL. This supports revocation, device management,
 idle/absolute expiry and security-event invalidation without refresh-token
 complexity in the browser.
 
+P1.4b stores the last successful password confirmation on each session. A
+server-side guard compares that timestamp with a configurable short window for
+sensitive mutations. Login, password change and explicit reauthentication can
+renew the timestamp; browser state cannot.
+
 ## ADR-006 - Authorization is server-side permission based
 
 Internal users receive roles and permissions. Every protected API operation

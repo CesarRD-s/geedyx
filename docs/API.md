@@ -69,6 +69,12 @@ explicit product decision; the boundary never chooses an offset silently.
 - `GET /api/v1/auth/sessions`, `POST /api/v1/auth/sessions/:id/revoke` and
   `POST /api/v1/auth/sessions/revoke-others` manage the authenticated user's
   sessions. `POST /api/v1/auth/password/change` requires the current password.
+- `POST /api/v1/auth/reauthenticate` verifies the current password and marks
+  only the current server-side session as recently authenticated. It returns
+  `reauthenticatedUntil`; an invalid password is `401`.
+- Sensitive mutations return `403` when the current session has no recent
+  authentication. P1.4b initially applies this boundary to company settings and
+  internal-user creation or updates.
 - `/api/v1/categories` and `/api/v1/products` expose the current CRUD and image
   operations. Reads require `catalog.read`; mutations require `catalog.manage`.
 - `GET /api/v1/users` and `GET /api/v1/users/roles` require `users.read`.

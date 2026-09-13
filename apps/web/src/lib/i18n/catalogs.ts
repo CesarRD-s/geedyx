@@ -82,6 +82,12 @@ export const es = {
   "security.updateError": "No se pudo actualizar la contraseña.",
   "security.updated":
     "Contraseña actualizada. Las demás sesiones fueron cerradas.",
+  "reauth.title": "Confirma tu identidad",
+  "reauth.description":
+    "Ingresa tu contraseña actual para completar esta operación sensible.",
+  "reauth.confirm": "Confirmar y continuar",
+  "reauth.confirming": "Confirmando...",
+  "reauth.invalid": "No se pudo confirmar la contraseña.",
   "dashboard.title": "Inventario",
   "dashboard.description": "Resumen de productos y categorías.",
   "dashboard.products": "Productos",
@@ -186,6 +192,12 @@ const en: Record<MessageKey, string> = {
   "security.mismatch": "Passwords do not match.",
   "security.updateError": "The password could not be updated.",
   "security.updated": "Password updated. Your other sessions were closed.",
+  "reauth.title": "Confirm your identity",
+  "reauth.description":
+    "Enter your current password to complete this sensitive operation.",
+  "reauth.confirm": "Confirm and continue",
+  "reauth.confirming": "Confirming...",
+  "reauth.invalid": "The password could not be confirmed.",
   "dashboard.title": "Inventory",
   "dashboard.description": "Product and category summary.",
   "dashboard.products": "Products",

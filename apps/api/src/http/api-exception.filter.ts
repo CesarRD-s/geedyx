@@ -21,7 +21,18 @@ const ERROR_CODES: Record<number, string> = {
 };
 
 interface HttpExceptionBody {
+  code?: string;
   message?: string | string[];
+}
+
+function exceptionCode(exception: HttpException): string | undefined {
+  const body: unknown = exception.getResponse();
+  return typeof body === 'object' &&
+    body !== null &&
+    'code' in body &&
+    typeof body.code === 'string'
+    ? body.code
+    : undefined;
 }
 
 function exceptionMessages(exception: HttpException): string[] {
@@ -57,6 +68,9 @@ export class ApiExceptionFilter implements ExceptionFilter {
       ? exception.getStatus()
       : HttpStatus.INTERNAL_SERVER_ERROR;
     const details = isHttpException ? exceptionMessages(exception) : undefined;
+    const explicitCode = isHttpException
+      ? exceptionCode(exception)
+      : undefined;
 
     if (!isHttpException) {
       const trace =
@@ -69,7 +83,7 @@ export class ApiExceptionFilter implements ExceptionFilter {
 
     response.status(statusCode).json({
       statusCode,
-      code: ERROR_CODES[statusCode] ?? 'HTTP_ERROR',
+      code: explicitCode ?? ERROR_CODES[statusCode] ?? 'HTTP_ERROR',
       message:
         statusCode === HttpStatus.INTERNAL_SERVER_ERROR
           ? 'Ocurrió un error interno.'

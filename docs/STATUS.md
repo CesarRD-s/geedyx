@@ -57,6 +57,10 @@ Current slice: **P1.4b - Password recovery and sensitive-operation reauthenticat
 - The workspace header shows the current date and time with the effective
   language and time zone. Compact headers show time only; the UI omits city,
   zone abbreviation, seconds and calendar actions.
+- Sensitive company and internal-user mutations require a password confirmation
+  no older than the configured session window. The API persists and enforces
+  the confirmation timestamp; the web preserves the pending operation and
+  retries it only after successful reauthentication.
 
 ## Prototype limitations to remove in Phase 1
 
@@ -84,9 +88,10 @@ silently adjusted. Session activity now consumes the shared formatter. P1.4a
 does not add operational calendar or scheduling. P1.4a.6 adds the current date
 and time to the workspace header without displaying a city, zone abbreviation
 or seconds. The compact mobile header shows time only and the value refreshes at
-minute boundaries. Next: complete P1.4b password recovery and
-sensitive-operation reauthentication, then P1.4c authentication hardening
-before P1.5.
+minute boundaries. P1.4b now enforces recent authentication for company and
+internal-user mutations with a default 10-minute session window. Next: complete
+the single-use password-recovery tokens and delivery boundary, then P1.4c
+authentication hardening before P1.5.
 
 ## Documentation rule
 

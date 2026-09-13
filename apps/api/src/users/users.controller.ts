@@ -18,6 +18,7 @@ import { RequirePermissions } from '../auth/authorization/require-permissions.de
 import { AccountStatusGuard } from '../auth/guards/account-status.guard.js';
 import { SessionAuthGuard } from '../auth/guards/session-auth.guard.js';
 import { PermissionsGuard } from '../auth/guards/permissions.guard.js';
+import { RecentAuthenticationGuard } from '../auth/guards/recent-authentication.guard.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { ListUsersDto } from './dto/list-users.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
@@ -47,6 +48,7 @@ export class UsersController {
 
   @Post()
   @RequirePermissions(PermissionCode.UsersManage)
+  @UseGuards(RecentAuthenticationGuard)
   @HttpCode(HttpStatus.CREATED)
   create(@Req() request: AuthenticatedRequest, @Body() dto: CreateUserDto) {
     return this.usersService.create(request.user.companyId, dto);
@@ -54,6 +56,7 @@ export class UsersController {
 
   @Patch(':id')
   @RequirePermissions(PermissionCode.UsersManage)
+  @UseGuards(RecentAuthenticationGuard)
   update(
     @Req() request: AuthenticatedRequest,
     @Param('id') id: string,
