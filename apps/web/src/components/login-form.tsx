@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { login } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/http";
 import { Button } from "@/components/ui/button";
@@ -51,7 +52,15 @@ export function LoginForm() {
         />
       </div>
       <div>
-        <FieldLabel htmlFor="password">Contraseña</FieldLabel>
+        <div className="flex items-center justify-between gap-3">
+          <FieldLabel htmlFor="password">Contraseña</FieldLabel>
+          <Link
+            href="/forgot-password"
+            className="text-sm font-medium text-accent hover:underline"
+          >
+            ¿Olvidaste tu contraseña?
+          </Link>
+        </div>
         <Input
           id="password"
           name="password"

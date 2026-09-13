@@ -6,6 +6,7 @@ import { AccountStatusGuard } from './guards/account-status.guard.js';
 import { SessionAuthGuard } from './guards/session-auth.guard.js';
 import { PermissionsGuard } from './guards/permissions.guard.js';
 import { RecentAuthenticationGuard } from './guards/recent-authentication.guard.js';
+import { PasswordResetDeliveryService } from './password-reset-delivery.service.js';
 
 @Global()
 @Module({
@@ -17,6 +18,7 @@ import { RecentAuthenticationGuard } from './guards/recent-authentication.guard.
     AccountStatusGuard,
     PermissionsGuard,
     RecentAuthenticationGuard,
+    PasswordResetDeliveryService,
   ],
   exports: [
     SessionAuthGuard,

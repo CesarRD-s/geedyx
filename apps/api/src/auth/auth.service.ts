@@ -4,6 +4,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Optional,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -20,6 +21,7 @@ import {
 import { LoginDto } from './dto/login.dto.js';
 import { SetupDto } from './dto/setup.dto.js';
 import { UpdateProfileDto } from './dto/update-profile.dto.js';
+import { PasswordResetDeliveryService } from './password-reset-delivery.service.js';
 
 export interface AuthUser {
   id: string;
@@ -93,6 +95,8 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
+    @Optional()
+    private readonly passwordResetDelivery?: PasswordResetDeliveryService,
   ) {}
 
   async setup(dto: SetupDto): Promise<AuthSession> {
@@ -364,6 +368,107 @@ export class AuthService {
           ),
       ),
     };
+  }
+
+  async requestPasswordReset(email: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { email: email.trim().toLowerCase() },
+      select: { id: true, email: true, status: true },
+    });
+    if (!user || user.status !== 'ACTIVE') {
+      return;
+    }
+
+    const token = randomBytes(32).toString('base64url');
+    const now = new Date();
+    const expiresAt = new Date(
+      now.getTime() +
+        durationToMs(
+          this.configService.get<string>('PASSWORD_RESET_TTL', '30m'),
+        ),
+    );
+    const tokenRecord = await this.prisma.$transaction(async (transaction) => {
+      await transaction.passwordResetToken.updateMany({
+        where: { userId: user.id, usedAt: null },
+        data: { usedAt: now },
+      });
+      return transaction.passwordResetToken.create({
+        data: {
+          userId: user.id,
+          tokenHash: createHash('sha256').update(token).digest('hex'),
+          expiresAt,
+        },
+        select: { id: true },
+      });
+    });
+
+    const resetUrl = new URL(
+      this.configService.get<string>(
+        'PASSWORD_RESET_URL_BASE',
+        'http://localhost:3000/reset-password',
+      ),
+    );
+    resetUrl.searchParams.set('token', token);
+    const delivered =
+      (await this.passwordResetDelivery?.deliver({
+        recipient: user.email,
+        resetUrl: resetUrl.toString(),
+        expiresAt: expiresAt.toISOString(),
+      })) ?? false;
+    if (!delivered) {
+      await this.prisma.passwordResetToken.deleteMany({
+        where: { id: tokenRecord.id },
+      });
+    }
+  }
+
+  async resetPassword(
+    token: string,
+    newPassword: string,
+    confirmPassword: string,
+  ): Promise<void> {
+    if (newPassword !== confirmPassword) {
+      throw new BadRequestException('Passwords do not match');
+    }
+    const now = new Date();
+    const tokenHash = createHash('sha256').update(token).digest('hex');
+    const passwordHash = await argon2Hash(newPassword);
+
+    await this.prisma.$transaction(async (transaction) => {
+      const record = await transaction.passwordResetToken.findUnique({
+        where: { tokenHash },
+        select: {
+          id: true,
+          userId: true,
+          expiresAt: true,
+          usedAt: true,
+          user: { select: { status: true } },
+        },
+      });
+      if (
+        !record ||
+        record.usedAt ||
+        record.expiresAt <= now ||
+        record.user.status !== 'ACTIVE'
+      ) {
+        throw new BadRequestException('Invalid password reset token');
+      }
+      const consumed = await transaction.passwordResetToken.updateMany({
+        where: { id: record.id, usedAt: null, expiresAt: { gt: now } },
+        data: { usedAt: now },
+      });
+      if (consumed.count !== 1) {
+        throw new BadRequestException('Invalid password reset token');
+      }
+      await transaction.user.update({
+        where: { id: record.userId },
+        data: { passwordHash, passwordChangedAt: now },
+      });
+      await transaction.session.updateMany({
+        where: { userId: record.userId, revokedAt: null },
+        data: { revokedAt: now },
+      });
+    });
   }
 
   private async buildSession(

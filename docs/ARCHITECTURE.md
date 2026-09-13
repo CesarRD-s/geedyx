@@ -83,6 +83,13 @@ reads the persisted confirmation timestamp and configured validity window.
 Password verification stays in the authentication domain and browser state is
 never an authorization input.
 
+Password recovery is split between token ownership and message delivery.
+`AuthService` creates and consumes hashed one-time tokens.
+`PasswordResetDelivery` owns the external message boundary and receives the raw
+link only for the duration of one call. The default adapter posts a
+provider-neutral JSON envelope to a configured HTTPS endpoint; no provider SDK
+is coupled to the authentication domain.
+
 ## Files and asynchronous work
 
 Files are stored by an adapter and described by `FileAsset`. Business rows refer

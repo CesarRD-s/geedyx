@@ -16,6 +16,10 @@ database.
 - A persisted installation state prevents setup from reopening if users change.
 - Passwords use Argon2id with explicit parameters and rehashing when needed.
 - Password reset tokens are random, single-use, short-lived and stored hashed.
+- Password-reset requests return the same accepted response for existing,
+  missing and suspended accounts. Raw tokens exist only long enough to pass a
+  reset URL to the delivery adapter; they are never returned by the API or
+  written to logs. Successful consumption revokes every browser session.
 - Account status, password change time, failed login events and MFA readiness
   are server-side state.
 - MFA is required for privileged roles before production financial operations.
@@ -36,6 +40,11 @@ database.
   `POST /auth/reauthenticate` can renew it after verifying the current password.
   The API enforces `REAUTHENTICATION_TTL` against the persisted session
   timestamp; the frontend cannot extend the window itself.
+
+Production requires an HTTPS `PASSWORD_RESET_DELIVERY_ENDPOINT`. GEEDYX sends
+the configured adapter a recipient, expiry and one-time reset URL using a bearer
+credential. Development may leave delivery disabled; requests still preserve
+the non-enumerating response and discard undeliverable tokens.
 - Secrets, passwords, raw session values and reset tokens are never logged.
 
 ### Authorization and APIs
@@ -89,7 +98,8 @@ continue using protected resources. The installation owner cannot be suspended
 or stripped of its role by the user-management API.
 
 These controls do not yet provide MFA, audit events, integration credentials or
-durable multi-instance rate limiting. Password reset storage is ready but its
-request, delivery and consumption flow remains planned. Recent authentication
-is enforced for company settings and internal-user mutations; additional
-sensitive domains must adopt the same guard when they are introduced.
+durable multi-instance rate limiting. Password reset request, delivery and
+consumption boundaries are implemented; production must configure its HTTPS
+delivery adapter. Recent authentication is enforced for company settings and
+internal-user mutations; additional sensitive domains must adopt the same guard
+when they are introduced.

@@ -34,6 +34,20 @@ describe('validateEnvironment', () => {
     ).toThrow('REAUTHENTICATION_TTL');
   });
 
+  it('requires secure password reset delivery in production', () => {
+    expect(() =>
+      validateEnvironment({ ...VALID_ENVIRONMENT, NODE_ENV: 'production' }),
+    ).toThrow('PASSWORD_RESET_DELIVERY_ENDPOINT');
+    expect(() =>
+      validateEnvironment({
+        ...VALID_ENVIRONMENT,
+        NODE_ENV: 'production',
+        PASSWORD_RESET_DELIVERY_ENDPOINT: 'http://notifications.example/reset',
+        PASSWORD_RESET_DELIVERY_TOKEN: 'secret',
+      }),
+    ).toThrow('must use https');
+  });
+
   it('rejects invalid session limits', () => {
     expect(() =>
       validateEnvironment({ ...VALID_ENVIRONMENT, SESSION_MAX_PER_USER: '0' }),

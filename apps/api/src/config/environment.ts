@@ -56,6 +56,23 @@ function durationValue(
   return value;
 }
 
+function httpUrlValue(
+  environment: Record<string, unknown>,
+  key: string,
+  fallback?: string,
+): string | undefined {
+  const rawValue = environment[key] ?? fallback;
+  if (rawValue === undefined || rawValue === '') {
+    return undefined;
+  }
+  const value = String(rawValue).trim();
+  const parsed = new URL(value);
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new Error(`${key} must use http or https`);
+  }
+  return value;
+}
+
 function validateOrigins(rawOrigins: string): string {
   const origins = rawOrigins
     .split(',')
@@ -83,6 +100,40 @@ function validateOrigins(rawOrigins: string): string {
 export function validateEnvironment(
   environment: Record<string, unknown>,
 ): Record<string, unknown> {
+  const passwordResetDeliveryEndpoint = httpUrlValue(
+    environment,
+    'PASSWORD_RESET_DELIVERY_ENDPOINT',
+  );
+  const passwordResetUrlBase = httpUrlValue(
+    environment,
+    'PASSWORD_RESET_URL_BASE',
+    'http://localhost:3000/reset-password',
+  );
+  const passwordResetDeliveryToken = environment.PASSWORD_RESET_DELIVERY_TOKEN;
+  if (
+    passwordResetDeliveryEndpoint &&
+    (typeof passwordResetDeliveryToken !== 'string' ||
+      passwordResetDeliveryToken.trim() === '')
+  ) {
+    throw new Error(
+      'PASSWORD_RESET_DELIVERY_TOKEN is required when delivery is enabled',
+    );
+  }
+  if (
+    environment.NODE_ENV === 'production' &&
+    (!passwordResetDeliveryEndpoint ||
+      !passwordResetDeliveryEndpoint.startsWith('https://'))
+  ) {
+    throw new Error(
+      'PASSWORD_RESET_DELIVERY_ENDPOINT must use https in production',
+    );
+  }
+  if (
+    environment.NODE_ENV === 'production' &&
+    !passwordResetUrlBase?.startsWith('https://')
+  ) {
+    throw new Error('PASSWORD_RESET_URL_BASE must use https in production');
+  }
   return {
     ...environment,
     DATABASE_URL: requiredString(environment, 'DATABASE_URL'),
@@ -104,6 +155,17 @@ export function validateEnvironment(
       'REAUTHENTICATION_TTL',
       '10m',
     ),
+    PASSWORD_RESET_TTL: durationValue(
+      environment,
+      'PASSWORD_RESET_TTL',
+      '30m',
+    ),
+    PASSWORD_RESET_URL_BASE: passwordResetUrlBase,
+    PASSWORD_RESET_DELIVERY_ENDPOINT: passwordResetDeliveryEndpoint,
+    PASSWORD_RESET_DELIVERY_TOKEN:
+      typeof passwordResetDeliveryToken === 'string'
+        ? passwordResetDeliveryToken.trim()
+        : undefined,
     PORT: integerValue(environment, 'PORT', 3001, 1, 65_535),
     MAX_IMAGE_SIZE_MB: String(
       integerValue(environment, 'MAX_IMAGE_SIZE_MB', 5, 1, 25),

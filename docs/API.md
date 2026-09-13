@@ -75,6 +75,14 @@ explicit product decision; the boundary never chooses an offset silently.
 - Sensitive mutations return `403` when the current session has no recent
   authentication. P1.4b initially applies this boundary to company settings and
   internal-user creation or updates.
+- `POST /api/v1/auth/password/reset-request` accepts an email address and always
+  returns `202` with no account details. When the active account exists, the API
+  replaces its older unused tokens and asks the configured delivery adapter to
+  send one short-lived link.
+- `POST /api/v1/auth/password/reset` accepts the raw token and a new password.
+  A successful transaction consumes the token, changes the password and revokes
+  every active browser session. Invalid, expired and used tokens share the same
+  `400` response.
 - `/api/v1/categories` and `/api/v1/products` expose the current CRUD and image
   operations. Reads require `catalog.read`; mutations require `catalog.manage`.
 - `GET /api/v1/users` and `GET /api/v1/users/roles` require `users.read`.

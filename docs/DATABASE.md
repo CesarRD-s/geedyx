@@ -39,6 +39,11 @@ for that session. The API updates it only after login, password change or
 explicit reauthentication. Authorization never trusts a browser timestamp for
 this decision.
 
+`PasswordResetToken` stores only a SHA-256 token hash, its owner, creation and
+expiry instants, and the one-time `usedAt` marker. A new request invalidates
+older unused records for the same user. Consumption updates the password,
+marks the token used and revokes all sessions in one transaction.
+
 ## Foundation data model - planned
 
 Phase 1 introduces the following models before business modules are expanded:

@@ -213,6 +213,24 @@ export async function reauthenticate(password: string): Promise<{
   );
 }
 
+export async function requestPasswordReset(email: string): Promise<void> {
+  await clientFetch<{ accepted: boolean }>("/auth/password/reset-request", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+}
+
+export async function resetPassword(input: {
+  token: string;
+  newPassword: string;
+  confirmPassword: string;
+}): Promise<void> {
+  await clientFetch<void>("/auth/password/reset", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
 export async function getCompanySettings(): Promise<CompanySettings> {
   return clientFetch<CompanySettings>("/company/settings");
 }

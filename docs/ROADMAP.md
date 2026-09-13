@@ -104,15 +104,16 @@ enforced consistently.
 
 ### P1.4b - Password recovery and sensitive-operation reauthentication
 
-**Partial.**
+**Complete.**
 
 - Complete password change and require recent reauthentication for sensitive
   account and administration operations. Recent authentication is implemented
   for company settings and internal-user mutations.
 - Add single-use, expiring password-reset tokens without exposing stored token
-  values.
+  values. Completed.
 - Define a delivery boundary for recovery messages and the audit events that
-  P1.5 will persist for recovery and reauthentication outcomes.
+  P1.5 will persist for recovery and reauthentication outcomes. Completed with
+  a provider-neutral authenticated HTTP boundary.
 
 ### P1.4c - Authentication hardening
 

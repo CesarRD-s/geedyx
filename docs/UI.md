@@ -707,6 +707,13 @@ reauthentication dialog; the existing user dialog reveals an inline password
 field so dialogs are never stacked. The browser does not calculate or persist
 the recent-authentication window.
 
+`/forgot-password` asks only for the account email and always shows the same
+completion message. `/reset-password` accepts the token from the delivered link,
+asks for the new password twice and never persists the token outside the current
+URL and request. Success directs the user to login because all previous sessions
+have been revoked. Invalid, expired and already-used links share one recoverable
+error state.
+
 Every interactive control follows the same lifecycle:
 
 1. **Idle**: action is available and its label explains the result.

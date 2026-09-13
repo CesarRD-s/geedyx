@@ -22,6 +22,8 @@ import { SetupDto } from './dto/setup.dto.js';
 import { ChangePasswordDto } from './dto/change-password.dto.js';
 import { UpdateProfileDto } from './dto/update-profile.dto.js';
 import { ReauthenticateDto } from './dto/reauthenticate.dto.js';
+import { RequestPasswordResetDto } from './dto/request-password-reset.dto.js';
+import { ResetPasswordDto } from './dto/reset-password.dto.js';
 import { SessionAuthGuard } from './guards/session-auth.guard.js';
 import { AccountStatusGuard } from './guards/account-status.guard.js';
 import { AUTH_COOKIE_NAME, CSRF_COOKIE_NAME } from './session.constants.js';
@@ -153,6 +155,25 @@ export class AuthController {
       req.user.id,
       req.user.sessionId ?? '',
       dto.password,
+    );
+  }
+
+  @Post('password/reset-request')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @Throttle(LOGIN_ATTEMPTS)
+  async requestPasswordReset(@Body() dto: RequestPasswordResetDto) {
+    await this.authService.requestPasswordReset(dto.email);
+    return { accepted: true };
+  }
+
+  @Post('password/reset')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Throttle(LOGIN_ATTEMPTS)
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    await this.authService.resetPassword(
+      dto.token,
+      dto.newPassword,
+      dto.confirmPassword,
     );
   }
 

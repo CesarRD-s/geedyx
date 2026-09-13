@@ -36,6 +36,11 @@ server-side guard compares that timestamp with a configurable short window for
 sensitive mutations. Login, password change and explicit reauthentication can
 renew the timestamp; browser state cannot.
 
+Password-reset ownership remains in the authentication domain while delivery
+uses a provider-neutral authenticated HTTP adapter. The API stores only token
+hashes, returns the same request result for every account state and revokes all
+sessions when one token is consumed successfully.
+
 ## ADR-006 - Authorization is server-side permission based
 
 Internal users receive roles and permissions. Every protected API operation

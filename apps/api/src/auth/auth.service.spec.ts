@@ -162,3 +162,106 @@ describe('AuthService session capacity', () => {
     });
   });
 });
+
+describe('AuthService password recovery', () => {
+  it('persists only a hash and passes the raw token through the delivery link', async () => {
+    const create = vi.fn().mockResolvedValue({ id: 'reset-1' });
+    const transactionClient = {
+      passwordResetToken: { updateMany: vi.fn(), create },
+    };
+    const prisma = {
+      user: {
+        findUnique: vi.fn().mockResolvedValue({
+          id: 'user-1',
+          email: 'admin@geedyx.test',
+          status: 'ACTIVE',
+        }),
+      },
+      passwordResetToken: { deleteMany: vi.fn() },
+      $transaction: vi.fn(
+        (callback: (client: typeof transactionClient) => Promise<unknown>) =>
+          callback(transactionClient),
+      ),
+    } as unknown as PrismaService;
+    const config = {
+      get: vi.fn((key: string, fallback: string) => fallback),
+    } as unknown as ConfigService;
+    const delivery = { deliver: vi.fn().mockResolvedValue(true) };
+    const service = new AuthService(prisma, config, delivery as never);
+
+    await service.requestPasswordReset(' ADMIN@geedyx.test ');
+
+    const resetUrl = new URL(delivery.deliver.mock.calls[0][0].resetUrl);
+    const rawToken = resetUrl.searchParams.get('token');
+    const storedHash = create.mock.calls[0][0].data.tokenHash as string;
+    expect(rawToken).toBeTruthy();
+    expect(storedHash).toHaveLength(64);
+    expect(storedHash).not.toBe(rawToken);
+    expect(prisma.passwordResetToken.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it('does not reveal whether the requested account exists', async () => {
+    const prisma = {
+      user: { findUnique: vi.fn().mockResolvedValue(null) },
+      $transaction: vi.fn(),
+    } as unknown as PrismaService;
+    const delivery = { deliver: vi.fn() };
+    const service = new AuthService(
+      prisma,
+      new ConfigService(),
+      delivery as never,
+    );
+
+    await expect(
+      service.requestPasswordReset('missing@example.com'),
+    ).resolves.toBeUndefined();
+    expect(delivery.deliver).not.toHaveBeenCalled();
+  });
+
+  it('consumes one valid token and revokes every active session', async () => {
+    const passwordResetUpdate = vi.fn().mockResolvedValue({ count: 1 });
+    const userUpdate = vi.fn();
+    const sessionUpdate = vi.fn();
+    const transactionClient = {
+      passwordResetToken: {
+        findUnique: vi.fn().mockResolvedValue({
+          id: 'reset-1',
+          userId: 'user-1',
+          expiresAt: new Date(Date.now() + 60_000),
+          usedAt: null,
+          user: { status: 'ACTIVE' },
+        }),
+        updateMany: passwordResetUpdate,
+      },
+      user: { update: userUpdate },
+      session: { updateMany: sessionUpdate },
+    };
+    const prisma = {
+      $transaction: vi.fn(
+        (callback: (client: typeof transactionClient) => Promise<unknown>) =>
+          callback(transactionClient),
+      ),
+    } as unknown as PrismaService;
+    const service = new AuthService(prisma, new ConfigService());
+
+    await service.resetPassword(
+      'one-time-token',
+      'new-password-value',
+      'new-password-value',
+    );
+
+    expect(passwordResetUpdate).toHaveBeenCalledWith({
+      where: {
+        id: 'reset-1',
+        usedAt: null,
+        expiresAt: { gt: expect.any(Date) },
+      },
+      data: { usedAt: expect.any(Date) },
+    });
+    expect(userUpdate).toHaveBeenCalledOnce();
+    expect(sessionUpdate).toHaveBeenCalledWith({
+      where: { userId: 'user-1', revokedAt: null },
+      data: { revokedAt: expect.any(Date) },
+    });
+  });
+});
