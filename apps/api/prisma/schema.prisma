@@ -57,10 +57,45 @@ model User {
   passwordChangedAt DateTime @default(now())
   lastLoginAt  DateTime?
   roles        UserRole[]
+  sessions     Session[]
+  passwordResetTokens PasswordResetToken[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   @@index([companyId])
+}
+
+/// A browser session stores only a SHA-256 hash of its random opaque token.
+/// Both expiry columns are evaluated by the API before every authenticated use.
+model Session {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash      String   @unique
+  csrfTokenHash  String
+  userAgent      String?
+  ipAddress      String?
+  createdAt      DateTime @default(now())
+  lastUsedAt     DateTime @default(now())
+  idleExpiresAt  DateTime
+  expiresAt      DateTime
+  revokedAt      DateTime?
+
+  @@index([userId, revokedAt])
+  @@index([expiresAt])
+}
+
+/// Future password-reset delivery uses this single-use, hashed token record.
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId, expiresAt])
 }
 
 /// A role belongs to exactly one company. System roles are provisioned during

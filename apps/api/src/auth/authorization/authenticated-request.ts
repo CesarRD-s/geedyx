@@ -5,6 +5,7 @@ export interface AuthenticatedRequestUser {
   id: string;
   email: string;
   companyId: string;
+  sessionId?: string;
   permissions: PermissionCode[];
 }
 

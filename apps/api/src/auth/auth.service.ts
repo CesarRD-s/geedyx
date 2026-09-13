@@ -5,8 +5,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { JwtService } from '@nestjs/jwt';
-import { timingSafeEqual } from 'node:crypto';
+import { randomBytes, createHash, timingSafeEqual } from 'node:crypto';
 import type { UserModel } from '../generated/prisma/models.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { durationToMs } from './duration.js';
@@ -78,7 +77,6 @@ function isUniqueConstraintError(error: unknown): boolean {
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {}
 
@@ -213,18 +211,26 @@ export class AuthService {
     return toAuthUser(user, [...new Set(permissions)]);
   }
 
+  async revokeSession(sessionId: string): Promise<void> {
+    await this.prisma.session.updateMany({
+      where: { id: sessionId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  }
+
   private async buildSession(
     user: Pick<UserModel, 'id' | 'username' | 'email' | 'companyId' | 'displayName'>,
   ): Promise<AuthSession> {
-    const token = await this.jwtService.signAsync({
-      sub: user.id,
-      email: user.email,
-      companyId: user.companyId,
-    });
-
-    const cookieMaxAge = durationToMs(
-      this.configService.get<string>('JWT_EXPIRES_IN', '1h'),
-    );
+    const token = randomBytes(32).toString('base64url');
+    const cookieMaxAge = durationToMs(this.configService.get<string>('SESSION_ABSOLUTE_TTL', '12h'));
+    const now = new Date();
+    await this.prisma.session.create({ data: {
+      userId: user.id,
+      tokenHash: createHash('sha256').update(token).digest('hex'),
+      csrfTokenHash: createHash('sha256').update(randomBytes(32)).digest('hex'),
+      idleExpiresAt: new Date(now.getTime() + durationToMs(this.configService.get<string>('SESSION_IDLE_TTL', '30m'))),
+      expiresAt: new Date(now.getTime() + cookieMaxAge),
+    } });
 
     return { user: toAuthUser(user), token, cookieMaxAge };
   }
