@@ -1,4 +1,4 @@
-# GEEDYX — Design Tokens v1.0
+# GEEDYX - Design Tokens v1.0
 
 Living reference for the semantic design tokens implemented in
 `apps/web/src/app/globals.css`. This is the **source of truth** for token names
@@ -47,7 +47,7 @@ same tonal family.
 ### Text
 
 Text hierarchy is built primarily by **size, weight, contrast, spacing and
-position** — not by arbitrary colors.
+position** - not by arbitrary colors.
 
 | Token | Utility | Light | Dark | Intent |
 | --- | --- | --- | --- | --- |
@@ -60,7 +60,7 @@ position** — not by arbitrary colors.
 
 ### Borders
 
-Borders are not mandatory everywhere — use them to separate surfaces, delimit
+Borders are not mandatory everywhere - use them to separate surfaces, delimit
 structures, define controls, communicate states.
 
 | Token | Utility | Light | Dark | Intent |
@@ -70,7 +70,7 @@ structures, define controls, communicate states.
 
 ### Accent
 
-The accent drives **action, selection, links, focus and interactive meaning** —
+The accent drives **action, selection, links, focus and interactive meaning** -
 not the brand. The logo/wordmark is **monochrome** and never uses the accent
 (see `docs/BRAND.md`).
 
@@ -97,7 +97,7 @@ Rules:
 
 ### Semantic status
 
-Semantic colors communicate meaning only — never decoration.
+Semantic colors communicate meaning only - never decoration.
 
 | Token | Utility | Light | Dark | Intent |
 | --- | --- | --- | --- | --- |
@@ -128,7 +128,7 @@ so it can diverge from the accent later.
 - Used weights: **300 Light, 400 Regular, 500 Medium, 600 Semibold, 700 Bold**.
 - The wordmark is **independent** of the UI typography (see `docs/BRAND.md`).
 - Mono (`Geist Mono`, `--font-mono`) is kept only for **data identifiers**
-  (SKU, slug, IDs, price alignment) — it is not an interface family.
+  (SKU, slug, IDs, price alignment) - it is not an interface family.
 - Do not introduce a second UI family without an explicit, documented reason.
 - Hierarchy is built with size + weight + contrast + spacing + position; do not
   use weights arbitrarily.
@@ -163,7 +163,7 @@ other content:
 
 - modal, dropdown, popover, drawer, floating menu, the login card.
 
-Normal surfaces separate through surface + border + spacing — **not** shadows.
+Normal surfaces separate through surface + border + spacing - **not** shadows.
 Cards and tables use the `shadow-panel` token only when they float.
 
 ## Motion
@@ -185,7 +185,7 @@ animated gradients, decorative movement.
 
 ## Related
 
-- [UI.md](./UI.md) — visual contract (how tokens are used)
-- [BRAND.md](./BRAND.md) — brand personality and monochrome identity rules
-- [DECISIONS.md](./DECISIONS.md) — ADR-029 (Design System v1.0)
-- [AGENTS.md](../AGENTS.md) — mandatory consultation before UI work
+- [UI.md](./UI.md) - visual contract (how tokens are used)
+- [BRAND.md](./BRAND.md) - brand personality and monochrome identity rules
+- [DECISIONS.md](./DECISIONS.md) - ADR-029 (Design System v1.0)
+- [AGENTS.md](../AGENTS.md) - mandatory consultation before UI work

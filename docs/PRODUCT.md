@@ -1,4 +1,4 @@
-# GEEDYX — Product
+# GEEDYX - Product
 
 ## Purpose
 

@@ -1,4 +1,4 @@
-# GEEDYX — API
+# GEEDYX - API
 
 ## Contract policy
 
@@ -101,7 +101,7 @@ documentation generated at `/api/docs`.
 - Mutation endpoints that may be retried accept `Idempotency-Key`; its result is
   stored and replayed for the same authenticated actor and operation.
 
-## Webhooks — planned
+## Webhooks - planned
 
 Outbound deliveries include an event ID, timestamp, signed payload and retry
 record. Consumers deduplicate by event ID. Inbound providers are verified against

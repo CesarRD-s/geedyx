@@ -1,4 +1,4 @@
-# GEEDYX — Security
+# GEEDYX - Security
 
 ## Security posture
 
@@ -6,7 +6,7 @@ GEEDYX manages private business data. Security controls are enforced by the
 NestJS API; the browser and external stores are untrusted clients. The current
 JWT-cookie implementation is a prototype and will be replaced in Phase 1.
 
-## Phase 1 security baseline — planned
+## Phase 1 security baseline - planned
 
 ### Installation and internal identity
 

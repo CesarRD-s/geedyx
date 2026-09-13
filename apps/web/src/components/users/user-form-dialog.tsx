@@ -131,7 +131,7 @@ export function UserFormDialog({
     >
       <form id="user-form" onSubmit={handleSubmit} noValidate className="space-y-5">
         {!isEdit ? (
-          <fieldset className="grid gap-4 sm:grid-cols-2">
+          <fieldset className="grid gap-4 md:grid-cols-2">
             <div>
               <FieldLabel htmlFor="user-username">Usuario</FieldLabel>
               <Input
@@ -168,7 +168,7 @@ export function UserFormDialog({
           </fieldset>
         ) : null}
 
-        <fieldset className="grid gap-4 sm:grid-cols-2">
+        <fieldset className="grid gap-4 md:grid-cols-2">
           <div>
             <FieldLabel htmlFor="user-display-name">Nombre visible</FieldLabel>
             <Input
@@ -235,7 +235,7 @@ export function UserFormDialog({
                   <span>
                     <span className="font-medium">{role.name}</span>
                     {role.description ? (
-                      <span className="ml-1 text-muted">— {role.description}</span>
+                      <span className="ml-1 text-muted">- {role.description}</span>
                     ) : null}
                   </span>
                 </label>

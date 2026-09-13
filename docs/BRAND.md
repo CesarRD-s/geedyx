@@ -1,4 +1,4 @@
-# GEEDYX — Brand
+# GEEDYX - Brand
 
 The identity rules for the GEEDYX administration console.
 
@@ -18,7 +18,7 @@ GEEDYX **never** looks like a generic AI-generated SaaS dashboard.
 
 - The **logo and wordmark are monochrome** and live on `foreground` only.
   They never use the accent, and the accent never recolors the logo.
-- The accent is a configurable **product tool** for action/selection/links —
+- The accent is a configurable **product tool** for action/selection/links -
   it is completely decoupled from the brand (see
   [DESIGN-TOKENS.md](./DESIGN-TOKENS.md)).
 - **No gradients, glassmorphism, or emoji** in identity or UI.
@@ -49,6 +49,6 @@ GEEDYX **never** looks like a generic AI-generated SaaS dashboard.
 
 ## Related
 
-- [DESIGN-TOKENS.md](./DESIGN-TOKENS.md) — token/color system
-- [UI.md](./UI.md) — interface contract
-- [DECISIONS.md](./DECISIONS.md) — ADR-029 (Design System v1.0)
+- [DESIGN-TOKENS.md](./DESIGN-TOKENS.md) - token/color system
+- [UI.md](./UI.md) - interface contract
+- [DECISIONS.md](./DECISIONS.md) - ADR-029 (Design System v1.0)

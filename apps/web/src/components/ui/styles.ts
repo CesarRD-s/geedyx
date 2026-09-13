@@ -54,7 +54,7 @@ export const helperTextXsClass = "text-xs text-muted";
 
 /* Dense admin tables.
  * The header band (bg-surface-subtle) gives tables a clear reading anchor
- * without extra borders — documented in docs/UI.md §12. */
+ * without extra borders - documented in docs/UI.md §12. */
 export const tableWrapClass =
   "overflow-x-auto rounded-md border border-border bg-surface";
 export const theadRowClass =
@@ -76,7 +76,7 @@ export const errorBannerClass =
 
 /* Navigation link (admin sidebar).
  * Active = subtle accent-muted fill, accent text and a 2px accent indicator
- * bar on the left — documented in docs/UI.md §14. */
+ * bar on the left - documented in docs/UI.md §14. */
 export function navLinkClass(active: boolean): string {
   return `relative flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
     active

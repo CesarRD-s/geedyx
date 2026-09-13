@@ -15,8 +15,8 @@ interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 /**
- * Icon-only button. Always receives `label` (aria-label) and — when the
- * meaning is not obvious — a `tooltip`. Never render an icon-only button
+ * Icon-only button. Always receives `label` (aria-label) and - when the
+ * meaning is not obvious - a `tooltip`. Never render an icon-only button
  * without an accessible name.
  */
 export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(

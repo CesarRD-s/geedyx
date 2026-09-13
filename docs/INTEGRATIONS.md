@@ -1,4 +1,4 @@
-# GEEDYX — Integrations
+# GEEDYX - Integrations
 
 ## Purpose
 
@@ -18,7 +18,7 @@ The integration contract decides which business event is authoritative. A store
 must not assume a browser redirect means a payment has completed; the verified
 provider webhook decides that result.
 
-## Integration client — planned
+## Integration client - planned
 
 Each store backend receives a separately managed integration client:
 
@@ -32,7 +32,7 @@ Each store backend receives a separately managed integration client:
 No integration secret may be embedded in JavaScript, mobile binaries or a public
 storefront. Browser catalog access uses only `/api/v1/public/*` resources.
 
-## Commerce flow — planned
+## Commerce flow - planned
 
 1. A store reads published products and availability through a least-privilege
    API contract.
@@ -46,7 +46,7 @@ storefront. Browser catalog access uses only `/api/v1/public/*` resources.
 Exact reservation timing is a Phase 3 decision; no store is allowed to mutate a
 product's stock balance directly.
 
-## Webhooks — planned
+## Webhooks - planned
 
 GEEDYX delivers outbound events for data that an external system must reconcile,
 such as product publication, stock change, order state and invoice issuance.
@@ -62,7 +62,7 @@ Inbound webhooks use a provider-specific signature check over the raw body,
 timestamp/replay protection and persistent event deduplication before changing
 business state.
 
-## Payments — planned
+## Payments - planned
 
 Payment providers are adapters selected by a business configuration. GEEDYX will
 support hosted checkout or provider elements first to avoid processing raw card

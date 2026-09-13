@@ -1,4 +1,4 @@
-# GEEDYX — Roadmap
+# GEEDYX - Roadmap
 
 Nothing marked **planned** is implemented. A phase is completed only after its
 schema migrations, API contract, security review, tests and documentation are
@@ -11,12 +11,12 @@ complete.
 - Categories, products, simple stock field and local product images.
 - Private administration screens and basic count dashboard.
 
-## Phase 1 — Secure platform foundation
+## Phase 1 - Secure platform foundation
 
 **Active milestone.** Work is delivered in the following order. A slice is not
 complete until its migration, API behavior, tests and documentation agree.
 
-### P1.0 — Contract and current-state baseline
+### P1.0 - Contract and current-state baseline
 
 **Complete.**
 
@@ -26,7 +26,7 @@ complete until its migration, API behavior, tests and documentation agree.
   administration navigation documented and applied to the current screens.
 - Prototype capabilities and security limitations explicitly recorded.
 
-### P1.1 — API and operational baseline
+### P1.1 - API and operational baseline
 
 **Complete.**
 
@@ -39,7 +39,7 @@ complete until its migration, API behavior, tests and documentation agree.
 - Validate runtime configuration at startup and fail fast on missing secrets.
 - Add liveness/readiness health endpoints and structured application logs.
 
-### P1.2 — Installation and organization identity
+### P1.2 - Installation and organization identity
 
 **Complete.**
 
@@ -48,7 +48,7 @@ complete until its migration, API behavior, tests and documentation agree.
 - Create company, owner and first session in one database transaction.
 - Make setup permanently unavailable after successful installation.
 
-### P1.3 — Users, roles and permissions
+### P1.3 - Users, roles and permissions
 
 **Complete.**
 
@@ -62,7 +62,7 @@ Profile-avatar assets and append-only audit records are delivered with the file
 and audit foundation in P1.5, where their storage and retention rules can be
 enforced consistently.
 
-### P1.4 — Professional authentication and sessions
+### P1.4 - Professional authentication and sessions
 
 **Planned.**
 
@@ -76,7 +76,7 @@ enforced consistently.
 - Enforce browser origin/CSRF controls and durable rate limiting; keep the data
   model ready for MFA without blocking the first internal release.
 
-### P1.5 — Audit, integration and files foundation
+### P1.5 - Audit, integration and files foundation
 
 **Planned.**
 
@@ -89,7 +89,7 @@ enforced consistently.
   provider interface: local development storage plus S3-compatible production
   storage.
 
-### P1.6 — Release gate
+### P1.6 - Release gate
 
 **Planned.**
 
@@ -104,7 +104,7 @@ enforced consistently.
 Phase 1 deliberately excludes variants, warehouses, orders, payments,
 accounting and the public storefront. Those domains begin only after P1.6.
 
-## Phase 2 — Master data and inventory
+## Phase 2 - Master data and inventory
 
 **Planned.**
 
@@ -115,7 +115,7 @@ accounting and the public storefront. Those domains begin only after P1.6.
 - Low-stock rules and operational inventory reports.
 - Suppliers and customer records.
 
-## Phase 3 — Commerce integration
+## Phase 3 - Commerce integration
 
 **Planned.**
 
@@ -125,7 +125,7 @@ accounting and the public storefront. Those domains begin only after P1.6.
 - Inventory reservation/release rules.
 - Outbound webhooks and connector patterns for external commerce platforms.
 
-## Phase 4 — Payments and invoicing
+## Phase 4 - Payments and invoicing
 
 **Planned.**
 
@@ -135,7 +135,7 @@ accounting and the public storefront. Those domains begin only after P1.6.
 - Invoice and credit-note lifecycle, numbering and tax snapshots.
 - Country-specific fiscal providers isolated behind adapters.
 
-## Phase 5 — Finance and reporting
+## Phase 5 - Finance and reporting
 
 **Planned.**
 

@@ -1,4 +1,4 @@
-# GEEDYX — Architecture
+# GEEDYX - Architecture
 
 ## System boundary
 

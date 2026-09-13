@@ -1,4 +1,4 @@
-# GEEDYX — Current implementation status
+# GEEDYX - Current implementation status
 
 This file is the living handoff for development. Update it in the same change
 whenever a milestone, schema, public API contract, security control or shared UI
@@ -8,8 +8,8 @@ Last reviewed: 2026-09-12
 
 ## Active milestone
 
-**Phase 1 — Secure platform foundation**
-Current slice: **P1.4 — Professional authentication and sessions**
+**Phase 1 - Secure platform foundation**
+Current slice: **P1.4 - Professional authentication and sessions**
 
 ## Implemented
 

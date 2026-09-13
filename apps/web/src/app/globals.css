@@ -3,7 +3,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
- * GEEDYX Design System v1.0 — design tokens (CP12.5).
+ * GEEDYX Design System v1.0 - design tokens (CP12.5).
  *
  * Single source of truth for the visual language. These CSS custom properties
  * are mapped into Tailwind utilities through `@theme inline`, so components
@@ -11,12 +11,12 @@
  * bg-accent, …) instead of hard-coded palette colors.
  *
  * Token groups:
- *   Neutral   — background, surface, surface-subtle, surface-raised
- *   Text      — text, text-secondary, text-muted
- *   Borders   — border, border-strong
- *   Accent    — accent family (configurable, decoupled from the brand)
- *   Semantic  — success / warning / danger / info (+ states)
- *   Misc      — overlay, input, selection, shadow-panel
+ *   Neutral   - background, surface, surface-subtle, surface-raised
+ *   Text      - text, text-secondary, text-muted
+ *   Borders   - border, border-strong
+ *   Accent    - accent family (configurable, decoupled from the brand)
+ *   Semantic  - success / warning / danger / info (+ states)
+ *   Misc      - overlay, input, selection, shadow-panel
  *
  * Light values live in `:root`; the dark variant lives under `.dark` (also
  * applied to `<html>` by next-themes). The canonical tokens are documented in
@@ -42,7 +42,7 @@
   --border: #e4e4e7;
   --border-strong: #d4d4d8;
 
-  /* Accent (configurable — see docs/DESIGN-TOKENS.md "Accent") */
+  /* Accent (configurable - see docs/DESIGN-TOKENS.md "Accent") */
   --accent: #2563eb;
   --accent-hover: #1d4ed8;
   --accent-active: #1e40af;
@@ -68,7 +68,7 @@
 }
 
 /*
- * Alternate accent example — the accent is decoupled from the GEEDYX brand.
+ * Alternate accent example - the accent is decoupled from the GEEDYX brand.
  * Setting data-accent="indigo|emerald|violet|rose" on <html> swaps the whole
  * accent family; the default is blue. The brand stays monochrome.
  */
@@ -137,7 +137,7 @@
 }
 
 .dark {
-  /* Neutral surfaces — deep, toned; never pure OLED black */
+  /* Neutral surfaces - deep, toned; never pure OLED black */
   --background: #101114;
   --surface: #18191c;
   --surface-subtle: #202226;
@@ -220,14 +220,14 @@
   --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo,
     Consolas, monospace;
 
-  /* Shadows — floating elements only (modal, dropdown, popover, drawer). */
+  /* Shadows - floating elements only (modal, dropdown, popover, drawer). */
   --shadow-panel: var(--shadow-panel);
 
-  /* Motion — functional transitions only, 100–150ms. */
+  /* Motion - functional transitions only, 100–150ms. */
   --duration-fast: 100ms;
   --duration-normal: 150ms;
 
-  /* Geometry — predominantly straight. rounded-full only when circular
+  /* Geometry - predominantly straight. rounded-full only when circular
      meaning exists (dots, avatars). */
   --radius-none: 0px;
   --radius-sm: 2px;

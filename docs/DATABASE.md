@@ -1,4 +1,4 @@
-# GEEDYX — Database
+# GEEDYX - Database
 
 ## Ownership and migrations
 
@@ -30,7 +30,7 @@ System roles are created per company: `OWNER`, `ADMIN`, `CATALOG_MANAGER` and
 the only initial `OWNER`; it cannot be suspended or reassigned through the user
 management API.
 
-## Foundation data model — planned
+## Foundation data model - planned
 
 Phase 1 introduces the following models before business modules are expanded:
 
@@ -48,7 +48,7 @@ Phase 1 introduces the following models before business modules are expanded:
 `Customer` is a future business model owned by the company. It may reference an
 external-store account but it is not an internal `User` role.
 
-## ERP data rules — planned
+## ERP data rules - planned
 
 - Business tables receive a `companyId` even though one company is supported;
   this makes ownership explicit without implementing SaaS tenancy.

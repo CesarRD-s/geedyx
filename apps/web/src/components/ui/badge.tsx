@@ -12,7 +12,7 @@ const TONE_CLASSES: Record<BadgeTone, { text: string; dot: string }> = {
 
 /**
  * Compact status indicator: a small dot + label. These are status badges, not
- * decorative pills — use them consistently for active/inactive, stock and
+ * decorative pills - use them consistently for active/inactive, stock and
  * availability states.
  */
 export function Badge({

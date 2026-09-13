@@ -2,7 +2,7 @@
 //
 // Reuses the exact Prisma setup the API uses: the generated client with the
 // `@prisma/adapter-pg` driver adapter (see src/prisma/prisma.service.ts).
-// Not part of the API application — compiled on demand by `pnpm db:*` commands.
+// Not part of the API application - compiled on demand by `pnpm db:*` commands.
 //
 // Commands (run via the API package scripts so `.env` and the Prisma CLI are
 // resolved from the API root):
@@ -146,7 +146,7 @@ function cmdReset(): void {
   );
   console.log(`Target: ${databaseLabel(url)}`);
   console.log(
-    `Guard:  NODE_ENV=${nodeEnv ?? '(unset)'}, host ${host} is loopback — safe for development.`,
+    `Guard:  NODE_ENV=${nodeEnv ?? '(unset)'}, host ${host} is loopback - safe for development.`,
   );
   console.log('');
 

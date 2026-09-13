@@ -1,4 +1,4 @@
-# GEEDYX — UI / Design System
+# GEEDYX - UI / Design System
 
 This document is the **official Design System contract for GEEDYX**. It defines
 the visual language, the semantic tokens, the shared components, and the rules
@@ -9,7 +9,7 @@ A new GEEDYX screen must answer the question
 > "¿Cómo debe verse una nueva página de GEEDYX?"
 
 by reusing the tokens, components, patterns, hierarchies, states and
-interaction rules described here — **not** by inventing a new style.
+interaction rules described here - **not** by inventing a new style.
 
 > Rule: all new UI must use the Design System defined in this document. Do not
 > introduce new visual patterns when an existing pattern is sufficient.
@@ -20,27 +20,27 @@ Token values and the full token reference live in
 
 ## Status
 
-- **CP7** — first administration experience: `/login` and the protected admin
+- **CP7** - first administration experience: `/login` and the protected admin
   shell.
-- **CP8** — categories CRUD, now served at `/app/categories`.
-- **CP9** — products CRUD, now served at `/app/products` (list, filters, sorting,
+- **CP8** - categories CRUD, now served at `/app/categories`.
+- **CP9** - products CRUD, now served at `/app/products` (list, filters, sorting,
   pagination, dialogs, images, stock).
-- **CP10** — public catalog: `/` landing and `/products/[slug]`.
-- **CP12** — **Design System established**: semantic tokens + Light/Dark/System
+- **CP10** - public catalog: `/` landing and `/products/[slug]`.
+- **CP12** - **Design System established**: semantic tokens + Light/Dark/System
   themes, shared UI component set, dialog/overlay fixes, hard-coded palette
   colors removed, and this document converted into the official contract.
-- **CP12.1** — **initial installation**: `/setup` completes the first-run
+- **CP12.1** - **initial installation**: `/setup` completes the first-run
   experience (create the company and primary administrator via
   `POST /api/v1/auth/setup`), reusing the `/login` layout pattern.
-- **CP12.2** — public catalog removed (`/` is now a session redirect to
+- **CP12.2** - public catalog removed (`/` is now a session redirect to
   `/app` or `/login`); `/login` no longer exposes the `/setup` entry point.
-- **CP12.5** — **Design System v1.0**: canonical token nomenclature
+- **CP12.5** - **Design System v1.0**: canonical token nomenclature
   (neutral/text/border/accent/semantic), configurable accent decoupled from the
   brand, Source Sans 3 UI typography, compact radius scale, and motion/borders
   rules formalized. Token source of truth moved to `docs/DESIGN-TOKENS.md`;
   identity rules live in `docs/BRAND.md`. CP12 names became deprecated
   compatibility aliases.
-- **CP12.6** — **GEEDYX Design System applied to the existing UI**: every screen
+- **CP12.6** - **GEEDYX Design System applied to the existing UI**: every screen
   (`/setup`, `/login`, `/app*`) and shared component migrated to canonical
   tokens; CP12 aliases (`primary*`, `surface-muted`, `surface-elevated`,
   `muted-foreground`, `foreground`) **removed** from `globals.css`. Tables gain a
@@ -49,9 +49,9 @@ Token values and the full token reference live in
 
 Two distinct experiences share one visual system:
 
-- **Internal workspace** (`/setup`, `/login`, `/app*`) — density-first,
+- **Internal workspace** (`/setup`, `/login`, `/app*`) - density-first,
   batched workflows, tables, filters, fast actions (AWS Console inspiration).
-- **Public catalog** (`/`, `/products/[slug]`) — product presentation and
+- **Public catalog** (`/`, `/products/[slug]`) - product presentation and
   readability (Dell product-site inspiration).
 
 They differ in composition and density, never in tokens or components.
@@ -86,7 +86,7 @@ Avoid:
 - icon-heavy decoration (each icon must add information)
 - random single-use colors (`bg-blue-600`/`text-gray-500`/`border-gray-200`)
 
-Inspiration is conceptual only — AWS Console (information density, table-first
+Inspiration is conceptual only - AWS Console (information density, table-first
 administration), Dell (product presentation, content hierarchy), modern SaaS
 (consistency, feedback, accessibility). Proprietary interfaces are never copied.
 
@@ -97,7 +97,7 @@ administration), Dell (product presentation, content hierarchy), modern SaaS
 The single source of truth for colors lives in `apps/web/src/app/globals.css`.
 Values are CSS custom properties declared for light (`:root`) and dark (`.dark`)
 and mapped into Tailwind utilities through `@theme inline`, so components use
-**semantic** utilities — never raw palette colors.
+**semantic** utilities - never raw palette colors.
 
 **Never scatter raw hex/slate/blue/white values across components.** Add or
 change a token in `globals.css` instead. Any new token must be mapped in
@@ -105,7 +105,7 @@ change a token in `globals.css` instead. Any new token must be mapped in
 
 **Canonical names.** The CP12 names (`primary*`, `surface-muted`,
 `surface-elevated`, `muted-foreground`, `foreground`) were deprecated
-compatibility aliases and have been **removed in CP12.6** — only the canonical
+compatibility aliases and have been **removed in CP12.6** - only the canonical
 names below exist. Never reintroduce them.
 
 ### Surfaces
@@ -135,7 +135,7 @@ names below exist. Never reintroduce them.
 | `border` | `border-border` | `#e2e8f0` | `#223049` | table rows, dividers, container edges |
 | `border-strong` | `border-border-strong` | `#cbd5e1` | `#3b4a63` | inputs, button outlines, dashed frames |
 
-### Accent (configurable — action, selection, links)
+### Accent (configurable - action, selection, links)
 
 | Token | Utility | Light | Dark | Usage |
 | --- | --- | --- | --- | --- |
@@ -156,7 +156,7 @@ names below exist. Never reintroduce them.
 
 The accent is **decoupled from the brand**: the GEEDYX identity stays
 monochrome (`docs/BRAND.md`), while the accent drives interaction only. It is
-configurable — set `data-accent="indigo"` on `<html>` to switch the whole
+configurable - set `data-accent="indigo"` on `<html>` to switch the whole
 accent family (alternate palettes live in `globals.css`); a picker UI can drive
 that attribute in a later checkpoint. `info` is an **independent** token so it
 can diverge from the accent later.
@@ -186,13 +186,13 @@ GEEDYX supports **Light**, **Dark** and **System** themes.
 - The `.dark` class is applied to `<html>` by the provider; `globals.css`
   declares `color-scheme` for `light`/`dark` so native controls match.
 - The `ThemeToggle` (`src/components/ui/theme-toggle.tsx`) is a discreet
-  icon-only button — never a protagonist. It uses a mounted guard
+  icon-only button - never a protagonist. It uses a mounted guard
   (`useSyncExternalStore`) to avoid hydration mismatch and shows the action
   that would run on click.
 - `suppressHydrationWarning` is set on `<html>`; no other the-theme-specific
   hacks are allowed.
 
-A component must never reach for `dark:` exceptions — theming is handled by the
+A component must never reach for `dark:` exceptions - theming is handled by the
 tokens. If a color needs a dark variant, change the token in `globals.css`.
 
 ---
@@ -204,7 +204,7 @@ Fonts: **Source Sans 3** (UI family, variable font, weights 300–700) + **Geist
 `--font-source` (mapped to `--font-sans`) / `--font-geist-mono` (mapped to
 `--font-mono`).
 
-Recommended scale (administrative, density-first — titles are not huge):
+Recommended scale (administrative, density-first - titles are not huge):
 
 | Role | Classes |
 | --- | --- |
@@ -222,7 +222,7 @@ The public catalog may use a wider, more commercial hierarchy (larger prices,
 `text-lg` product names) while keeping the same font family and token colors.
 
 Mono (`--font-mono`) is reserved for data identifiers (SKU, slug, IDs, price
-alignment) — it is not an interface family. Monetary values always use
+alignment) - it is not an interface family. Monetary values always use
 `tabular-nums`.
 
 ---
@@ -350,6 +350,13 @@ Rules:
 - **Labels are always visible**; never rely on placeholders alone.
 - One control per row/column with `space-y-4`; grouped fieldsets use a small
   section heading and consistent spacing.
+- **Desktop uses the available width**: a related field group starts as one
+  column on narrow screens, becomes two columns when its container can keep
+  controls legible, and may use three columns on wide page forms. Use
+  `grid-cols-1 md:grid-cols-2 xl:grid-cols-3` as the normal page-form
+  starting point; choose a later breakpoint for constrained dialogs. Long or
+  dependent fields may span the group width. Do not stack an entire desktop
+  form vertically when horizontal space is available.
 - Inline validation errors appear directly under the field (`FieldError`,
   `role="alert"`).
 - Required/constraints are communicated by the label/help text, not by red or
@@ -360,6 +367,8 @@ Rules:
   submission.
 - Errors are user-facing Spanish, mapped from API status
   (`lib/api/http.ts`); raw/internal messages are never shown.
+- User-facing text, documentation and code comments use commas, colons or a
+  simple hyphen where punctuation is needed. Do not use the em dash character.
 
 ---
 
@@ -368,7 +377,7 @@ Rules:
 `Dialog` (`src/components/ui/dialog.tsx`) is the **only** dialog primitive.
 All form dialogs and delete confirmations use it.
 
-Structure and behavior (CP12 — critical requirement, previously broken):
+Structure and behavior (CP12 - critical requirement, previously broken):
 
 - **Layering**: fixed wrapper `z-40`; the backdrop is an `absolute inset-0
   bg-overlay` layer *below* the panel; the panel is `relative z-10`, so it
@@ -409,15 +418,15 @@ Header | Data | Data | Status | Actions
 ```
 
 - Wrap: `rounded-md border border-border bg-surface`.
-- Header row: `theadRowClass` — `bg-surface-subtle` header band (subtle tonal
+- Header row: `theadRowClass` - `bg-surface-subtle` header band (subtle tonal
   anchor, no extra borders), uppercase `text-xs`, muted.
 - Rows: divide-y, `hover:bg-surface-subtle`.
 - Cells: `px-4 py-2.5`; numeric columns right-aligned, `tabular-nums`.
 - Actions are grouped on the right, compact; correct example:
-  `[ Editar ] [🗑]` — text button + icon-only delete with `aria-label`/tooltip.
+  `[ Editar ] [🗑]` - text button + icon-only delete with `aria-label`/tooltip.
 - **Never** wrap every row in a rounded card.
 - Mobile: the same data renders as stacked rows (`mobileListClass`) prioritizing
-  image, name, price, stock, status and actions — no horizontal scroll as a
+  image, name, price, stock, status and actions - no horizontal scroll as a
   default.
 
 Loading rows use the `Skeleton` pattern; empty tables use `EmptyState`.
@@ -442,12 +451,12 @@ Canonical mappings:
 | Informational | `info` |
 
 `Availability` (`src/components/catalog/availability.tsx`) centralizes the
-public availability wording ("Disponible", "Stock limitado — quedan N",
+public availability wording ("Disponible", "Stock limitado - quedan N",
 "Agotado"). The admin `StatusCell`/`StockCell` in `products-view.tsx` follow the
 same tones.
 
 **Persistent states are shown as icon + text (dot + label), never as buttons or
-text-turned-into-actions** — a state is information, not an interaction. Do not
+text-turned-into-actions** - a state is information, not an interaction. Do not
 invent a new color per page; reuse the tones above.
 
 ---
@@ -470,7 +479,7 @@ workspace identity and compact operational density.
   `md:pl-16` contracted). Width changes do not use animation.
 - **Header** (h-14, sticky): mobile menu button, current section title, signed-in
   user (initial avatar + username + muted email), `ThemeToggle`, and a **ghost
-  icon + text** logout button (`LogOut` icon) — the last item before logout stays
+  icon + text** logout button (`LogOut` icon) - the last item before logout stays
   visually quiet.
 - **Mobile**: hamburger opens a left drawer (`z-30`) with overlay, Escape and
   overlay-click to close, focusable content, `role="dialog"`.
@@ -479,7 +488,7 @@ workspace identity and compact operational density.
 - New sections in V1/V2 must follow the same `NAV_ITEMS` shape (href, label,
   icon).
 
-Public header (`catalog-header.tsx`): compact — wordmark, "Catálogo" active
+Public header (`catalog-header.tsx`): compact - wordmark, "Catálogo" active
 nav, `ThemeToggle`, discreet "Administración" link. No sidebar, no login wall.
 
 ---
@@ -500,12 +509,12 @@ token colors.
 List pages keep a consistent toolbar pattern:
 
 - the toolbar container is a **tonal band**: `rounded-md bg-surface-subtle`
-  with `p-3`, no container border — a subtle fill, not another box
+  with `p-3`, no container border - a subtle fill, not another box
 - labeled `SearchInput` (always visible label)
 - grouped `Select` filters (category, status, sort field)
 - sort direction toggle
 - "Limpiar filtros" action when any filter is active
-- meta line: total, "Página X de Y", page-size select, Anterior/Siguiente —
+- meta line: total, "Página X de Y", page-size select, Anterior/Siguiente -
   divided from the filters above by a hairline `border-t border-border/60`
 
 The toolbar wraps naturally on mobile; controls are grouped, never a chaotic
@@ -567,11 +576,11 @@ No giant decorative illustrations; one small icon is allowed when it helps.
 
 ## 20. Cards
 
-Cards are used when they group related information — not as the default
+Cards are used when they group related information - not as the default
 container for everything.
 
 - `SummaryCard`: restrained stat block (label, `tabular-nums` value, optional
-  detail) — no giant metric cards.
+  detail) - no giant metric cards.
 - `ProductCard` (public): image 4:3, category, name, price, availability,
   "Ver detalle". That is the one legitimate repeating-card surface (catalog
   grid).
@@ -712,7 +721,7 @@ New dependencies require justification per AGENTS.md.
 `/setup` is the first-visit onboarding experience of a GEEDYX installation and
 must feel like part of the same product as `/login`:
 
-- **Layout**: mirror `/login` exactly — centered `max-w-sm` surface card,
+- **Layout**: mirror `/login` exactly - centered `max-w-sm` surface card,
   wordmark above, `ThemeToggle` top-right, `bg-background` full-height main.
   Do not invent a different onboarding aesthetic.
 - **Behavior**: the Server Component calls `getSession()`; with an active
@@ -752,7 +761,7 @@ The internal users module follows the standard dense administration pattern:
 
 ## 27. Motion
 
-GEEDYX is **predominantly static** — information density over show. Only
+GEEDYX is **predominantly static** - information density over show. Only
 functional, brief transitions are allowed (100–150ms) when they genuinely help:
 hover/focus states, dropdown/dialog/drawer to/from, tooltips, toasts, loading
 feedback.
@@ -766,7 +775,7 @@ feedback.
 
 ## 28. Borders
 
-Borders are a primary structuring tool in a dense admin UI — used to separate
+Borders are a primary structuring tool in a dense admin UI - used to separate
 surfaces, delimit structures, define controls and communicate states.
 
 - `border-border` (subtle) for table rows, dividers and container edges.
