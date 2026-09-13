@@ -8,7 +8,8 @@ application never reads it directly.
 
 The current schema contains `Installation`, `Company`, `User`, `Role`,
 `Permission`, `UserRole`, `RolePermission`, `Session`, `PasswordResetToken`,
-`RateLimitBucket`, `MfaFactor`, `MfaRecoveryCode`, `Category` and `Product`.
+`RateLimitBucket`, `MfaFactor`, `MfaRecoveryCode`, `AuditEvent`, `Category` and
+`Product`.
 `Installation` is a singleton that closes bootstrap permanently; every user
 and role belongs to the one configured company.
 
@@ -59,6 +60,12 @@ plus used and revoked timestamps so future codes can be consumed once and a
 replacement batch can invalidate the preceding batch. Raw recovery codes must
 only be shown at generation time and never enter logs or API responses again.
 
+`AuditEvent` is an append-only security ledger. PostgreSQL rejects `UPDATE`,
+`DELETE` and `TRUNCATE` statements on the table. Events retain company, actor,
+action, outcome, target and request context plus a small metadata object that
+must not contain credentials or secrets. A monotonic sequence provides stable
+ordering while the opaque event ID is safe for later API use.
+
 ## Foundation data model - planned
 
 Phase 1 introduces the following models before business modules are expanded:
@@ -68,7 +75,6 @@ Phase 1 introduces the following models before business modules are expanded:
 | `FileAsset` relation for profile avatar | Optional avatar storage after the provider-neutral file model exists. |
 | `IntegrationClient` | Hashed credential and scopes for an external store/backend. |
 | `WebhookEndpoint`, `WebhookDelivery` | Signed outbound webhook configuration and delivery record. |
-| `AuditEvent` | Append-only record of security and business actions. |
 | `FileAsset` | Provider/key/mime/size/checksum/status; never a permanent public URL. |
 
 `Customer` is a future business model owned by the company. It may reference an

@@ -80,6 +80,9 @@ the non-enumerating response and discard undeliverable tokens.
   configured at the edge/API.
 - Audit events record authentication, session, authorization, configuration and
   later financial/inventory actions; audit data is append-only.
+- PostgreSQL blocks modification and truncation of persisted audit rows. The
+  application writes through a service that limits metadata and rejects field
+  names associated with passwords, tokens, cookies and other credentials.
 - Production uses backups with tested restoration, dependency updates, secret
   management, monitoring and alerts.
 
@@ -111,7 +114,8 @@ or stripped of its role by the user-management API.
 
 These controls do not yet enforce MFA or expose enrollment, challenge or
 recovery-code endpoints. Only the protected persistence model exists. Audit
-events and integration credentials also remain planned.
+event storage is implemented, but domain coverage and integration credentials
+remain planned.
 Password reset request, delivery and
 consumption boundaries are implemented; production must configure its HTTPS
 delivery adapter. Recent authentication is enforced for company settings and

@@ -17,6 +17,7 @@ import { UsersModule } from './users/users.module.js';
 import { CompanyModule } from './company/company.module.js';
 import { validateEnvironment } from './config/environment.js';
 import { RequestContextMiddleware } from './http/request-context.middleware.js';
+import { AuditModule } from './audit/audit.module.js';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { RequestContextMiddleware } from './http/request-context.middleware.js';
     }),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
     PrismaModule,
+    AuditModule,
     AuthModule,
     CategoriesModule,
     ProductsModule,

@@ -134,10 +134,12 @@ enforced consistently.
 
 ### P1.5 - Audit, integration and files foundation
 
-**Planned.**
+**Partial.**
 
 - Add append-only audit events for authentication, authorization, configuration
-  and security-sensitive mutations.
+  and security-sensitive mutations. P1.5a.1 adds the immutable PostgreSQL
+  ledger and typed transactional writer; domain event coverage follows in the
+  remaining P1.5a slices.
 - Add integration clients with hashed scoped credentials, rotation, revocation
   and idempotency records.
 - Define signed inbound/outbound webhook envelopes and replay protection.

@@ -22,6 +22,19 @@ enum MfaFactorType {
   TOTP
 }
 
+enum AuditActorType {
+  ANONYMOUS
+  INTERNAL_USER
+  SYSTEM
+  INTEGRATION_CLIENT
+}
+
+enum AuditOutcome {
+  SUCCEEDED
+  FAILED
+  DENIED
+}
+
 /// The single internal company configured during installation.
 model Company {
   id           String         @id @default(cuid())
@@ -33,6 +46,7 @@ model Company {
   users        User[]
   roles        Role[]
   installation Installation?
+  auditEvents  AuditEvent[]
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 }
@@ -161,6 +175,32 @@ model MfaRecoveryCode {
   createdAt DateTime @default(now())
 
   @@index([userId, usedAt, revokedAt])
+}
+
+/// Immutable security and business event. Database triggers reject every
+/// update, delete and truncate operation against this table.
+model AuditEvent {
+  id          String         @id @default(cuid())
+  sequence    BigInt         @unique @default(autoincrement())
+  companyId   String?
+  company     Company?       @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  actorType   AuditActorType
+  actorId     String?
+  action      String
+  outcome     AuditOutcome
+  targetType  String?
+  targetId    String?
+  requestId   String?
+  ipAddress   String?
+  userAgent   String?
+  metadata    Json?
+  occurredAt  DateTime       @default(now())
+
+  @@index([companyId, occurredAt])
+  @@index([actorType, actorId, occurredAt])
+  @@index([action, outcome, occurredAt])
+  @@index([targetType, targetId, occurredAt])
+  @@index([requestId])
 }
 
 /// A role belongs to exactly one company. System roles are provisioned during

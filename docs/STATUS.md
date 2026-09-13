@@ -71,8 +71,8 @@ Current slice: **P1.5 - Audit, integration and files foundation**
 
 ## Prototype limitations to remove in Phase 1
 
-- Audit events and integration credentials are not implemented. Password-reset
-  delivery requires an external HTTPS adapter in
+- Domain audit coverage and integration credentials are not implemented.
+  Password-reset delivery requires an external HTTPS adapter in
   production; local development intentionally leaves delivery disabled unless
   configured.
 - Product images are tied to local storage rather than a general file-asset
@@ -107,7 +107,9 @@ session-bound CSRF and rotates session and CSRF credentials after successful
 reauthentication or password changes without extending absolute expiry. P1.4c.3
 adds storage for encrypted TOTP factors, replay detection and hashed one-use
 recovery codes without exposing an incomplete MFA flow. P1.4c is complete.
-Next: begin P1.5 with append-only audit events.
+P1.5a.1 adds an append-only PostgreSQL audit ledger and a typed transactional
+writer with metadata safeguards. Next: connect authentication and session
+outcomes to the ledger atomically where a business write occurs.
 
 ## Documentation rule
 

@@ -35,7 +35,8 @@ not share the admin cookie and they do not receive administrative credentials.
 - `authorization`: implemented roles, permissions and API guards.
 - `sessions`: opaque browser sessions and device management.
 - `account-context`: effective language, time zone and regional formatting.
-- `audit`: append-only security and business events.
+- `audit`: append-only security and business events through one typed writer
+  that can join domain transactions.
 - `integrations`: clients, scopes, idempotency and webhook deliveries.
 - `files`: private assets and provider adapters.
 - `catalog`, `inventory`, `customers`, `orders`, `payments`, `invoicing`,
@@ -109,8 +110,8 @@ durable queue is introduced.
 The repository currently has `auth`, `company`, `users`, `categories`,
 `products` and `images`. Roles and permissions are enforced by NestJS for the
 current catalog, company and users resources. Browser sessions are persisted in
-PostgreSQL. Audit, integrations, files and later business modules remain
-planned.
+PostgreSQL. The immutable audit store and writer are implemented; domain event
+coverage, integrations, files and later business modules remain planned.
 
 The API resolves regional context from user overrides, company defaults and
 es/UTC fallbacks, independently per field. Invalid legacy values fall through.

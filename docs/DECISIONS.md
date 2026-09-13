@@ -130,6 +130,17 @@ Users may override language and display time zone in one personal preferences
 area. Stored instants remain UTC. A reusable date input is platform UI, while
 an operational calendar waits for a business domain that owns scheduled data.
 
+## ADR-031 - Audit events are append-only domain facts
+
+Audit events use an opaque public ID and a monotonic internal sequence. The
+application exposes only creation through a typed writer, and PostgreSQL blocks
+updates, deletes and truncation. Successful security-sensitive mutations will
+write their event in the same Prisma transaction. Failure and denial events use
+a separate transaction because their attempted business transaction does not
+commit. Metadata is deliberately small and rejects credential-related field
+names; retention and privileged read access are defined before a query API is
+introduced.
+
 ## Legacy decisions
 
 The previous single-administrator, stateless JWT, public-catalog and local-image
