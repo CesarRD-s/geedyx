@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="apps/web/src/assets/geedyx-logo-horizontal-light.png" alt="GEEDYX" width="360" />
+</p>
+
 # GEEDYX
 
 GEEDYX is a private, single-company ERP under development. It will manage the

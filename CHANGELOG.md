@@ -3,7 +3,7 @@
 All notable changes to GEEDYX are documented in this file. Checkpoints (CP)
 are the project's staged delivery milestones; see [docs/ROADMAP.md](docs/ROADMAP.md).
 
-## CP12.6 — GEEDYX Design System applied to the existing UI (2026-09-11)
+## CP12.6 - GEEDYX Design System applied to the existing UI (2026-09-11)
 
 Applies the GEEDYX Design System (CP12.5) to every existing screen and shared
 component, so `/setup`, `/login` and `/admin*` feel like one product.
@@ -41,7 +41,7 @@ no new dependencies.
 - `docs/UI.md`: CP12.6 status; alias paragraph rewritten (aliases removed);
   §12 header band, §14 nav indicator + ghost logout, §16 tonal toolbar band,
   §17 image placeholder references.
-- `docs/DESIGN-TOKENS.md`: alias section rewritten — aliases no longer exist.
+- `docs/DESIGN-TOKENS.md`: alias section rewritten - aliases no longer exist.
 - `docs/DECISIONS.md`: ADR-028 note and ADR-029 status updated (aliases removed;
   pattern decisions ratified).
 
@@ -50,7 +50,7 @@ no new dependencies.
 - Web + API lint clean; `pnpm build` clean; API unit tests clean.
 - Alias scan confirms no CP12 alias names remain in `apps/web` sources.
 
-## CP12.5 — GEEDYX Design System v1.0 (2026-09-11)
+## CP12.5 - GEEDYX Design System v1.0 (2026-09-11)
 
 Formalizes the visual language as a documented contract and prepares the `apps/web`
 infrastructure, **without redesigning** the existing screens (`/setup`, `/login`,
@@ -58,9 +58,9 @@ infrastructure, **without redesigning** the existing screens (`/setup`, `/login`
 
 ### Added
 
-- **Docs — identity**: `docs/BRAND.md` (monochrome GEEDYX identity, accent-independent
+- **Docs - identity**: `docs/BRAND.md` (monochrome GEEDYX identity, accent-independent
   wordmark, Light/Dark variants, favicon note).
-- **Docs — tokens**: `docs/DESIGN-TOKENS.md` (living token reference with
+- **Docs - tokens**: `docs/DESIGN-TOKENS.md` (living token reference with
   light/dark values and usage rules for colors, typography, spacing, radius,
   borders, shadows and motion).
 - **Canonical tokens**: neutral (`background`, `surface`, `surface-subtle`,
@@ -98,7 +98,7 @@ infrastructure, **without redesigning** the existing screens (`/setup`, `/login`
 - Web + API lint clean; `pnpm build` clean; API unit tests clean.
 - Themes and token loading unchanged (no component or layout regression introduced).
 
-## CP12.4 — Local PostgreSQL normalization to GEEDYX (2026-09-11)
+## CP12.4 - Local PostgreSQL normalization to GEEDYX (2026-09-11)
 
 Completes the Nexory → GEEDYX infrastructure normalization started in CP12.3 by
 switching the local development PostgreSQL defaults from `nexory` to `geedyx`.
@@ -127,7 +127,7 @@ switching the local development PostgreSQL defaults from `nexory` to `geedyx`.
   (tables `User`, `Category`, `Product` created).
 - API unit tests, web + API lint and `pnpm build` clean.
 
-## CP12.3 — Product rename: Nexory → GEEDYX (2026-09-11)
+## CP12.3 - Product rename: Nexory → GEEDYX (2026-09-11)
 
 The project previously used the provisional name **Nexory**. From this
 checkpoint the official product and project name is **GEEDYX**.
@@ -167,7 +167,7 @@ checkpoint the official product and project name is **GEEDYX**.
 - Global search for `nexory` returns only the deliberately kept references
   above.
 
-## CP12.2 — Bootstrap fixes, dev tooling and catalog removal (2026-09-11)
+## CP12.2 - Bootstrap fixes, dev tooling and catalog removal (2026-09-11)
 
 Completes the post-CP12 bootstrap experience and removes the public catalog,
 which contradicts the current product decision (GEEDYX is a private admin app).
@@ -176,10 +176,10 @@ which contradicts the current product decision (GEEDYX is a private admin app).
 
 - **Dev database tooling** (`apps/api/scripts/db.ts`, compiled via
   `tsconfig.scripts.json`):
-  - `pnpm db:status` — shows DB connectivity and User/Category/Product counts.
-  - `pnpm db:users` — lists development users with id, username, email and
+  - `pnpm db:status` - shows DB connectivity and User/Category/Product counts.
+  - `pnpm db:users` - lists development users with id, username, email and
     timestamps; shows "ready for /setup" when empty.
-  - `pnpm db:reset` — drops and re-migrates the local database (reuses
+  - `pnpm db:reset` - drops and re-migrates the local database (reuses
     `prisma migrate reset --force`); guarded against `NODE_ENV=production` and
     non-loopback `DATABASE_URL`.
 
@@ -224,7 +224,7 @@ which contradicts the current product decision (GEEDYX is a private admin app).
 - `GET /` (with valid session) → 307 to `/admin`.
 - `GET /products/[slug]` → 404.
 
-## CP12.1 — Initial admin setup UI (2026-09-11)
+## CP12.1 - Initial admin setup UI (2026-09-11)
 
 Completes the only gap found after CP12: the frontend had no experience to run
 the initial administrator setup (`POST /auth/setup` existed only in the API).
@@ -269,7 +269,7 @@ the initial administrator setup (`POST /auth/setup` existed only in the API).
   still protects into `/login`; `/login` shows the discreet setup link. Dev DB
   untouched (user count stayed 1).
 
-## CP12 — Design System & UI refinement (2026-09-11)
+## CP12 - Design System & UI refinement (2026-09-11)
 
 Established the official GEEDYX Design System and applied it to the entire
 current MVP, without touching business functionality, data, or API contracts.
@@ -278,9 +278,9 @@ No business logic changed.
 ### Design System
 
 - **Semantic tokens** (`apps/web/src/app/globals.css`): single source of truth
-  for colors — surfaces, text, borders, brand blue (`primary` family), status
+  for colors - surfaces, text, borders, brand blue (`primary` family), status
   accents (`success`/`warning`/`danger`), `overlay`, `input`, `selection`,
-  `shadow-panel` — with real **Light and Dark** variants mapped into Tailwind 4
+  `shadow-panel` - with real **Light and Dark** variants mapped into Tailwind 4
   utilities via `@theme inline`.
 - **Themes**: Light / Dark / System via `next-themes` (`defaultTheme=system`,
   `enableSystem`); the dark theme is a full surface hierarchy, not "black +
@@ -293,7 +293,7 @@ No business logic changed.
 
 ### Shared UI components
 
-- `components/ui/` is now the single set of shared primitives — Button,
+- `components/ui/` is now the single set of shared primitives - Button,
   IconButton, Input/Select/Textarea/FieldLabel/FieldError, **Dialog**, Badge,
   EmptyState, ErrorState, PageHeader, SearchInput, Skeleton, ThemeProvider,
   ThemeToggle, plus the class-string tokens in `styles.ts`.
@@ -346,7 +346,7 @@ No business logic changed.
 - API unit tests: 9/9 green.
 - No API contracts, schema, or business behavior changed.
 
-## CP11 — MVP hardening and release (2026-09-10)
+## CP11 - MVP hardening and release (2026-09-10)
 
 Final MVP checkpoint: a full audit and hardening pass. No new business
 functionality was added.
@@ -407,7 +407,7 @@ functionality was added.
 
 - `@geedyx/web` lint: 0 errors (3 accepted `<img>` warnings); build clean.
 - `@geedyx/api` lint, build clean; unit tests 9/9; e2e 83/83.
-- Smoke test on real PostgreSQL with production builds: **26/26 checks** —
+- Smoke test on real PostgreSQL with production builds: **26/26 checks** -
   migration deploy, admin bootstrap (201) and lock (403), login, category and
   product creation, image upload, edit, public catalog without a session,
   search, category filter, product detail (metadata, es-MX USD price, image via
@@ -416,7 +416,7 @@ functionality was added.
   delete product/category, no orphaned uploads, DB clean except the single
   administrator.
 
-## CP10 — Public catalog (2026-09-10)
+## CP10 - Public catalog (2026-09-10)
 
 ### Added
 
@@ -428,7 +428,7 @@ functionality was added.
     and route-specific `loading.tsx` + shared `error.tsx`.
   - Search (`search`), category filter (`categoryId`), sorting
     (`sort`/`order`: name/price/stock/createdAt), pagination and page size
-    (`page`/`limit` 10/20/50) — all URL-driven through
+    (`page`/`limit` 10/20/50) - all URL-driven through
     `parseProductQuery`/`productQueryToSearchParams` so refresh and
     back/forward keep state; debounced 400 ms search, a "Limpiar filtros"
     action, and server-side correction of out-of-range `page`.
@@ -458,7 +458,7 @@ functionality was added.
 - Manual end-to-end run (Postgres via Docker) 41/41 checks passed covering the
   public catalog flows, admin regressions and a clean database afterwards.
 
-## CP9 — Products management UI (2026-09-10)
+## CP9 - Products management UI (2026-09-10)
 
 ### Added
 
@@ -487,7 +487,7 @@ functionality was added.
 - `@geedyx/web` lint/build clean; `@geedyx/api` lint/build + unit tests clean;
   e2e 82 green; manual verification of the full admin flows.
 
-## CP8 — Web categories management (2026-09-10)
+## CP8 - Web categories management (2026-09-10)
 
 ### Added
 
@@ -512,7 +512,7 @@ functionality was added.
 
 ### Decisions
 
-- No new web dependencies (e.g. no `zod`); category-specific components only —
+- No new web dependencies (e.g. no `zod`); category-specific components only -
   no generic CRUD/table/modal framework yet.
 
 ### Verification
@@ -521,7 +521,7 @@ functionality was added.
   (9/9) clean; manual run 17/17 checks (redirect rules, login, CRUD, 409s,
   cleanup).
 
-## CP7 — Web authentication and admin shell (2026-09-10)
+## CP7 - Web authentication and admin shell (2026-09-10)
 
 ### Added
 
@@ -543,7 +543,7 @@ functionality was added.
 - `@geedyx/web` lint/build clean; manual verification 18/18 (redirect rules,
   login + cookie, dashboard counts, empty states, logout).
 
-## CP6 — Product images (2026-09-10)
+## CP6 - Product images (2026-09-10)
 
 ### Added
 
@@ -580,7 +580,7 @@ functionality was added.
   `local-image-storage.spec.ts` (8 tests). Full API e2e reached 82 green;
   unit 9 green; build and lint clean.
 
-## CP5 — Products API (2026-09-10)
+## CP5 - Products API (2026-09-10)
 
 ### Added
 
@@ -591,7 +591,7 @@ functionality was added.
   prices serialized as JSON numbers (ADR-023).
 - E2E suite `products.e2e-spec.ts`; the API e2e suite reached 63 green tests.
 
-## CP1–CP4 — Project foundation and core API
+## CP1–CP4 - Project foundation and core API
 
 - Bootstrap: pnpm workspace monorepo with `apps/web` (Next.js) and
   `apps/api` (NestJS), Docker PostgreSQL 17, ESLint/Prettier and

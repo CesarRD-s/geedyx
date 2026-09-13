@@ -92,10 +92,10 @@ Avoid:
 Use the GEEDYX Design System:
 
 - **Every new UI must use the Design System defined in `docs/UI.md`.**
-- **Mandatory**: before creating or modifying any `apps/web` UI, consult `docs/BRAND.md`, `docs/UI.md` and `docs/DESIGN-TOKENS.md` — then inspect the existing implementation.
+- **Mandatory**: before creating or modifying any `apps/web` UI, consult `docs/BRAND.md`, `docs/UI.md` and `docs/DESIGN-TOKENS.md` - then inspect the existing implementation.
 - Do not introduce new visual patterns when an existing pattern is sufficient.
 - Colors come from the semantic tokens in `globals.css`. Use canonical names and never hard-code raw palette colors in components.
-- The accent is configurable (`data-accent` on `<html>`); the brand stays monochrome — never color the logo/wordmark with the accent.
+- The accent is configurable (`data-accent` on `<html>`); the brand stays monochrome - never color the logo/wordmark with the accent.
 - Reuse shared primitives in `apps/web/src/components/ui/`. Document genuinely new recurring patterns in `docs/UI.md` before reuse.
 - Support Light, Dark and System themes via tokens; never reach for scattered `dark:` exceptions.
 - New dependencies require justification.
@@ -111,6 +111,14 @@ See [docs/BRAND.md](docs/BRAND.md), [docs/UI.md](docs/UI.md), [docs/DESIGN-TOKEN
 5. Run relevant tests/type checks/linting.
 6. Update documentation when an architectural decision changes.
 7. Do not add dependencies without justification.
+
+## Writing
+
+- Do not use the U+2014 punctuation character in any project text: repository
+  metadata, documentation, comments, HTML, CSS, JavaScript, TypeScript, UI
+  strings or other versioned text files. Use commas, colons or a simple hyphen.
+- Technical identifiers that require two hyphens, such as CSS custom
+  properties, are unaffected by this writing rule.
 
 ## Commands
 
