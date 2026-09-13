@@ -1,6 +1,8 @@
 import { ForbiddenException } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 import { ConfigService } from '@nestjs/config';
+import argon2 from 'argon2';
+import { createHash } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AuthService } from './auth.service.js';
 
@@ -160,6 +162,54 @@ describe('AuthService session capacity', () => {
       where: { id: { in: ['oldest'] } },
       data: { revokedAt: expect.any(Date) },
     });
+  });
+});
+
+describe('AuthService session credential rotation', () => {
+  it('rotates both credentials on reauthentication without extending absolute expiry', async () => {
+    const password = 'current-password-value';
+    const expiresAt = new Date(Date.now() + 60 * 60_000);
+    const updateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const transactionClient = {
+      session: {
+        findFirst: vi.fn().mockResolvedValue({ expiresAt }),
+        updateMany,
+      },
+    };
+    const prisma = {
+      user: {
+        findUnique: vi.fn().mockResolvedValue({
+          passwordHash: await argon2.hash(password, { type: argon2.argon2id }),
+        }),
+      },
+      $transaction: vi.fn(
+        (callback: (client: typeof transactionClient) => Promise<unknown>) =>
+          callback(transactionClient),
+      ),
+    } as unknown as PrismaService;
+    const service = new AuthService(prisma, new ConfigService());
+
+    const result = await service.reauthenticate(
+      'user-1',
+      'session-1',
+      password,
+    );
+
+    const rotation = updateMany.mock.calls[0][0];
+    expect(rotation.where).toEqual({
+      id: 'session-1',
+      userId: 'user-1',
+      revokedAt: null,
+    });
+    expect(rotation.data).not.toHaveProperty('expiresAt');
+    expect(rotation.data.tokenHash).toBe(
+      createHash('sha256').update(result.token).digest('hex'),
+    );
+    expect(rotation.data.csrfTokenHash).toBe(
+      createHash('sha256').update(result.csrfToken).digest('hex'),
+    );
+    expect(result.cookieMaxAge).toBeGreaterThan(0);
+    expect(result.cookieMaxAge).toBeLessThanOrEqual(60 * 60_000);
   });
 });
 

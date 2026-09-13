@@ -42,6 +42,16 @@ export interface AuthSession {
   cookieMaxAge: number;
 }
 
+export interface RotatedSessionCredentials {
+  token: string;
+  csrfToken: string;
+  cookieMaxAge: number;
+}
+
+export interface ReauthenticationResult extends RotatedSessionCredentials {
+  reauthenticatedUntil: Date;
+}
+
 function toAuthUser(
   user: Pick<
     UserModel,
@@ -315,7 +325,7 @@ export class AuthService {
     currentPassword: string,
     newPassword: string,
     currentSessionId: string,
-  ): Promise<void> {
+  ): Promise<RotatedSessionCredentials> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { passwordHash: true },
@@ -323,30 +333,51 @@ export class AuthService {
     if (!user || !(await argon2Verify(user.passwordHash, currentPassword)))
       throw new UnauthorizedException('Invalid credentials');
     const now = new Date();
-    await this.prisma.$transaction([
-      this.prisma.user.update({
+    const passwordHash = await argon2Hash(newPassword);
+    const credentials = this.createSessionCredentials();
+    const expiresAt = await this.prisma.$transaction(async (transaction) => {
+      const currentSession = await transaction.session.findFirst({
+        where: { id: currentSessionId, userId, revokedAt: null },
+        select: { expiresAt: true },
+      });
+      if (!currentSession || currentSession.expiresAt <= now) {
+        throw new UnauthorizedException('Session expired');
+      }
+      await transaction.user.update({
         where: { id: userId },
         data: {
-          passwordHash: await argon2Hash(newPassword),
+          passwordHash,
           passwordChangedAt: now,
         },
-      }),
-      this.prisma.session.updateMany({
+      });
+      await transaction.session.updateMany({
         where: { userId, id: { not: currentSessionId }, revokedAt: null },
         data: { revokedAt: now },
-      }),
-      this.prisma.session.update({
-        where: { id: currentSessionId },
-        data: { reauthenticatedAt: now },
-      }),
-    ]);
+      });
+      const rotated = await transaction.session.updateMany({
+        where: { id: currentSessionId, userId, revokedAt: null },
+        data: {
+          reauthenticatedAt: now,
+          tokenHash: this.hashCredential(credentials.token),
+          csrfTokenHash: this.hashCredential(credentials.csrfToken),
+        },
+      });
+      if (rotated.count !== 1) {
+        throw new UnauthorizedException('Session expired');
+      }
+      return currentSession.expiresAt;
+    });
+    return {
+      ...credentials,
+      cookieMaxAge: Math.max(0, expiresAt.getTime() - now.getTime()),
+    };
   }
 
   async reauthenticate(
     userId: string,
     sessionId: string,
     password: string,
-  ): Promise<{ reauthenticatedUntil: Date }> {
+  ): Promise<ReauthenticationResult> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { passwordHash: true },
@@ -356,11 +387,34 @@ export class AuthService {
     }
 
     const reauthenticatedAt = new Date();
-    await this.prisma.session.updateMany({
-      where: { id: sessionId, userId, revokedAt: null },
-      data: { reauthenticatedAt },
+    const credentials = this.createSessionCredentials();
+    const expiresAt = await this.prisma.$transaction(async (transaction) => {
+      const currentSession = await transaction.session.findFirst({
+        where: { id: sessionId, userId, revokedAt: null },
+        select: { expiresAt: true },
+      });
+      if (!currentSession || currentSession.expiresAt <= reauthenticatedAt) {
+        throw new UnauthorizedException('Session expired');
+      }
+      const rotated = await transaction.session.updateMany({
+        where: { id: sessionId, userId, revokedAt: null },
+        data: {
+          reauthenticatedAt,
+          tokenHash: this.hashCredential(credentials.token),
+          csrfTokenHash: this.hashCredential(credentials.csrfToken),
+        },
+      });
+      if (rotated.count !== 1) {
+        throw new UnauthorizedException('Session expired');
+      }
+      return currentSession.expiresAt;
     });
     return {
+      ...credentials,
+      cookieMaxAge: Math.max(
+        0,
+        expiresAt.getTime() - reauthenticatedAt.getTime(),
+      ),
       reauthenticatedUntil: new Date(
         reauthenticatedAt.getTime() +
           durationToMs(
@@ -483,8 +537,7 @@ export class AuthService {
       | 'timeZone'
     >,
   ): Promise<AuthSession> {
-    const token = randomBytes(32).toString('base64url');
-    const csrfToken = randomBytes(32).toString('base64url');
+    const { token, csrfToken } = this.createSessionCredentials();
     const cookieMaxAge = durationToMs(
       this.configService.get<string>('SESSION_ABSOLUTE_TTL', '12h'),
     );
@@ -509,8 +562,8 @@ export class AuthService {
     await this.prisma.session.create({
       data: {
         userId: user.id,
-        tokenHash: createHash('sha256').update(token).digest('hex'),
-        csrfTokenHash: createHash('sha256').update(csrfToken).digest('hex'),
+        tokenHash: this.hashCredential(token),
+        csrfTokenHash: this.hashCredential(csrfToken),
         reauthenticatedAt: now,
         idleExpiresAt: new Date(
           now.getTime() +
@@ -527,5 +580,19 @@ export class AuthService {
       select: { locale: true, timeZone: true, currency: true },
     });
     return { user: toAuthUser(user, company), token, csrfToken, cookieMaxAge };
+  }
+
+  private createSessionCredentials(): Pick<
+    RotatedSessionCredentials,
+    'token' | 'csrfToken'
+  > {
+    return {
+      token: randomBytes(32).toString('base64url'),
+      csrfToken: randomBytes(32).toString('base64url'),
+    };
+  }
+
+  private hashCredential(value: string): string {
+    return createHash('sha256').update(value).digest('hex');
   }
 }

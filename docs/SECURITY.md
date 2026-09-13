@@ -43,6 +43,9 @@ database.
   `POST /auth/reauthenticate` can renew it after verifying the current password.
   The API enforces `REAUTHENTICATION_TTL` against the persisted session
   timestamp; the frontend cannot extend the window itself.
+- Successful reauthentication and password changes replace both the opaque
+  session token and CSRF token. Rotation retains the session's original
+  absolute expiry and does not create a new session.
 
 Production requires an HTTPS `PASSWORD_RESET_DELIVERY_ENDPOINT`. GEEDYX sends
 the configured adapter a recipient, expiry and one-time reset URL using a bearer
@@ -55,8 +58,9 @@ the non-enumerating response and discard undeliverable tokens.
 - Every private endpoint has an explicit permission check.
 - Integration credentials are hashed, scoped, rate-limited, rotated and
   independently revoked.
-- Browser-originated mutations validate the allowed origin and apply CSRF
-  protection. CORS is never authorization.
+- Every session-authenticated mutation requires an exact `Origin` match against
+  `CORS_ORIGINS` and a valid session-bound CSRF token. Missing, opaque (`null`)
+  and unapproved origins are rejected. CORS is never authorization.
 - Public endpoints are allowlisted, read-only, rate-limited and reveal only
   published catalog fields.
 - Inputs use allowlist DTO validation; IDs and company ownership are checked on
@@ -85,9 +89,10 @@ first-class threats. Each new domain documents its threat model before release.
 ## Current controls and limitations
 
 Implemented controls include Argon2id hashing, opaque sessions stored as token
-hashes, HttpOnly cookies, idle and absolute session expiry, session limits,
-logout revocation, CSRF validation for browser mutations, CORS allowlist, DTO
-validation, durable authentication throttling, validated image uploads, fail-fast runtime
+hashes, HttpOnly cookies, idle and absolute session expiry, credential rotation,
+session limits, logout revocation, exact-origin and CSRF validation for browser
+mutations, CORS allowlist, DTO validation, durable authentication throttling,
+validated image uploads, fail-fast runtime
 configuration validation and safe API error responses. Installation writes the
 provisional company, owner and immutable installation state in one transaction.
 Requests receive correlation IDs and structured access logs. Every current

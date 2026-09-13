@@ -46,6 +46,11 @@ PostgreSQL for authoritative authentication limits. Only SHA-256 subject keys,
 scope, counters and expiry state are stored, allowing enforcement to survive
 restarts and remain consistent across API instances.
 
+Session-authenticated mutations use two independent browser checks: an exact
+`Origin` match against the configured allowlist and a session-bound CSRF token.
+Successful password confirmation replaces both opaque credentials in the same
+session record while retaining its original absolute expiry.
+
 ## ADR-006 - Authorization is server-side permission based
 
 Internal users receive roles and permissions. Every protected API operation

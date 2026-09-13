@@ -123,7 +123,10 @@ enforced consistently.
   endpoints so process restarts cannot clear enforcement. Completed in
   P1.4c.1 with hashed PostgreSQL buckets.
 - Verify session rotation, idle and absolute expiry, revocation, browser origin
-  and CSRF behavior as one documented security contract.
+  and CSRF behavior as one documented security contract. Completed in P1.4c.2:
+  reauthentication and password changes rotate both credentials while
+  preserving absolute expiry, and every session mutation requires an approved
+  origin plus its session-bound CSRF token.
 - Keep the account model ready for a later MFA implementation without exposing
   an incomplete enrollment flow.
 

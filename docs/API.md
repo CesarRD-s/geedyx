@@ -70,8 +70,9 @@ explicit product decision; the boundary never chooses an offset silently.
   `POST /api/v1/auth/sessions/revoke-others` manage the authenticated user's
   sessions. `POST /api/v1/auth/password/change` requires the current password.
 - `POST /api/v1/auth/reauthenticate` verifies the current password and marks
-  only the current server-side session as recently authenticated. It returns
-  `reauthenticatedUntil`; an invalid password is `401`.
+  only the current server-side session as recently authenticated. It rotates
+  that session's opaque and CSRF credentials without extending its absolute
+  expiry. It returns `reauthenticatedUntil`; an invalid password is `401`.
 - Sensitive mutations return `403` when the current session has no recent
   authentication. P1.4b initially applies this boundary to company settings and
   internal-user creation or updates.
@@ -86,6 +87,10 @@ explicit product decision; the boundary never chooses an offset silently.
 - Authentication and recovery endpoints can return `429 RATE_LIMITED`. Their
   critical counters are persisted in PostgreSQL and keyed by hashed IP plus a
   hashed account, session or token subject as applicable.
+- Every non-safe request authenticated by a browser session must send an
+  `Origin` that exactly matches `CORS_ORIGINS` and the current CSRF token in
+  `X-CSRF-Token`. Successful password changes also rotate both credentials
+  without extending the session's absolute expiry.
 - `/api/v1/categories` and `/api/v1/products` expose the current CRUD and image
   operations. Reads require `catalog.read`; mutations require `catalog.manage`.
 - `GET /api/v1/users` and `GET /api/v1/users/roles` require `users.read`.

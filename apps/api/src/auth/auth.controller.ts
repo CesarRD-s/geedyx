@@ -138,14 +138,17 @@ export class AuthController {
   async changePassword(
     @Req() req: AuthenticatedRequest,
     @Body() dto: ChangePasswordDto,
+    @Res({ passthrough: true }) res: Response,
   ) {
     await this.enforceRateLimit(req, 'change-password', req.user.id);
-    await this.authService.changePassword(
+    const session = await this.authService.changePassword(
       req.user.id,
       dto.currentPassword,
       dto.newPassword,
       req.user.sessionId ?? '',
     );
+    this.setSessionCookie(res, session.token, session.cookieMaxAge);
+    this.setCsrfCookie(res, session.csrfToken, session.cookieMaxAge);
   }
 
   @Post('reauthenticate')
@@ -154,13 +157,17 @@ export class AuthController {
   async reauthenticate(
     @Req() req: AuthenticatedRequest,
     @Body() dto: ReauthenticateDto,
+    @Res({ passthrough: true }) res: Response,
   ) {
     await this.enforceRateLimit(req, 'reauthenticate', req.user.id);
-    return this.authService.reauthenticate(
+    const session = await this.authService.reauthenticate(
       req.user.id,
       req.user.sessionId ?? '',
       dto.password,
     );
+    this.setSessionCookie(res, session.token, session.cookieMaxAge);
+    this.setCsrfCookie(res, session.csrfToken, session.cookieMaxAge);
+    return { reauthenticatedUntil: session.reauthenticatedUntil };
   }
 
   @Post('password/reset-request')

@@ -1,6 +1,7 @@
 import {
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -55,6 +56,15 @@ export class SessionAuthGuard implements CanActivate {
     )
       throw new UnauthorizedException('Session expired');
     if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method)) {
+      const origin = request.header('origin');
+      const allowedOrigins = this.config
+        .get<string>('CORS_ORIGINS', 'http://localhost:3000')
+        .split(',')
+        .map((allowedOrigin) => allowedOrigin.trim())
+        .filter(Boolean);
+      if (!origin || !allowedOrigins.includes(origin)) {
+        throw new ForbiddenException('Invalid request origin');
+      }
       const csrfToken = request.header('x-csrf-token');
       const suppliedHash =
         typeof csrfToken === 'string'

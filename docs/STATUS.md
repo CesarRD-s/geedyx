@@ -102,8 +102,10 @@ internal-user mutations with a default 10-minute session window. It also adds
 non-enumerating recovery requests, provider-neutral delivery, hashed one-time
 tokens, public recovery screens and transactional session revocation after a
 reset. P1.4c.1 replaces critical in-memory authentication limits with durable,
-hashed PostgreSQL buckets. Next: enforce browser origin alongside CSRF, verify
-session rotation and expiry behavior, and add MFA-ready storage before P1.5.
+hashed PostgreSQL buckets. P1.4c.2 enforces approved browser origins alongside
+session-bound CSRF and rotates session and CSRF credentials after successful
+reauthentication or password changes without extending absolute expiry. Next:
+add MFA-ready storage before P1.5.
 
 ## Documentation rule
 
