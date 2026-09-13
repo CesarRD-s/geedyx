@@ -10,6 +10,7 @@ import {
   Menu,
   Package,
   PanelLeftClose,
+  Users,
   X,
 } from "lucide-react";
 import { logout } from "@/lib/api/client";
@@ -21,15 +22,17 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { navLinkClass } from "@/components/ui/styles";
 
 const NAV_ITEMS = [
-  { href: "/app", label: "Panel", icon: LayoutDashboard },
-  { href: "/app/products", label: "Productos", icon: Package },
-  { href: "/app/categories", label: "Categorías", icon: Folder },
+  { href: "/app", label: "Panel", icon: LayoutDashboard, permission: null },
+  { href: "/app/products", label: "Productos", icon: Package, permission: "catalog.read" },
+  { href: "/app/categories", label: "Categorías", icon: Folder, permission: "catalog.read" },
+  { href: "/app/users", label: "Usuarios", icon: Users, permission: "users.read" },
 ] as const;
 
 const SECTION_TITLES: Record<string, string> = {
   "/app": "Panel",
   "/app/products": "Productos",
   "/app/categories": "Categorías",
+  "/app/users": "Usuarios",
 };
 
 const SIDEBAR_STORAGE_KEY = "geedyx-sidebar-collapsed";
@@ -78,7 +81,7 @@ export function WorkspaceShell({ user, children }: WorkspaceShellProps) {
       <aside className={`fixed inset-y-0 left-0 z-20 hidden flex-col border-r border-border bg-surface md:flex ${sidebarCollapsed ? "w-16" : "w-60"}`}>
         <Brand collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
         <div className={`flex-1 overflow-y-auto py-4 ${sidebarCollapsed ? "px-2" : "px-3"}`}>
-          <NavLinks pathname={pathname} collapsed={sidebarCollapsed} />
+          <NavLinks pathname={pathname} user={user} collapsed={sidebarCollapsed} />
         </div>
       </aside>
 
@@ -99,11 +102,11 @@ export function WorkspaceShell({ user, children }: WorkspaceShellProps) {
           <div className="ml-auto flex items-center gap-3">
             <div className="hidden items-center gap-2.5 sm:flex">
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-surface-subtle text-sm font-medium text-foreground">
-                {user.username.charAt(0).toUpperCase()}
+                  {(user.displayName ?? user.username).charAt(0).toUpperCase()}
               </div>
               <div className="text-right">
                 <p className="text-sm font-medium leading-tight text-foreground">
-                  {user.username}
+                  {user.displayName ?? user.username}
                 </p>
                 <p className="max-w-48 truncate text-xs text-muted">
                   {user.email}
@@ -127,7 +130,13 @@ export function WorkspaceShell({ user, children }: WorkspaceShellProps) {
         <main className="flex-1 p-4 sm:p-6">{children}</main>
       </div>
 
-      {drawerOpen && <MobileDrawer pathname={pathname} onClose={() => setDrawerOpen(false)} />}
+      {drawerOpen && (
+        <MobileDrawer
+          pathname={pathname}
+          user={user}
+          onClose={() => setDrawerOpen(false)}
+        />
+      )}
     </div>
   );
 }
@@ -166,17 +175,21 @@ function Brand({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => vo
 
 function NavLinks({
   pathname,
+  user,
   onNavigate,
   collapsed = false,
 }: {
   pathname: string;
+  user: AuthUser;
   onNavigate?: () => void;
   collapsed?: boolean;
 }) {
   return (
     <nav aria-label="Principal">
       <ul className="space-y-1">
-        {NAV_ITEMS.map((item) => {
+        {NAV_ITEMS.filter(
+          (item) => item.permission === null || user.permissions.includes(item.permission),
+        ).map((item) => {
           const ItemIcon = item.icon;
           const isActive = pathname === item.href;
           return (
@@ -208,9 +221,11 @@ function NavLinks({
 
 function MobileDrawer({
   pathname,
+  user,
   onClose,
 }: {
   pathname: string;
+  user: AuthUser;
   onClose: () => void;
 }) {
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
@@ -239,7 +254,7 @@ function MobileDrawer({
           </IconButton>
         </div>
         <div className="flex-1 px-3 py-4">
-          <NavLinks pathname={pathname} onNavigate={onClose} />
+          <NavLinks pathname={pathname} user={user} onNavigate={onClose} />
         </div>
       </div>
     </div>

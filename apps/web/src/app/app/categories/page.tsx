@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getCategories, requireSession } from "@/lib/api/server";
+import { getCategories, requirePermission } from "@/lib/api/server";
 import { CategoriesView } from "@/components/categories/categories-view";
 
 export const metadata: Metadata = {
@@ -7,7 +7,12 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminCategoriesPage() {
-  await requireSession();
+  const user = await requirePermission("catalog.read");
   const categories = await getCategories();
-  return <CategoriesView initialCategories={categories} />;
+  return (
+    <CategoriesView
+      initialCategories={categories}
+      canManage={user.permissions.includes("catalog.manage")}
+    />
+  );
 }

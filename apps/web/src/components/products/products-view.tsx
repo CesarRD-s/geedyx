@@ -67,6 +67,7 @@ interface ProductsViewProps {
   };
   categories: CategorySummary[];
   initialQuery: ProductListQuery;
+  canManage: boolean;
 }
 
 type DialogState =
@@ -127,6 +128,7 @@ export function ProductsView({
   initialPage,
   categories,
   initialQuery,
+  canManage,
 }: ProductsViewProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -362,11 +364,11 @@ export function ProductsView({
       <PageHeader
         title="Productos"
         description="Administra el catálogo, el inventario y las imágenes de tus productos."
-        action={
+        action={canManage ? (
           <Button variant="primary" onClick={openCreate}>
             Nuevo producto
           </Button>
-        }
+        ) : undefined}
       />
 
       {banner ? (
@@ -523,11 +525,11 @@ export function ProductsView({
           icon={<PackageX className="h-4 w-4" aria-hidden="true" />}
           title="No hay productos todavía"
           description="Crea tu primer producto para empezar a armar el catálogo."
-          action={
+          action={canManage ? (
             <Button variant="primary" onClick={openCreate}>
               Nuevo producto
             </Button>
-          }
+          ) : undefined}
         />
       ) : showNoResults ? (
         <EmptyState
@@ -582,7 +584,7 @@ export function ProductsView({
                     </dd>
                   </div>
                 </dl>
-                <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                {canManage ? <div className="mt-3 flex flex-wrap items-center gap-1.5">
                   <IconButton
                     label={`Editar ${product.name}`}
                     tooltip="Editar"
@@ -603,7 +605,7 @@ export function ProductsView({
                   >
                     {product.isActive ? "Desactivar" : "Activar"}
                   </Button>
-                </div>
+                </div> : null}
               </li>
             ))}
           </ul>
@@ -653,7 +655,7 @@ export function ProductsView({
                       <StatusCell isActive={product.isActive} />
                     </td>
                     <td className={tdClass}>
-                      <div className="flex items-center justify-end gap-1.5">
+                      {canManage ? <div className="flex items-center justify-end gap-1.5">
                         <IconButton
                           label={`Editar ${product.name}`}
                           tooltip="Editar"
@@ -676,7 +678,7 @@ export function ProductsView({
                         >
                           <Trash2 className="h-4 w-4" aria-hidden="true" />
                         </IconButton>
-                      </div>
+                      </div> : null}
                     </td>
                   </tr>
                 ))}
@@ -686,7 +688,7 @@ export function ProductsView({
         </>
       )}
 
-      {dialog?.mode === "create" ? (
+      {canManage && dialog?.mode === "create" ? (
         <ProductFormDialog
           mode="create"
           initial={null}
@@ -696,7 +698,7 @@ export function ProductsView({
           onClose={() => setDialog(null)}
         />
       ) : null}
-      {dialog?.mode === "edit" ? (
+      {canManage && dialog?.mode === "edit" ? (
         <ProductFormDialog
           mode="edit"
           initial={dialog.product}
@@ -708,7 +710,7 @@ export function ProductsView({
           onClose={() => setDialog(null)}
         />
       ) : null}
-      {dialog?.mode === "delete" ? (
+      {canManage && dialog?.mode === "delete" ? (
         <DeleteProductDialog
           productName={dialog.product.name}
           onConfirm={handleDelete}

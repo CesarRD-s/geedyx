@@ -4,6 +4,12 @@ import type {
   CategorySummary,
   ProductDetail,
   ProductInput,
+  InternalUser,
+  Paginated,
+  RoleSummary,
+  UserInput,
+  UserListQuery,
+  UserUpdateInput,
 } from "./types";
 
 async function clientFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -135,5 +141,42 @@ export async function uploadProductImage(
 export async function deleteProductImage(id: string): Promise<void> {
   await clientFetch<void>(`/products/${encodeURIComponent(id)}/image`, {
     method: "DELETE",
+  });
+}
+
+export async function listUsers(
+  query: UserListQuery,
+): Promise<Paginated<InternalUser>> {
+  const params = new URLSearchParams({
+    page: String(query.page),
+    limit: String(query.limit),
+  });
+  if (query.search) {
+    params.set("search", query.search);
+  }
+  if (query.status) {
+    params.set("status", query.status);
+  }
+  return clientFetch<Paginated<InternalUser>>(`/users?${params.toString()}`);
+}
+
+export async function listAssignableRoles(): Promise<RoleSummary[]> {
+  return clientFetch<RoleSummary[]>("/users/roles");
+}
+
+export async function createUser(input: UserInput): Promise<InternalUser> {
+  return clientFetch<InternalUser>("/users", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateUser(
+  id: string,
+  input: UserUpdateInput,
+): Promise<InternalUser> {
+  return clientFetch<InternalUser>(`/users/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
   });
 }

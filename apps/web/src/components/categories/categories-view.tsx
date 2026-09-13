@@ -35,8 +35,10 @@ type DialogState =
 
 export function CategoriesView({
   initialCategories,
+  canManage,
 }: {
   initialCategories: CategorySummary[];
+  canManage: boolean;
 }) {
   const [categories, setCategories] =
     useState<CategorySummary[]>(initialCategories);
@@ -93,11 +95,11 @@ export function CategoriesView({
       <PageHeader
         title="Categorías"
         description="Organiza los productos por categorías."
-        action={
+        action={canManage ? (
           <Button variant="primary" onClick={() => setDialog({ mode: "create" })}>
             Nueva categoría
           </Button>
-        }
+        ) : undefined}
       />
 
       {banner ? (
@@ -127,11 +129,11 @@ export function CategoriesView({
           icon={<FolderOpen className="h-4 w-4" aria-hidden="true" />}
           title="Aún no hay categorías"
           description="Crea tu primera categoría para empezar a organizar los productos."
-          action={
+          action={canManage ? (
             <Button variant="primary" onClick={() => setDialog({ mode: "create" })}>
               Nueva categoría
             </Button>
-          }
+          ) : undefined}
         />
       ) : visible.length === 0 ? (
         <EmptyState
@@ -160,7 +162,7 @@ export function CategoriesView({
                     {category.slug}
                   </p>
                 </div>
-                <div className="flex shrink-0 gap-1">
+                {canManage ? <div className="flex shrink-0 gap-1">
                   <IconButton
                     label={`Editar categoría ${category.name}`}
                     tooltip="Editar"
@@ -176,7 +178,7 @@ export function CategoriesView({
                   >
                     <Trash2 className="h-4 w-4" aria-hidden="true" />
                   </IconButton>
-                </div>
+                </div> : null}
               </li>
             ))}
           </ul>
@@ -201,7 +203,7 @@ export function CategoriesView({
                       {category.slug}
                     </td>
                     <td className={tdClass}>
-                      <div className="flex justify-end gap-1">
+                      {canManage ? <div className="flex justify-end gap-1">
                         <IconButton
                           label={`Editar categoría ${category.name}`}
                           tooltip="Editar"
@@ -217,7 +219,7 @@ export function CategoriesView({
                         >
                           <Trash2 className="h-4 w-4" aria-hidden="true" />
                         </IconButton>
-                      </div>
+                      </div> : null}
                     </td>
                   </tr>
                 ))}
@@ -227,14 +229,14 @@ export function CategoriesView({
         </>
       )}
 
-      {dialog?.mode === "create" ? (
+      {canManage && dialog?.mode === "create" ? (
         <CategoryFormDialog
           mode="create"
           onSave={handleSave}
           onClose={() => setDialog(null)}
         />
       ) : null}
-      {dialog?.mode === "edit" ? (
+      {canManage && dialog?.mode === "edit" ? (
         <CategoryFormDialog
           mode="edit"
           categoryName={dialog.category.name}
@@ -242,7 +244,7 @@ export function CategoriesView({
           onClose={() => setDialog(null)}
         />
       ) : null}
-      {dialog?.mode === "delete" ? (
+      {canManage && dialog?.mode === "delete" ? (
         <DeleteCategoryDialog
           categoryName={dialog.category.name}
           onConfirm={handleDelete}

@@ -1,8 +1,16 @@
+export type PermissionCode =
+  | "catalog.read"
+  | "catalog.manage"
+  | "users.read"
+  | "users.manage";
+
 export interface AuthUser {
   id: string;
   username: string;
   email: string;
   companyId: string;
+  displayName: string | null;
+  permissions: PermissionCode[];
 }
 
 export interface CategorySummary {
@@ -80,4 +88,53 @@ export interface ProductCounts {
 export interface AdminStats {
   productCounts: ProductCounts;
   categoryCount: number;
+}
+
+export interface RoleSummary {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+}
+
+export interface InternalUser {
+  id: string;
+  username: string;
+  email: string;
+  displayName: string | null;
+  locale: string;
+  timeZone: string;
+  status: "ACTIVE" | "SUSPENDED";
+  lastLoginAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  roles: Array<{
+    id: string;
+    code: string;
+    name: string;
+    isSystem: boolean;
+  }>;
+}
+
+export interface UserListQuery {
+  page: number;
+  limit: number;
+  search?: string;
+  status?: "ACTIVE" | "SUSPENDED";
+}
+
+export interface UserInput {
+  username: string;
+  email: string;
+  password: string;
+  displayName?: string;
+  roleIds: string[];
+}
+
+export interface UserUpdateInput {
+  displayName?: string;
+  locale?: string;
+  timeZone?: string;
+  status?: "ACTIVE" | "SUSPENDED";
+  roleIds?: string[];
 }

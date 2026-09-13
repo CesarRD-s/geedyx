@@ -11,6 +11,10 @@ import type {
   ProductListItem,
   ProductListQuery,
   ProductCounts,
+  PermissionCode,
+  InternalUser,
+  RoleSummary,
+  UserListQuery,
 } from "./types";
 
 export const SESSION_COOKIE_NAME = "geedyx_session";
@@ -99,4 +103,36 @@ export async function getAdminStats(): Promise<AdminStats | null> {
     }
     throw error;
   }
+}
+
+export async function requirePermission(
+  permission: PermissionCode,
+): Promise<AuthUser> {
+  const user = await requireSession();
+  if (!user.permissions.includes(permission)) {
+    redirect("/app");
+  }
+  return user;
+}
+
+export async function getUsers(
+  query: UserListQuery,
+): Promise<Paginated<InternalUser>> {
+  const params = new URLSearchParams({
+    page: String(query.page),
+    limit: String(query.limit),
+  });
+  if (query.search) {
+    params.set("search", query.search);
+  }
+  if (query.status) {
+    params.set("status", query.status);
+  }
+  return authenticatedFetch<Paginated<InternalUser>>(
+    `/users?${params.toString()}`,
+  );
+}
+
+export async function getAssignableRoles(): Promise<RoleSummary[]> {
+  return authenticatedFetch<RoleSummary[]>("/users/roles");
 }
