@@ -65,11 +65,14 @@ Current slice: **P1.4c - Authentication hardening**
   transactional one-time consumption. A successful reset changes the password
   and revokes every session. Public recovery screens consume the documented API;
   production requires a configured HTTPS delivery adapter.
+- Authentication and recovery limits use hashed PostgreSQL buckets shared by
+  API instances. The critical five-attempt window survives process restarts;
+  the general in-memory API throttle remains an additional coarse limit.
 
 ## Prototype limitations to remove in Phase 1
 
-- Durable rate limiting, audit events and integration credentials are not
-  implemented. Password-reset delivery requires an external HTTPS adapter in
+- Audit events and integration credentials are not implemented. Password-reset
+  delivery requires an external HTTPS adapter in
   production; local development intentionally leaves delivery disabled unless
   configured.
 - Product images are tied to local storage rather than a general file-asset
@@ -98,7 +101,9 @@ minute boundaries. P1.4b enforces recent authentication for company and
 internal-user mutations with a default 10-minute session window. It also adds
 non-enumerating recovery requests, provider-neutral delivery, hashed one-time
 tokens, public recovery screens and transactional session revocation after a
-reset. Next: P1.4c authentication hardening before P1.5.
+reset. P1.4c.1 replaces critical in-memory authentication limits with durable,
+hashed PostgreSQL buckets. Next: enforce browser origin alongside CSRF, verify
+session rotation and expiry behavior, and add MFA-ready storage before P1.5.
 
 ## Documentation rule
 

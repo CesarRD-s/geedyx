@@ -7,6 +7,7 @@ import { SessionAuthGuard } from './guards/session-auth.guard.js';
 import { PermissionsGuard } from './guards/permissions.guard.js';
 import { RecentAuthenticationGuard } from './guards/recent-authentication.guard.js';
 import { PasswordResetDeliveryService } from './password-reset-delivery.service.js';
+import { DurableRateLimitService } from './durable-rate-limit.service.js';
 
 @Global()
 @Module({
@@ -19,6 +20,7 @@ import { PasswordResetDeliveryService } from './password-reset-delivery.service.
     PermissionsGuard,
     RecentAuthenticationGuard,
     PasswordResetDeliveryService,
+    DurableRateLimitService,
   ],
   exports: [
     SessionAuthGuard,

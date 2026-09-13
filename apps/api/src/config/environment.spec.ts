@@ -54,6 +54,21 @@ describe('validateEnvironment', () => {
     ).toThrow('SESSION_MAX_PER_USER');
   });
 
+  it('rejects invalid durable authentication rate limits', () => {
+    expect(() =>
+      validateEnvironment({
+        ...VALID_ENVIRONMENT,
+        AUTH_RATE_LIMIT_ATTEMPTS: '0',
+      }),
+    ).toThrow('AUTH_RATE_LIMIT_ATTEMPTS');
+    expect(() =>
+      validateEnvironment({
+        ...VALID_ENVIRONMENT,
+        AUTH_RATE_LIMIT_WINDOW: 'none',
+      }),
+    ).toThrow('AUTH_RATE_LIMIT_WINDOW');
+  });
+
   it('rejects CORS entries that contain a path', () => {
     expect(() =>
       validateEnvironment({

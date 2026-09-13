@@ -41,6 +41,11 @@ uses a provider-neutral authenticated HTTP adapter. The API stores only token
 hashes, returns the same request result for every account state and revokes all
 sessions when one token is consumed successfully.
 
+P1.4c keeps the general in-memory API throttle as a coarse first layer and uses
+PostgreSQL for authoritative authentication limits. Only SHA-256 subject keys,
+scope, counters and expiry state are stored, allowing enforcement to survive
+restarts and remain consistent across API instances.
+
 ## ADR-006 - Authorization is server-side permission based
 
 Internal users receive roles and permissions. Every protected API operation

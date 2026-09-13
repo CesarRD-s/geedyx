@@ -20,6 +20,9 @@ database.
   missing and suspended accounts. Raw tokens exist only long enough to pass a
   reset URL to the delivery adapter; they are never returned by the API or
   written to logs. Successful consumption revokes every browser session.
+- Setup, login, password confirmation and recovery endpoints consume durable
+  PostgreSQL rate-limit buckets. IP and account/token subjects are hashed before
+  storage; limits survive process restarts and apply across API instances.
 - Account status, password change time, failed login events and MFA readiness
   are server-side state.
 - MFA is required for privileged roles before production financial operations.
@@ -84,7 +87,7 @@ first-class threats. Each new domain documents its threat model before release.
 Implemented controls include Argon2id hashing, opaque sessions stored as token
 hashes, HttpOnly cookies, idle and absolute session expiry, session limits,
 logout revocation, CSRF validation for browser mutations, CORS allowlist, DTO
-validation, in-memory throttling, validated image uploads, fail-fast runtime
+validation, durable authentication throttling, validated image uploads, fail-fast runtime
 configuration validation and safe API error responses. Installation writes the
 provisional company, owner and immutable installation state in one transaction.
 Requests receive correlation IDs and structured access logs. Every current
@@ -97,8 +100,8 @@ does not carry authoritative permissions. Suspended accounts cannot log in or
 continue using protected resources. The installation owner cannot be suspended
 or stripped of its role by the user-management API.
 
-These controls do not yet provide MFA, audit events, integration credentials or
-durable multi-instance rate limiting. Password reset request, delivery and
+These controls do not yet provide MFA, audit events or integration credentials.
+Password reset request, delivery and
 consumption boundaries are implemented; production must configure its HTTPS
 delivery adapter. Recent authentication is enforced for company settings and
 internal-user mutations; additional sensitive domains must adopt the same guard

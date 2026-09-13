@@ -12,9 +12,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Throttle } from '@nestjs/throttler';
 import { ApiCookieAuth } from '@nestjs/swagger';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import type { AuthenticatedRequest } from './authorization/authenticated-request.js';
 import { AuthService } from './auth.service.js';
 import { LoginDto } from './dto/login.dto.js';
@@ -27,23 +26,27 @@ import { ResetPasswordDto } from './dto/reset-password.dto.js';
 import { SessionAuthGuard } from './guards/session-auth.guard.js';
 import { AccountStatusGuard } from './guards/account-status.guard.js';
 import { AUTH_COOKIE_NAME, CSRF_COOKIE_NAME } from './session.constants.js';
-
-const LOGIN_ATTEMPTS = { default: { limit: 5, ttl: 60_000 } };
+import {
+  DurableRateLimitService,
+  type AuthRateLimitScope,
+} from './durable-rate-limit.service.js';
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
+    private readonly durableRateLimit: DurableRateLimitService,
   ) {}
 
   @Post('setup')
   @HttpCode(HttpStatus.CREATED)
-  @Throttle(LOGIN_ATTEMPTS)
   async setup(
+    @Req() req: Request,
     @Body() dto: SetupDto,
     @Res({ passthrough: true }) res: Response,
   ) {
+    await this.enforceRateLimit(req, 'setup', dto.email);
     const session = await this.authService.setup(dto);
     this.setSessionCookie(res, session.token, session.cookieMaxAge);
     this.setCsrfCookie(res, session.csrfToken, session.cookieMaxAge);
@@ -57,11 +60,12 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @Throttle(LOGIN_ATTEMPTS)
   async login(
+    @Req() req: Request,
     @Body() dto: LoginDto,
     @Res({ passthrough: true }) res: Response,
   ) {
+    await this.enforceRateLimit(req, 'login', dto.email);
     const session = await this.authService.login(dto);
     this.setSessionCookie(res, session.token, session.cookieMaxAge);
     this.setCsrfCookie(res, session.csrfToken, session.cookieMaxAge);
@@ -135,6 +139,7 @@ export class AuthController {
     @Req() req: AuthenticatedRequest,
     @Body() dto: ChangePasswordDto,
   ) {
+    await this.enforceRateLimit(req, 'change-password', req.user.id);
     await this.authService.changePassword(
       req.user.id,
       dto.currentPassword,
@@ -145,12 +150,12 @@ export class AuthController {
 
   @Post('reauthenticate')
   @HttpCode(HttpStatus.OK)
-  @Throttle(LOGIN_ATTEMPTS)
   @UseGuards(SessionAuthGuard, AccountStatusGuard)
   async reauthenticate(
     @Req() req: AuthenticatedRequest,
     @Body() dto: ReauthenticateDto,
   ) {
+    await this.enforceRateLimit(req, 'reauthenticate', req.user.id);
     return this.authService.reauthenticate(
       req.user.id,
       req.user.sessionId ?? '',
@@ -160,21 +165,37 @@ export class AuthController {
 
   @Post('password/reset-request')
   @HttpCode(HttpStatus.ACCEPTED)
-  @Throttle(LOGIN_ATTEMPTS)
-  async requestPasswordReset(@Body() dto: RequestPasswordResetDto) {
+  async requestPasswordReset(
+    @Req() req: Request,
+    @Body() dto: RequestPasswordResetDto,
+  ) {
+    await this.enforceRateLimit(req, 'reset-request', dto.email);
     await this.authService.requestPasswordReset(dto.email);
     return { accepted: true };
   }
 
   @Post('password/reset')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @Throttle(LOGIN_ATTEMPTS)
-  async resetPassword(@Body() dto: ResetPasswordDto) {
+  async resetPassword(@Req() req: Request, @Body() dto: ResetPasswordDto) {
+    await this.enforceRateLimit(req, 'reset-password', dto.token);
     await this.authService.resetPassword(
       dto.token,
       dto.newPassword,
       dto.confirmPassword,
     );
+  }
+
+  private async enforceRateLimit(
+    req: Request,
+    scope: AuthRateLimitScope,
+    identity?: string,
+  ): Promise<void> {
+    const ipAddress = req.ip || req.socket.remoteAddress || 'unknown';
+    const subjects = [`ip:${ipAddress}`];
+    if (identity) {
+      subjects.push(`identity:${identity.trim().toLowerCase()}`);
+    }
+    await this.durableRateLimit.consume(scope, subjects);
   }
 
   private setCsrfCookie(res: Response, token: string, maxAge: number): void {

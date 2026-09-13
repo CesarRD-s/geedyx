@@ -166,6 +166,18 @@ export function validateEnvironment(
       typeof passwordResetDeliveryToken === 'string'
         ? passwordResetDeliveryToken.trim()
         : undefined,
+    AUTH_RATE_LIMIT_ATTEMPTS: integerValue(
+      environment,
+      'AUTH_RATE_LIMIT_ATTEMPTS',
+      5,
+      1,
+      100,
+    ),
+    AUTH_RATE_LIMIT_WINDOW: durationValue(
+      environment,
+      'AUTH_RATE_LIMIT_WINDOW',
+      '1m',
+    ),
     PORT: integerValue(environment, 'PORT', 3001, 1, 65_535),
     MAX_IMAGE_SIZE_MB: String(
       integerValue(environment, 'MAX_IMAGE_SIZE_MB', 5, 1, 25),

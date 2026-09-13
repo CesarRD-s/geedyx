@@ -90,6 +90,12 @@ link only for the duration of one call. The default adapter posts a
 provider-neutral JSON envelope to a configured HTTPS endpoint; no provider SDK
 is coupled to the authentication domain.
 
+Authentication rate limits use PostgreSQL-backed fixed windows in the auth
+domain. Controllers consume separate hashed IP and identity subjects before
+credential work. The general API throttler remains a lightweight first layer;
+the durable store is authoritative for setup, login, password confirmation and
+recovery abuse controls.
+
 ## Files and asynchronous work
 
 Files are stored by an adapter and described by `FileAsset`. Business rows refer

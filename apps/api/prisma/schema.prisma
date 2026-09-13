@@ -103,6 +103,21 @@ model PasswordResetToken {
   @@index([userId, expiresAt])
 }
 
+/// Persistent fixed-window counters for security-sensitive API operations.
+/// keyHash is a SHA-256 digest; raw IP and identity subjects are never stored.
+model RateLimitBucket {
+  scope        String
+  keyHash      String
+  totalHits    Int      @default(1)
+  expiresAt    DateTime
+  blockedUntil DateTime?
+  updatedAt    DateTime @updatedAt
+
+  @@id([scope, keyHash])
+  @@index([expiresAt])
+  @@index([blockedUntil])
+}
+
 /// A role belongs to exactly one company. System roles are provisioned during
 /// installation and may not be renamed or removed by ordinary administration.
 model Role {

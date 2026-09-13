@@ -44,6 +44,10 @@ expiry instants, and the one-time `usedAt` marker. A new request invalidates
 older unused records for the same user. Consumption updates the password,
 marks the token used and revokes all sessions in one transaction.
 
+`RateLimitBucket` stores a scope plus a SHA-256 subject key; raw IP addresses,
+emails, session IDs and reset tokens are not retained. Counts, window expiry and
+temporary blocking survive API restarts and are shared by every API instance.
+
 ## Foundation data model - planned
 
 Phase 1 introduces the following models before business modules are expanded:
@@ -53,6 +57,7 @@ Phase 1 introduces the following models before business modules are expanded:
 | `FileAsset` relation for profile avatar | Optional avatar storage after the provider-neutral file model exists. |
 | `Session` | Hashed opaque token, expiry, device data and revocation state. |
 | `PasswordResetToken` | Hashed, one-time, short-lived recovery token. |
+| `RateLimitBucket` | Hashed subject key, persistent request window and block state. |
 | `MfaFactor`, `RecoveryCode` | MFA readiness and recovery. |
 | `IntegrationClient` | Hashed credential and scopes for an external store/backend. |
 | `WebhookEndpoint`, `WebhookDelivery` | Signed outbound webhook configuration and delivery record. |

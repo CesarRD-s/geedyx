@@ -117,10 +117,11 @@ enforced consistently.
 
 ### P1.4c - Authentication hardening
 
-**Planned.**
+**Partial.**
 
 - Persist rate-limit state for authentication, recovery and other sensitive
-  endpoints so process restarts cannot clear enforcement.
+  endpoints so process restarts cannot clear enforcement. Completed in
+  P1.4c.1 with hashed PostgreSQL buckets.
 - Verify session rotation, idle and absolute expiry, revocation, browser origin
   and CSRF behavior as one documented security contract.
 - Keep the account model ready for a later MFA implementation without exposing

@@ -83,6 +83,9 @@ explicit product decision; the boundary never chooses an offset silently.
   A successful transaction consumes the token, changes the password and revokes
   every active browser session. Invalid, expired and used tokens share the same
   `400` response.
+- Authentication and recovery endpoints can return `429 RATE_LIMITED`. Their
+  critical counters are persisted in PostgreSQL and keyed by hashed IP plus a
+  hashed account, session or token subject as applicable.
 - `/api/v1/categories` and `/api/v1/products` expose the current CRUD and image
   operations. Reads require `catalog.read`; mutations require `catalog.manage`.
 - `GET /api/v1/users` and `GET /api/v1/users/roles` require `users.read`.
