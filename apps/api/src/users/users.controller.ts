@@ -16,7 +16,7 @@ import type { AuthenticatedRequest } from '../auth/authorization/authenticated-r
 import { PermissionCode } from '../auth/authorization/permissions.js';
 import { RequirePermissions } from '../auth/authorization/require-permissions.decorator.js';
 import { AccountStatusGuard } from '../auth/guards/account-status.guard.js';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
+import { SessionAuthGuard } from '../auth/guards/session-auth.guard.js';
 import { PermissionsGuard } from '../auth/guards/permissions.guard.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { ListUsersDto } from './dto/list-users.dto.js';
@@ -24,7 +24,7 @@ import { UpdateUserDto } from './dto/update-user.dto.js';
 import { UsersService } from './users.service.js';
 
 @Controller('users')
-@UseGuards(JwtAuthGuard, AccountStatusGuard, PermissionsGuard)
+@UseGuards(SessionAuthGuard, AccountStatusGuard, PermissionsGuard)
 @ApiCookieAuth()
 @RequirePermissions(PermissionCode.UsersRead)
 export class UsersController {

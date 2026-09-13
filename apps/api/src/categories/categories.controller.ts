@@ -10,7 +10,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
+import { SessionAuthGuard } from '../auth/guards/session-auth.guard.js';
 import { AccountStatusGuard } from '../auth/guards/account-status.guard.js';
 import { PermissionsGuard } from '../auth/guards/permissions.guard.js';
 import { ApiCookieAuth } from '@nestjs/swagger';
@@ -21,7 +21,7 @@ import { CreateCategoryDto } from './dto/create-category.dto.js';
 import { UpdateCategoryDto } from './dto/update-category.dto.js';
 
 @Controller('categories')
-@UseGuards(JwtAuthGuard, AccountStatusGuard, PermissionsGuard)
+@UseGuards(SessionAuthGuard, AccountStatusGuard, PermissionsGuard)
 @ApiCookieAuth()
 @RequirePermissions(PermissionCode.CatalogRead)
 export class CategoriesController {

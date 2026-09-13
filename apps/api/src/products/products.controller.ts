@@ -19,7 +19,7 @@ import { ApiBody, ApiConsumes, ApiCookieAuth } from '@nestjs/swagger';
 import { PermissionCode } from '../auth/authorization/permissions.js';
 import { RequirePermissions } from '../auth/authorization/require-permissions.decorator.js';
 import { AccountStatusGuard } from '../auth/guards/account-status.guard.js';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
+import { SessionAuthGuard } from '../auth/guards/session-auth.guard.js';
 import { PermissionsGuard } from '../auth/guards/permissions.guard.js';
 import { CreateProductDto } from './dto/create-product.dto.js';
 import { ListProductsDto } from './dto/list-products.dto.js';
@@ -28,7 +28,7 @@ import { ProductsService } from './products.service.js';
 import type { ImageUploadFile } from './products.service.js';
 
 @Controller('products')
-@UseGuards(JwtAuthGuard, AccountStatusGuard, PermissionsGuard)
+@UseGuards(SessionAuthGuard, AccountStatusGuard, PermissionsGuard)
 @ApiCookieAuth()
 @RequirePermissions(PermissionCode.CatalogRead)
 export class ProductsController {

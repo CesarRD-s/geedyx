@@ -18,6 +18,15 @@ async function clientFetch<T>(path: string, init: RequestInit = {}): Promise<T> 
   if (!(init.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
   }
+  if (init.method && !["GET", "HEAD", "OPTIONS"].includes(init.method)) {
+    const csrfToken = document.cookie
+      .split("; ")
+      .find((entry) => entry.startsWith("geedyx_csrf="))
+      ?.split("=")[1];
+    if (csrfToken) {
+      headers.set("X-CSRF-Token", decodeURIComponent(csrfToken));
+    }
+  }
 
   let response: Response;
   try {

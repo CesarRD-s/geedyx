@@ -30,6 +30,7 @@ export interface AuthUser {
 export interface AuthSession {
   user: AuthUser;
   token: string;
+  csrfToken: string;
   cookieMaxAge: number;
 }
 
@@ -218,20 +219,53 @@ export class AuthService {
     });
   }
 
+  async listSessions(userId: string, currentSessionId: string) {
+    return this.prisma.session.findMany({
+      where: { userId, revokedAt: null, expiresAt: { gt: new Date() }, idleExpiresAt: { gt: new Date() } },
+      select: { id: true, userAgent: true, ipAddress: true, createdAt: true, lastUsedAt: true, expiresAt: true },
+      orderBy: { lastUsedAt: 'desc' },
+    }).then((sessions) => sessions.map((session) => ({ ...session, current: session.id === currentSessionId })));
+  }
+
+  async revokeOtherSessions(userId: string, currentSessionId: string): Promise<void> {
+    await this.prisma.session.updateMany({ where: { userId, id: { not: currentSessionId }, revokedAt: null }, data: { revokedAt: new Date() } });
+  }
+
+  async changePassword(userId: string, currentPassword: string, newPassword: string, currentSessionId: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { passwordHash: true } });
+    if (!user || !(await argon2Verify(user.passwordHash, currentPassword))) throw new UnauthorizedException('Invalid credentials');
+    const now = new Date();
+    await this.prisma.$transaction([
+      this.prisma.user.update({ where: { id: userId }, data: { passwordHash: await argon2Hash(newPassword), passwordChangedAt: now } }),
+      this.prisma.session.updateMany({ where: { userId, id: { not: currentSessionId }, revokedAt: null }, data: { revokedAt: now } }),
+    ]);
+  }
+
   private async buildSession(
     user: Pick<UserModel, 'id' | 'username' | 'email' | 'companyId' | 'displayName'>,
   ): Promise<AuthSession> {
     const token = randomBytes(32).toString('base64url');
+    const csrfToken = randomBytes(32).toString('base64url');
     const cookieMaxAge = durationToMs(this.configService.get<string>('SESSION_ABSOLUTE_TTL', '12h'));
     const now = new Date();
+    const maximumSessions = Number(this.configService.get<string>('SESSION_MAX_PER_USER', '5'));
+    const activeSessions = await this.prisma.session.findMany({
+      where: { userId: user.id, revokedAt: null },
+      select: { id: true },
+      orderBy: { lastUsedAt: 'asc' },
+    });
+    const sessionsToRevoke = activeSessions.slice(Math.max(0, activeSessions.length - maximumSessions + 1));
+    if (sessionsToRevoke.length > 0) {
+      await this.prisma.session.updateMany({ where: { id: { in: sessionsToRevoke.map((session) => session.id) } }, data: { revokedAt: now } });
+    }
     await this.prisma.session.create({ data: {
       userId: user.id,
       tokenHash: createHash('sha256').update(token).digest('hex'),
-      csrfTokenHash: createHash('sha256').update(randomBytes(32)).digest('hex'),
+      csrfTokenHash: createHash('sha256').update(csrfToken).digest('hex'),
       idleExpiresAt: new Date(now.getTime() + durationToMs(this.configService.get<string>('SESSION_IDLE_TTL', '30m'))),
       expiresAt: new Date(now.getTime() + cookieMaxAge),
     } });
 
-    return { user: toAuthUser(user), token, cookieMaxAge };
+    return { user: toAuthUser(user), token, csrfToken, cookieMaxAge };
   }
 }

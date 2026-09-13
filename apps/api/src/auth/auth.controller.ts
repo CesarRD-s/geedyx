@@ -17,9 +17,10 @@ import type { AuthenticatedRequest } from './authorization/authenticated-request
 import { AuthService } from './auth.service.js';
 import { LoginDto } from './dto/login.dto.js';
 import { SetupDto } from './dto/setup.dto.js';
-import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
+import { ChangePasswordDto } from './dto/change-password.dto.js';
+import { SessionAuthGuard } from './guards/session-auth.guard.js';
 import { AccountStatusGuard } from './guards/account-status.guard.js';
-import { AUTH_COOKIE_NAME } from './strategies/jwt.strategy.js';
+import { AUTH_COOKIE_NAME, CSRF_COOKIE_NAME } from './session.constants.js';
 
 const LOGIN_ATTEMPTS = { default: { limit: 5, ttl: 60_000 } };
 
@@ -39,6 +40,7 @@ export class AuthController {
   ) {
     const session = await this.authService.setup(dto);
     this.setSessionCookie(res, session.token, session.cookieMaxAge);
+    this.setCsrfCookie(res, session.csrfToken, session.cookieMaxAge);
     return session.user;
   }
 
@@ -56,11 +58,12 @@ export class AuthController {
   ) {
     const session = await this.authService.login(dto);
     this.setSessionCookie(res, session.token, session.cookieMaxAge);
+    this.setCsrfCookie(res, session.csrfToken, session.cookieMaxAge);
     return session.user;
   }
 
   @Get('me')
-  @UseGuards(JwtAuthGuard, AccountStatusGuard)
+  @UseGuards(SessionAuthGuard, AccountStatusGuard)
   @ApiCookieAuth()
   async me(@Req() req: AuthenticatedRequest) {
     return this.authService.getProfile(req.user.id);
@@ -68,12 +71,37 @@ export class AuthController {
 
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(SessionAuthGuard)
   async logout(@Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
     if (req.user.sessionId) {
       await this.authService.revokeSession(req.user.sessionId);
     }
     res.clearCookie(AUTH_COOKIE_NAME, this.cookieOptions());
+    res.clearCookie(CSRF_COOKIE_NAME, { ...this.cookieOptions(), httpOnly: false });
+  }
+
+  @Get('sessions')
+  @UseGuards(SessionAuthGuard, AccountStatusGuard)
+  async sessions(@Req() req: AuthenticatedRequest) {
+    return this.authService.listSessions(req.user.id, req.user.sessionId ?? '');
+  }
+
+  @Post('sessions/revoke-others')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(SessionAuthGuard, AccountStatusGuard)
+  async revokeOthers(@Req() req: AuthenticatedRequest) {
+    await this.authService.revokeOtherSessions(req.user.id, req.user.sessionId ?? '');
+  }
+
+  @Post('password/change')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(SessionAuthGuard, AccountStatusGuard)
+  async changePassword(@Req() req: AuthenticatedRequest, @Body() dto: ChangePasswordDto) {
+    await this.authService.changePassword(req.user.id, dto.currentPassword, dto.newPassword, req.user.sessionId ?? '');
+  }
+
+  private setCsrfCookie(res: Response, token: string, maxAge: number): void {
+    res.cookie(CSRF_COOKIE_NAME, token, { ...this.cookieOptions(), httpOnly: false, maxAge });
   }
 
   private setSessionCookie(
