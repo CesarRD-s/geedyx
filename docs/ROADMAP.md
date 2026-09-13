@@ -117,7 +117,7 @@ enforced consistently.
 
 ### P1.4c - Authentication hardening
 
-**Partial.**
+**Complete.**
 
 - Persist rate-limit state for authentication, recovery and other sensitive
   endpoints so process restarts cannot clear enforcement. Completed in
@@ -128,7 +128,9 @@ enforced consistently.
   preserving absolute expiry, and every session mutation requires an approved
   origin plus its session-bound CSRF token.
 - Keep the account model ready for a later MFA implementation without exposing
-  an incomplete enrollment flow.
+  an incomplete enrollment flow. Completed in P1.4c.3 with metadata for
+  encrypted TOTP secrets, replay state and hashed one-use recovery-code records.
+  No MFA route or UI is exposed.
 
 ### P1.5 - Audit, integration and files foundation
 

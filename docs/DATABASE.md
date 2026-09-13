@@ -8,7 +8,7 @@ application never reads it directly.
 
 The current schema contains `Installation`, `Company`, `User`, `Role`,
 `Permission`, `UserRole`, `RolePermission`, `Session`, `PasswordResetToken`,
-`Category` and `Product`.
+`RateLimitBucket`, `MfaFactor`, `MfaRecoveryCode`, `Category` and `Product`.
 `Installation` is a singleton that closes bootstrap permanently; every user
 and role belongs to the one configured company.
 
@@ -48,6 +48,17 @@ marks the token used and revokes all sessions in one transaction.
 emails, session IDs and reset tokens are not retained. Counts, window expiry and
 temporary blocking survive API restarts and are shared by every API instance.
 
+`MfaFactor` prepares TOTP enrollment without enabling it. A factor owns separate
+AES-256-GCM ciphertext, 96-bit nonce, authentication tag and key-version fields;
+the database has no plaintext-secret column. `verifiedAt` distinguishes a
+pending enrollment from a usable factor, `revokedAt` preserves lifecycle state
+and `lastUsedStep` supports rejection of a reused TOTP time step.
+
+`MfaRecoveryCode` belongs directly to a user. It stores only an Argon2id hash
+plus used and revoked timestamps so future codes can be consumed once and a
+replacement batch can invalidate the preceding batch. Raw recovery codes must
+only be shown at generation time and never enter logs or API responses again.
+
 ## Foundation data model - planned
 
 Phase 1 introduces the following models before business modules are expanded:
@@ -55,10 +66,6 @@ Phase 1 introduces the following models before business modules are expanded:
 | Model | Purpose |
 | --- | --- |
 | `FileAsset` relation for profile avatar | Optional avatar storage after the provider-neutral file model exists. |
-| `Session` | Hashed opaque token, expiry, device data and revocation state. |
-| `PasswordResetToken` | Hashed, one-time, short-lived recovery token. |
-| `RateLimitBucket` | Hashed subject key, persistent request window and block state. |
-| `MfaFactor`, `RecoveryCode` | MFA readiness and recovery. |
 | `IntegrationClient` | Hashed credential and scopes for an external store/backend. |
 | `WebhookEndpoint`, `WebhookDelivery` | Signed outbound webhook configuration and delivery record. |
 | `AuditEvent` | Append-only record of security and business actions. |

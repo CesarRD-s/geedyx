@@ -18,6 +18,10 @@ enum UserStatus {
   SUSPENDED
 }
 
+enum MfaFactorType {
+  TOTP
+}
+
 /// The single internal company configured during installation.
 model Company {
   id           String         @id @default(cuid())
@@ -63,6 +67,8 @@ model User {
   roles        UserRole[]
   sessions     Session[]
   passwordResetTokens PasswordResetToken[]
+  mfaFactors   MfaFactor[]
+  mfaRecoveryCodes MfaRecoveryCode[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -116,6 +122,45 @@ model RateLimitBucket {
   @@id([scope, keyHash])
   @@index([expiresAt])
   @@index([blockedUntil])
+}
+
+/// MFA secrets require reversible authenticated encryption. The plaintext
+/// secret and encryption key are never stored in PostgreSQL.
+model MfaFactor {
+  id                   String        @id @default(cuid())
+  userId               String
+  user                 User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type                 MfaFactorType @default(TOTP)
+  label                String?
+  secretCiphertext     Bytes
+  secretNonce          Bytes
+  secretAuthTag        Bytes
+  encryptionKeyVersion Int           @default(1)
+  totpAlgorithm        String        @default("SHA1")
+  totpDigits           Int           @default(6)
+  totpPeriodSeconds    Int           @default(30)
+  lastUsedStep         BigInt?
+  verifiedAt           DateTime?
+  revokedAt            DateTime?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  @@index([userId, revokedAt])
+  @@index([userId, verifiedAt])
+}
+
+/// Recovery codes are generated with high entropy and persisted only as
+/// Argon2id hashes. A code is unavailable after use or revocation.
+model MfaRecoveryCode {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash  String   @unique
+  usedAt    DateTime?
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId, usedAt, revokedAt])
 }
 
 /// A role belongs to exactly one company. System roles are provisioned during

@@ -51,6 +51,13 @@ Session-authenticated mutations use two independent browser checks: an exact
 Successful password confirmation replaces both opaque credentials in the same
 session record while retaining its original absolute expiry.
 
+MFA readiness is persisted before any MFA API is exposed. TOTP factors separate
+AES-256-GCM ciphertext, nonce, authentication tag and key version, and record
+verification, revocation and the last accepted time step. Recovery codes store
+only Argon2id hashes and one-use lifecycle timestamps. Encryption keys remain
+outside PostgreSQL; a later enrollment service will define key loading and
+rotation before it can write factors.
+
 ## ADR-006 - Authorization is server-side permission based
 
 Internal users receive roles and permissions. Every protected API operation

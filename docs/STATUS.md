@@ -9,7 +9,7 @@ Last reviewed: 2026-09-13
 ## Active milestone
 
 **Phase 1 - Secure platform foundation**
-Current slice: **P1.4c - Authentication hardening**
+Current slice: **P1.5 - Audit, integration and files foundation**
 
 ## Implemented
 
@@ -104,8 +104,10 @@ tokens, public recovery screens and transactional session revocation after a
 reset. P1.4c.1 replaces critical in-memory authentication limits with durable,
 hashed PostgreSQL buckets. P1.4c.2 enforces approved browser origins alongside
 session-bound CSRF and rotates session and CSRF credentials after successful
-reauthentication or password changes without extending absolute expiry. Next:
-add MFA-ready storage before P1.5.
+reauthentication or password changes without extending absolute expiry. P1.4c.3
+adds storage for encrypted TOTP factors, replay detection and hashed one-use
+recovery codes without exposing an incomplete MFA flow. P1.4c is complete.
+Next: begin P1.5 with append-only audit events.
 
 ## Documentation rule
 

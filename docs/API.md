@@ -84,6 +84,9 @@ explicit product decision; the boundary never chooses an offset silently.
   A successful transaction consumes the token, changes the password and revokes
   every active browser session. Invalid, expired and used tokens share the same
   `400` response.
+- MFA has no API endpoint yet. The database can represent pending, verified and
+  revoked TOTP factors plus one-use recovery-code hashes, but P1.4c intentionally
+  exposes no partial enrollment, challenge or recovery flow.
 - Authentication and recovery endpoints can return `429 RATE_LIMITED`. Their
   critical counters are persisted in PostgreSQL and keyed by hashed IP plus a
   hashed account, session or token subject as applicable.

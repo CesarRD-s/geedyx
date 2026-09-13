@@ -46,7 +46,8 @@ The current repository contains a prototype foundation:
 
 These capabilities are implemented but are not yet the production platform
 defined in this document. Persistent browser sessions, multiple internal users,
-permissions and API versioning are now present. Audit logs, integration
+permissions, password recovery, MFA-ready persistence and API versioning are
+now present. MFA enrollment and enforcement, audit logs, integration
 credentials, inventory movements, orders, payments and financial records remain
 planned.
 

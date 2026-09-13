@@ -26,6 +26,10 @@ database.
 - Account status, password change time, failed login events and MFA readiness
   are server-side state.
 - MFA is required for privileged roles before production financial operations.
+- MFA-ready storage never has a plaintext-secret column. Future TOTP enrollment
+  must encrypt secrets with AES-256-GCM under a versioned key outside the
+  database, bind ciphertext to its user and factor as authenticated data, and
+  store recovery codes only as Argon2id hashes.
 
 ### Sessions
 
@@ -105,7 +109,9 @@ does not carry authoritative permissions. Suspended accounts cannot log in or
 continue using protected resources. The installation owner cannot be suspended
 or stripped of its role by the user-management API.
 
-These controls do not yet provide MFA, audit events or integration credentials.
+These controls do not yet enforce MFA or expose enrollment, challenge or
+recovery-code endpoints. Only the protected persistence model exists. Audit
+events and integration credentials also remain planned.
 Password reset request, delivery and
 consumption boundaries are implemented; production must configure its HTTPS
 delivery adapter. Recent authentication is enforced for company settings and

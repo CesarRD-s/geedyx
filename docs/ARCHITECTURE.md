@@ -29,8 +29,9 @@ not share the admin cookie and they do not receive administrative credentials.
 ## Domain modules
 
 - `installation` and `company`: initial configuration and company settings.
-- `identity`: internal users, basic profile metadata and passwords; recovery
-  and MFA remain planned.
+- `identity`: internal users, profiles, passwords and recovery. MFA persistence
+  is prepared; enrollment, challenge verification and enforcement remain
+  planned.
 - `authorization`: implemented roles, permissions and API guards.
 - `sessions`: opaque browser sessions and device management.
 - `account-context`: effective language, time zone and regional formatting.
