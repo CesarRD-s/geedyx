@@ -2,7 +2,8 @@ export type PermissionCode =
   | "catalog.read"
   | "catalog.manage"
   | "users.read"
-  | "users.manage";
+  | "users.manage"
+  | "company.manage";
 
 export interface AuthUser {
   id: string;
@@ -10,7 +11,34 @@ export interface AuthUser {
   email: string;
   companyId: string;
   displayName: string | null;
+  locale: string;
+  timeZone: string;
   permissions: PermissionCode[];
+}
+
+export interface SessionSummary {
+  id: string;
+  userAgent: string | null;
+  ipAddress: string | null;
+  createdAt: string;
+  lastUsedAt: string;
+  expiresAt: string;
+  current: boolean;
+}
+
+export interface CompanySettings {
+  name: string | null;
+  locale: "es" | "en" | null;
+  timeZone: string | null;
+  currency: "HNL" | "USD" | "MXN" | "COP" | "EUR" | null;
+  configuredAt: string | null;
+}
+
+export interface CompanySettingsInput {
+  name?: string;
+  locale?: "es" | "en";
+  timeZone?: string;
+  currency?: "HNL" | "USD" | "MXN" | "COP" | "EUR";
 }
 
 export interface CategorySummary {

@@ -96,6 +96,13 @@ screens until the product owner validates a new UI/UX direction and logo. This
 ADR is retained to preserve the UI documentation contract; it does not authorize
 a redesign in the secure-platform milestone.
 
+## ADR-030 - Account context owns personal regional preferences
+
+Company locale and time zone define defaults and official business context.
+Users may override language and display time zone in one personal preferences
+area. Stored instants remain UTC. A reusable date input is platform UI, while
+an operational calendar waits for a business domain that owns scheduled data.
+
 ## Legacy decisions
 
 The previous single-administrator, stateless JWT, public-catalog and local-image

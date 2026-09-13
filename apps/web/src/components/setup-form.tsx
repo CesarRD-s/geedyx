@@ -16,14 +16,13 @@ export function SetupForm() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
-    const companyName = String(formData.get("companyName") ?? "").trim();
     const username = String(formData.get("username") ?? "").trim();
     const email = String(formData.get("email") ?? "").trim();
     const password = String(formData.get("password") ?? "");
-    const installationSecret = String(formData.get("installationSecret") ?? "");
+    const confirmPassword = String(formData.get("confirmPassword") ?? "");
 
-    if (!companyName || !username || !email || !password || !installationSecret) {
-      setError("Completa los datos de empresa, administrador y el secreto de instalación.");
+    if (!username || !email || !password || !confirmPassword) {
+      setError("Completa los datos de la cuenta propietaria.");
       return;
     }
 
@@ -32,8 +31,8 @@ export function SetupForm() {
       return;
     }
 
-    if (installationSecret.length < 32) {
-      setError("El secreto de instalación debe tener al menos 32 caracteres.");
+    if (password !== confirmPassword) {
+      setError("Las contraseñas no coinciden.");
       return;
     }
 
@@ -41,11 +40,10 @@ export function SetupForm() {
     setError(null);
     try {
       await setup({
-        companyName,
         username,
         email,
         password,
-        installationSecret,
+        confirmPassword,
       });
       router.push("/app");
       router.refresh();
@@ -86,18 +84,6 @@ export function SetupForm() {
   return (
     <form onSubmit={handleSubmit} noValidate className="mt-6 space-y-4">
       <div>
-        <FieldLabel htmlFor="companyName">Nombre de la empresa</FieldLabel>
-        <Input
-          id="companyName"
-          name="companyName"
-          type="text"
-          autoComplete="organization"
-          required
-          disabled={pending}
-          placeholder="Mi empresa"
-        />
-      </div>
-      <div>
         <FieldLabel htmlFor="username">Nombre de usuario</FieldLabel>
         <Input
           id="username"
@@ -134,12 +120,12 @@ export function SetupForm() {
         />
       </div>
       <div>
-        <FieldLabel htmlFor="installationSecret">Secreto de instalación</FieldLabel>
+        <FieldLabel htmlFor="confirmPassword">Confirmar contraseña</FieldLabel>
         <Input
-          id="installationSecret"
-          name="installationSecret"
+          id="confirmPassword"
+          name="confirmPassword"
           type="password"
-          autoComplete="off"
+          autoComplete="new-password"
           required
           disabled={pending}
         />
@@ -155,7 +141,7 @@ export function SetupForm() {
         loading={pending}
         loadingLabel="Configurando…"
       >
-        Crear empresa y administrador
+        Crear cuenta propietaria
       </Button>
     </form>
   );

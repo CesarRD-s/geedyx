@@ -1,11 +1,8 @@
 import { ForbiddenException } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 import { ConfigService } from '@nestjs/config';
-import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AuthService } from './auth.service.js';
-
-const INSTALLATION_SECRET = 'test-installation-secret-with-at-least-32-chars';
 
 function createService(installation: { id: string } | null): {
   service: AuthService;
@@ -19,12 +16,11 @@ function createService(installation: { id: string } | null): {
     $transaction: transaction,
   } as unknown as PrismaService;
   const config = {
-    getOrThrow: vi.fn().mockReturnValue(INSTALLATION_SECRET),
+    get: vi.fn().mockReturnValue('12h'),
   } as unknown as ConfigService;
-  const jwt = {} as JwtService;
 
   return {
-    service: new AuthService(prisma, jwt, config),
+    service: new AuthService(prisma, config),
     transaction,
   };
 }
@@ -43,11 +39,10 @@ describe('AuthService installation state', () => {
 
     await expect(
       service.setup({
-        companyName: 'GEEDYX',
         username: 'owner',
         email: 'owner@example.com',
         password: 'correct-horse-battery-staple',
-        installationSecret: INSTALLATION_SECRET,
+        confirmPassword: 'correct-horse-battery-staple',
       }),
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(transaction).not.toHaveBeenCalled();

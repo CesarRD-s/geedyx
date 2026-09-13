@@ -9,13 +9,13 @@ Last reviewed: 2026-09-12
 ## Active milestone
 
 **Phase 1 - Secure platform foundation**
-Current slice: **P1.4 - Professional authentication and sessions**
+Current slice: **P1.4a - Account context and temporal foundation**
 
 ## Implemented
 
 - pnpm monorepo with separate Next.js and NestJS applications.
 - PostgreSQL through Prisma migrations owned by the API.
-- Prototype setup/login/logout/me flow using Argon2id and a JWT HttpOnly cookie.
+- Setup/login/logout/me with Argon2id and persisted opaque browser sessions.
 - Prototype category and product CRUD, simple stock and local product images.
 - Private administration shell, responsive drawer and persistent collapsible
   sidebar.
@@ -30,12 +30,18 @@ Current slice: **P1.4 - Professional authentication and sessions**
   HTTP logs and liveness/readiness endpoints form the operational baseline.
 - Every current category and product route is private and requires a valid
   authenticated session.
-- Installation persists a singleton state plus the first company and owner in
-  one transaction. Its server-side installation secret is required only once;
-  completed installations redirect `/setup` to `/login`.
+- Installation persists a singleton state plus a provisional company and owner
+  in one transaction. It asks only for the owner account and confirmation of
+  its password; completed installations redirect `/setup` to `/app` for an
+  active session or `/login` otherwise.
+- Company name, default language (`es` or `en`), time zone and base currency
+  are optional database settings. They are managed at `/app/settings` by users
+  with `company.manage`; pending values never block access to the workspace.
 - Internal users have display name, locale, time zone, account state and login
   metadata. System roles and database-backed permissions protect catalog and
   user operations; suspended users lose protected access immediately.
+- `/app/profile` lets each authenticated user update their own display name,
+  language and time zone. These individual preferences do not alter company defaults.
 - `/app/users` provides permission-aware administration of internal users,
   account status and role assignments. The installation owner is protected from
   suspension and reassignment.
@@ -48,9 +54,7 @@ Current slice: **P1.4 - Professional authentication and sessions**
 
 ## Prototype limitations to remove in Phase 1
 
-- Authentication uses a self-contained JWT and cannot revoke individual
-  sessions server-side.
-- CSRF/origin enforcement, durable rate limiting, audit events and integration
+- Password recovery delivery, durable rate limiting, audit events and integration
   credentials are not implemented.
 - Product images are tied to local storage rather than a general file-asset
   provider contract.
@@ -58,8 +62,8 @@ Current slice: **P1.4 - Professional authentication and sessions**
 
 ## Next deliverable
 
-P1.4 replaces the temporary JWT cookie with persisted opaque sessions, idle and
-absolute expiration, revocation and secure password-change/recovery flows.
+Centralize account configuration, regional context and reusable date inputs.
+This slice does not add an operational calendar or business scheduling.
 
 ## Documentation rule
 

@@ -10,9 +10,15 @@ import type {
   UserInput,
   UserListQuery,
   UserUpdateInput,
+  SessionSummary,
+  CompanySettings,
+  CompanySettingsInput,
 } from "./types";
 
-async function clientFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
+async function clientFetch<T>(
+  path: string,
+  init: RequestInit = {},
+): Promise<T> {
   const url = apiUrl(path);
   const headers = new Headers(init.headers);
   if (!(init.body instanceof FormData)) {
@@ -51,11 +57,10 @@ async function clientFetch<T>(path: string, init: RequestInit = {}): Promise<T> 
 }
 
 export async function setup(input: {
-  companyName: string;
   username: string;
   email: string;
   password: string;
-  installationSecret: string;
+  confirmPassword: string;
 }): Promise<AuthUser> {
   return clientFetch<AuthUser>("/auth/setup", {
     method: "POST",
@@ -141,15 +146,70 @@ export async function uploadProductImage(
 ): Promise<ProductDetail> {
   const body = new FormData();
   body.append("file", file);
-  return clientFetch<ProductDetail>(`/products/${encodeURIComponent(id)}/image`, {
-    method: "POST",
-    body,
-  });
+  return clientFetch<ProductDetail>(
+    `/products/${encodeURIComponent(id)}/image`,
+    {
+      method: "POST",
+      body,
+    },
+  );
 }
 
 export async function deleteProductImage(id: string): Promise<void> {
   await clientFetch<void>(`/products/${encodeURIComponent(id)}/image`, {
     method: "DELETE",
+  });
+}
+
+export async function getCurrentUser(): Promise<AuthUser> {
+  return clientFetch<AuthUser>("/auth/me");
+}
+
+export async function updateProfile(input: {
+  displayName?: string;
+  locale?: "es" | "en";
+  timeZone?: string;
+}): Promise<AuthUser> {
+  return clientFetch<AuthUser>("/auth/profile", {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function listSessions(): Promise<SessionSummary[]> {
+  return clientFetch<SessionSummary[]>("/auth/sessions");
+}
+
+export async function revokeSession(id: string): Promise<void> {
+  await clientFetch<void>(`/auth/sessions/${encodeURIComponent(id)}/revoke`, {
+    method: "POST",
+  });
+}
+
+export async function revokeOtherSessions(): Promise<void> {
+  await clientFetch<void>("/auth/sessions/revoke-others", { method: "POST" });
+}
+
+export async function changePassword(input: {
+  currentPassword: string;
+  newPassword: string;
+}): Promise<void> {
+  await clientFetch<void>("/auth/password/change", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function getCompanySettings(): Promise<CompanySettings> {
+  return clientFetch<CompanySettings>("/company/settings");
+}
+
+export async function updateCompanySettings(
+  input: CompanySettingsInput,
+): Promise<CompanySettings> {
+  return clientFetch<CompanySettings>("/company/settings", {
+    method: "PATCH",
+    body: JSON.stringify(input),
   });
 }
 

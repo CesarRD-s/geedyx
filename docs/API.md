@@ -41,19 +41,28 @@ consume only intentionally public, rate-limited data.
 - `GET /api/v1/health/ready` checks API readiness, including PostgreSQL.
 - `GET /api/v1/auth/installation` returns the public, non-sensitive
   installation state used by the first-run screen.
-- `POST /api/v1/auth/setup` creates the company, initial owner and temporary
-  JWT-cookie session in one transaction. It requires `companyName`, `username`,
-  `email`, `password` and the server-configured `installationSecret`; it is
-  permanently unavailable after installation.
-- `POST /api/v1/auth/login` and `POST /api/v1/auth/logout` implement the
-  temporary Phase 1 authentication flow; `GET /api/v1/auth/me` requires its
+- `POST /api/v1/auth/setup` creates a provisional company, initial owner and
+  opaque browser session in one transaction. It requires `username`, `email`,
+  `password` and `confirmPassword`; it is permanently unavailable after
+  installation.
+- `POST /api/v1/auth/login` and `POST /api/v1/auth/logout` create and revoke
+  opaque sessions; `GET /api/v1/auth/me` requires its
   HttpOnly session cookie and returns the current profile and effective
   permissions.
+- `PATCH /api/v1/auth/profile` lets an authenticated user update only their
+  display name, preferred language (`es` or `en`) and time zone.
+- `GET /api/v1/auth/sessions`, `POST /api/v1/auth/sessions/:id/revoke` and
+  `POST /api/v1/auth/sessions/revoke-others` manage the authenticated user's
+  sessions. `POST /api/v1/auth/password/change` requires the current password.
 - `/api/v1/categories` and `/api/v1/products` expose the current CRUD and image
   operations. Reads require `catalog.read`; mutations require `catalog.manage`.
 - `GET /api/v1/users` and `GET /api/v1/users/roles` require `users.read`.
   `POST /api/v1/users` and `PATCH /api/v1/users/:id` require `users.manage`.
   User operations are constrained to the authenticated user's company.
+- `GET /api/v1/company/settings` reads the optional company defaults for the
+  authenticated company. `PATCH /api/v1/company/settings` requires
+  `company.manage` and accepts `name`, `locale` (`es` or `en`), `timeZone` and
+  `currency` (`HNL`, `USD`, `MXN`, `COP` or `EUR`).
 
 There is currently no anonymous catalog API. Future storefront reads will be
 explicitly added below `/api/v1/public`; private resource routes will not be
@@ -91,12 +100,17 @@ specific contract code.
 ## Current authorization
 
 Permissions are looked up from current database roles for every protected
-request; they are never trusted from the JWT. Suspended accounts cannot log in
+request; they are never trusted from a browser cookie. Suspended accounts cannot log in
 or use an existing protected session. The system roles are `OWNER`, `ADMIN`,
 `CATALOG_MANAGER` and `VIEWER`; their effective access is described in the API
 documentation generated at `/api/docs`.
 
 ## Conventions still planned
+
+The effective account context will resolve language and time zone from the user
+override or company default. Base currency remains company-wide. A persisted
+language preference is not a translated interface until `es` and `en` catalogs
+are implemented across API and web.
 
 - Mutation endpoints that may be retried accept `Idempotency-Key`; its result is
   stored and replayed for the same authenticated actor and operation.

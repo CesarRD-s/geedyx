@@ -37,23 +37,44 @@ function integerValue(
   const rawValue = environment[key] ?? fallback;
   const parsed = Number(rawValue);
   if (!Number.isInteger(parsed) || parsed < minimum || parsed > maximum) {
-    throw new Error(`${key} must be an integer between ${minimum} and ${maximum}`);
+    throw new Error(
+      `${key} must be an integer between ${minimum} and ${maximum}`,
+    );
   }
   return parsed;
 }
 
+function durationValue(
+  environment: Record<string, unknown>,
+  key: string,
+  fallback: string,
+): string {
+  const value = String(environment[key] ?? fallback).trim();
+  if (!/^([1-9]\d*)\s*(s|m|h|d)$/i.test(value)) {
+    throw new Error(`${key} must use a positive duration such as 30m or 12h`);
+  }
+  return value;
+}
+
 function validateOrigins(rawOrigins: string): string {
-  const origins = rawOrigins.split(',').map((origin) => origin.trim()).filter(Boolean);
+  const origins = rawOrigins
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
   if (origins.length === 0) {
     throw new Error('CORS_ORIGINS must contain at least one origin');
   }
   for (const origin of origins) {
     const parsed = new URL(origin);
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-      throw new Error(`CORS_ORIGINS contains an unsupported protocol: ${origin}`);
+      throw new Error(
+        `CORS_ORIGINS contains an unsupported protocol: ${origin}`,
+      );
     }
     if (parsed.origin !== origin) {
-      throw new Error(`CORS_ORIGINS entries must be origins without paths: ${origin}`);
+      throw new Error(
+        `CORS_ORIGINS entries must be origins without paths: ${origin}`,
+      );
     }
   }
   return origins.join(',');
@@ -62,20 +83,22 @@ function validateOrigins(rawOrigins: string): string {
 export function validateEnvironment(
   environment: Record<string, unknown>,
 ): Record<string, unknown> {
-  const jwtSecret = requiredString(environment, 'JWT_SECRET');
-  if (jwtSecret.length < 32) {
-    throw new Error('JWT_SECRET must contain at least 32 characters');
-  }
-  const installationSecret = requiredString(environment, 'INSTALLATION_SECRET');
-  if (installationSecret.length < 32) {
-    throw new Error('INSTALLATION_SECRET must contain at least 32 characters');
-  }
-
   return {
     ...environment,
     DATABASE_URL: requiredString(environment, 'DATABASE_URL'),
-    JWT_SECRET: jwtSecret,
-    INSTALLATION_SECRET: installationSecret,
+    SESSION_IDLE_TTL: durationValue(environment, 'SESSION_IDLE_TTL', '30m'),
+    SESSION_ABSOLUTE_TTL: durationValue(
+      environment,
+      'SESSION_ABSOLUTE_TTL',
+      '12h',
+    ),
+    SESSION_MAX_PER_USER: integerValue(
+      environment,
+      'SESSION_MAX_PER_USER',
+      5,
+      1,
+      20,
+    ),
     PORT: integerValue(environment, 'PORT', 3001, 1, 65_535),
     MAX_IMAGE_SIZE_MB: String(
       integerValue(environment, 'MAX_IMAGE_SIZE_MB', 5, 1, 25),

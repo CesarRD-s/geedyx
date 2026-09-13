@@ -38,7 +38,7 @@ export default async function SetupPage() {
             Configuración inicial
           </h1>
           <p className="mt-1 text-sm text-muted">
-            Crea la empresa y el administrador principal de esta instalación.
+            Crea la cuenta propietaria de esta instalación.
           </p>
           <SetupForm />
         </div>

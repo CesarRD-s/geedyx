@@ -1,7 +1,10 @@
 import { redirect } from "next/navigation";
-import { getSession } from "@/lib/api/server";
+import { getInstallationStatus, getSession } from "@/lib/api/server";
 
 export default async function HomePage() {
-  const user = await getSession();
-  redirect(user ? "/app" : "/login");
+  const [user, installation] = await Promise.all([
+    getSession(),
+    getInstallationStatus(),
+  ]);
+  redirect(user ? "/app" : installation.installed ? "/login" : "/setup");
 }

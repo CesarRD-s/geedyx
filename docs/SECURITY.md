@@ -3,15 +3,16 @@
 ## Security posture
 
 GEEDYX manages private business data. Security controls are enforced by the
-NestJS API; the browser and external stores are untrusted clients. The current
-JWT-cookie implementation is a prototype and will be replaced in Phase 1.
+NestJS API; the browser and external stores are untrusted clients. Browser
+authentication uses persistent opaque sessions whose raw values never enter the
+database.
 
-## Phase 1 security baseline - planned
+## Phase 1 security baseline
 
 ### Installation and internal identity
 
-- Setup requires an installation secret and is completed atomically with the
-  first company, owner and session.
+- Setup is completed atomically with the provisional company, first owner and
+  session. It is unavailable as soon as the installation singleton exists.
 - A persisted installation state prevents setup from reopening if users change.
 - Passwords use Argon2id with explicit parameters and rehashing when needed.
 - Password reset tokens are random, single-use, short-lived and stored hashed.
@@ -64,14 +65,15 @@ first-class threats. Each new domain documents its threat model before release.
 
 ## Current controls and limitations
 
-Implemented controls include Argon2id hashing, a short-lived JWT in an HttpOnly
-cookie, CORS allowlist, DTO validation, in-memory throttling, validated image
-uploads, fail-fast runtime configuration validation and safe API error
-responses. Installation requires a distinct server-side secret and writes the
-company, owner and immutable installation state in one transaction. Requests
-receive correlation IDs and structured access logs. Every current category and
-product endpoint requires authentication; no catalog route is anonymously
-exposed.
+Implemented controls include Argon2id hashing, opaque sessions stored as token
+hashes, HttpOnly cookies, idle and absolute session expiry, session limits,
+logout revocation, CSRF validation for browser mutations, CORS allowlist, DTO
+validation, in-memory throttling, validated image uploads, fail-fast runtime
+configuration validation and safe API error responses. Installation writes the
+provisional company, owner and immutable installation state in one transaction.
+Requests receive correlation IDs and structured access logs. Every current
+category and product endpoint requires authentication; no catalog route is
+anonymously exposed.
 
 Current authorization is role and permission based. Permission checks read the
 current account status and role assignments on each protected request; a JWT
@@ -79,7 +81,6 @@ does not carry authoritative permissions. Suspended accounts cannot log in or
 continue using protected resources. The installation owner cannot be suspended
 or stripped of its role by the user-management API.
 
-These controls do not yet provide server-side session revocation, CSRF
-protection, MFA, audit events, integration credentials or
-durable multi-instance rate limiting. The JWT cookie remains transitional until
-P1.4 introduces persisted opaque sessions.
+These controls do not yet provide MFA, audit events, integration credentials or
+durable multi-instance rate limiting. Password reset storage is ready but its
+delivery flow and reauthentication for sensitive actions remain planned.

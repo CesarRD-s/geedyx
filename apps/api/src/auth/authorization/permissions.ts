@@ -3,13 +3,16 @@ export const PermissionCode = {
   CatalogManage: 'catalog.manage',
   UsersRead: 'users.read',
   UsersManage: 'users.manage',
+  CompanyManage: 'company.manage',
 } as const;
 
 export type PermissionCode =
   (typeof PermissionCode)[keyof typeof PermissionCode];
 
 export function isPermissionCode(value: string): value is PermissionCode {
-  return Object.values(PermissionCode).some((permission) => permission === value);
+  return Object.values(PermissionCode).some(
+    (permission) => permission === value,
+  );
 }
 
 export const ALL_PERMISSION_CODES: readonly PermissionCode[] = [
@@ -17,6 +20,7 @@ export const ALL_PERMISSION_CODES: readonly PermissionCode[] = [
   PermissionCode.CatalogManage,
   PermissionCode.UsersRead,
   PermissionCode.UsersManage,
+  PermissionCode.CompanyManage,
 ];
 
 export const SystemRoleCode = {

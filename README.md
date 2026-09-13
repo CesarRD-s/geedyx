@@ -19,7 +19,8 @@ The repository contains a prototype foundation, not the final ERP platform:
 
 - Next.js private admin console and NestJS API;
 - PostgreSQL and Prisma;
-- prototype bootstrap/login using Argon2id and a JWT cookie;
+- first-run setup and login using Argon2id with persistent opaque browser sessions;
+- internal users, roles, permissions, session management and optional company settings;
 - category and product CRUD, simple stock values and local image uploads;
 - a basic administration dashboard.
 
@@ -53,17 +54,18 @@ pnpm dev
 
 Copy `apps/api/.env.example` to `apps/api/.env` and
 `apps/web/.env.example` to `apps/web/.env.local` before running the services.
-The prototype API requires a non-empty `JWT_SECRET`.
+Session expiry, per-user session limits and cookie security are configured in
+`apps/api/.env`; see `apps/api/.env.example` for documented development values.
 
 Maintained endpoints use the `/api/v1` prefix. In development,
 `OPENAPI_ENABLED=true` exposes Swagger UI at `http://localhost:3001/api/docs`;
 liveness and readiness are available at `/api/v1/health/live` and
 `/api/v1/health/ready`.
 
-The first-run screen is available at `/setup`. It creates the company and its
-initial owner only when the API is not installed. Set a distinct
-`INSTALLATION_SECRET` in `apps/api/.env` and enter it once in the form; it is
-never exposed to the frontend configuration or returned by the API.
+The first-run screen is available at `/setup`. It creates a provisional company
+and its initial owner only when the API is not installed. It asks for username,
+email, password and password confirmation. Company name, language, time zone
+and base currency can stay pending and are configured later at `/app/settings`.
 
 ## Validation
 

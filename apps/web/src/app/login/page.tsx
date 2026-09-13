@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { getSession } from "@/lib/api/server";
+import { getInstallationStatus, getSession } from "@/lib/api/server";
 import { LoginForm } from "@/components/login-form";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
@@ -10,9 +10,15 @@ export const metadata: Metadata = {
 };
 
 export default async function LoginPage() {
-  const user = await getSession();
+  const [user, installation] = await Promise.all([
+    getSession(),
+    getInstallationStatus(),
+  ]);
   if (user) {
     redirect("/app");
+  }
+  if (!installation.installed) {
+    redirect("/setup");
   }
 
   return (
@@ -28,7 +34,9 @@ export default async function LoginPage() {
           </p>
         </div>
         <div className="rounded-lg border border-border bg-surface p-6 shadow-panel">
-          <h1 className="text-lg font-medium text-foreground">Iniciar sesión</h1>
+          <h1 className="text-lg font-medium text-foreground">
+            Iniciar sesión
+          </h1>
           <p className="mt-1 text-sm text-muted">
             Ingresa con tu cuenta de administrador.
           </p>

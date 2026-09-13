@@ -21,7 +21,11 @@ enum UserStatus {
 /// The single internal company configured during installation.
 model Company {
   id           String         @id @default(cuid())
-  name         String
+  name         String?
+  locale       String?
+  timeZone     String?
+  currency     String?
+  configuredAt DateTime?
   users        User[]
   roles        Role[]
   installation Installation?

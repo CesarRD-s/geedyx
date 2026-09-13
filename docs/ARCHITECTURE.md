@@ -33,6 +33,7 @@ not share the admin cookie and they do not receive administrative credentials.
   and MFA remain planned.
 - `authorization`: implemented roles, permissions and API guards.
 - `sessions`: opaque browser sessions and device management.
+- `account-context`: effective language, time zone and regional formatting.
 - `audit`: append-only security and business events.
 - `integrations`: clients, scopes, idempotency and webhook deliveries.
 - `files`: private assets and provider adapters.
@@ -43,6 +44,16 @@ Each module follows controller → service → Prisma/data access. Cross-domain
 writes are explicit services and database transactions, not controller chaining.
 Events that leave the system use an outbox/delivery record so a committed
 business action is not lost when a webhook or notification fails.
+
+## Account and temporal context
+
+`Mi cuenta` contains personal profile, preferences and security as child areas.
+`Administración` contains company configuration, internal users and later roles
+and auditability. A value has one owner and one write path.
+
+Persisted instants are UTC. The company time zone governs business rules,
+documents and reporting. A user's time zone changes only that user's display.
+A shared date input is not an operational calendar or scheduling module.
 
 ## Authentication and authorization target
 
@@ -63,7 +74,8 @@ durable queue is introduced.
 
 ## Current state
 
-The repository currently has `auth`, `users`, `categories`, `products` and
-`images`. Roles and permissions are enforced by NestJS for the current catalog
-and users resources. Persisted sessions, audit, integrations, files and later
-business modules remain planned.
+The repository currently has `auth`, `company`, `users`, `categories`,
+`products` and `images`. Roles and permissions are enforced by NestJS for the
+current catalog, company and users resources. Browser sessions are persisted in
+PostgreSQL. Audit, integrations, files and later business modules remain
+planned.

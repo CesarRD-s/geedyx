@@ -1,11 +1,12 @@
 import argon2 from 'argon2';
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { randomBytes, createHash, timingSafeEqual } from 'node:crypto';
+import { randomBytes, createHash } from 'node:crypto';
 import type { UserModel } from '../generated/prisma/models.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { durationToMs } from './duration.js';
@@ -17,6 +18,7 @@ import {
 } from './authorization/permissions.js';
 import { LoginDto } from './dto/login.dto.js';
 import { SetupDto } from './dto/setup.dto.js';
+import { UpdateProfileDto } from './dto/update-profile.dto.js';
 
 export interface AuthUser {
   id: string;
@@ -24,6 +26,8 @@ export interface AuthUser {
   email: string;
   companyId: string;
   displayName: string | null;
+  locale: string;
+  timeZone: string;
   permissions: PermissionCode[];
 }
 
@@ -35,7 +39,16 @@ export interface AuthSession {
 }
 
 function toAuthUser(
-  user: Pick<UserModel, 'id' | 'username' | 'email' | 'companyId' | 'displayName'>,
+  user: Pick<
+    UserModel,
+    | 'id'
+    | 'username'
+    | 'email'
+    | 'companyId'
+    | 'displayName'
+    | 'locale'
+    | 'timeZone'
+  >,
   permissions: PermissionCode[] = [],
 ): AuthUser {
   return {
@@ -44,6 +57,8 @@ function toAuthUser(
     email: user.email,
     companyId: user.companyId,
     displayName: user.displayName,
+    locale: user.locale,
+    timeZone: user.timeZone,
     permissions,
   };
 }
@@ -54,15 +69,6 @@ async function argon2Hash(password: string): Promise<string> {
 
 async function argon2Verify(hash: string, password: string): Promise<boolean> {
   return argon2.verify(hash, password);
-}
-
-function matchesInstallationSecret(expected: string, supplied: string): boolean {
-  const expectedBuffer = Buffer.from(expected);
-  const suppliedBuffer = Buffer.from(supplied);
-  return (
-    expectedBuffer.length === suppliedBuffer.length &&
-    timingSafeEqual(expectedBuffer, suppliedBuffer)
-  );
 }
 
 function isUniqueConstraintError(error: unknown): boolean {
@@ -90,10 +96,8 @@ export class AuthService {
       throw new ForbiddenException('Setup already completed');
     }
 
-    const installationSecret =
-      this.configService.getOrThrow<string>('INSTALLATION_SECRET');
-    if (!matchesInstallationSecret(installationSecret, dto.installationSecret)) {
-      throw new ForbiddenException('Invalid installation secret');
+    if (dto.password !== dto.confirmPassword) {
+      throw new BadRequestException('Passwords do not match');
     }
 
     const passwordHash = await argon2Hash(dto.password);
@@ -101,7 +105,7 @@ export class AuthService {
     try {
       const user = await this.prisma.$transaction(async (transaction) => {
         const company = await transaction.company.create({
-          data: { name: dto.companyName.trim() },
+          data: {},
           select: { id: true },
         });
         const owner = await transaction.user.create({
@@ -111,7 +115,15 @@ export class AuthService {
             passwordHash,
             companyId: company.id,
           },
-          select: { id: true, username: true, email: true, companyId: true, displayName: true },
+          select: {
+            id: true,
+            username: true,
+            email: true,
+            companyId: true,
+            displayName: true,
+            locale: true,
+            timeZone: true,
+          },
         });
         const ownerRole = await transaction.role.create({
           data: {
@@ -187,11 +199,15 @@ export class AuthService {
         email: true,
         companyId: true,
         displayName: true,
+        locale: true,
+        timeZone: true,
         roles: {
           select: {
             role: {
               select: {
-                permissions: { select: { permission: { select: { code: true } } } },
+                permissions: {
+                  select: { permission: { select: { code: true } } },
+                },
               },
             },
           },
@@ -212,6 +228,24 @@ export class AuthService {
     return toAuthUser(user, [...new Set(permissions)]);
   }
 
+  async updateProfile(
+    userId: string,
+    dto: UpdateProfileDto,
+  ): Promise<AuthUser> {
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(dto.displayName !== undefined
+          ? { displayName: dto.displayName || null }
+          : {}),
+        ...(dto.locale !== undefined ? { locale: dto.locale } : {}),
+        ...(dto.timeZone !== undefined ? { timeZone: dto.timeZone } : {}),
+      },
+      select: { id: true },
+    });
+    return this.getProfile(user.id);
+  }
+
   async revokeSession(sessionId: string): Promise<void> {
     await this.prisma.session.updateMany({
       where: { id: sessionId, revokedAt: null },
@@ -220,51 +254,126 @@ export class AuthService {
   }
 
   async listSessions(userId: string, currentSessionId: string) {
-    return this.prisma.session.findMany({
-      where: { userId, revokedAt: null, expiresAt: { gt: new Date() }, idleExpiresAt: { gt: new Date() } },
-      select: { id: true, userAgent: true, ipAddress: true, createdAt: true, lastUsedAt: true, expiresAt: true },
-      orderBy: { lastUsedAt: 'desc' },
-    }).then((sessions) => sessions.map((session) => ({ ...session, current: session.id === currentSessionId })));
+    return this.prisma.session
+      .findMany({
+        where: {
+          userId,
+          revokedAt: null,
+          expiresAt: { gt: new Date() },
+          idleExpiresAt: { gt: new Date() },
+        },
+        select: {
+          id: true,
+          userAgent: true,
+          ipAddress: true,
+          createdAt: true,
+          lastUsedAt: true,
+          expiresAt: true,
+        },
+        orderBy: { lastUsedAt: 'desc' },
+      })
+      .then((sessions) =>
+        sessions.map((session) => ({
+          ...session,
+          current: session.id === currentSessionId,
+        })),
+      );
   }
 
-  async revokeOtherSessions(userId: string, currentSessionId: string): Promise<void> {
-    await this.prisma.session.updateMany({ where: { userId, id: { not: currentSessionId }, revokedAt: null }, data: { revokedAt: new Date() } });
+  async revokeOtherSessions(
+    userId: string,
+    currentSessionId: string,
+  ): Promise<void> {
+    await this.prisma.session.updateMany({
+      where: { userId, id: { not: currentSessionId }, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
   }
 
-  async changePassword(userId: string, currentPassword: string, newPassword: string, currentSessionId: string): Promise<void> {
-    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { passwordHash: true } });
-    if (!user || !(await argon2Verify(user.passwordHash, currentPassword))) throw new UnauthorizedException('Invalid credentials');
+  async revokeSessionForUser(userId: string, sessionId: string): Promise<void> {
+    await this.prisma.session.updateMany({
+      where: { id: sessionId, userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  }
+
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+    currentSessionId: string,
+  ): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { passwordHash: true },
+    });
+    if (!user || !(await argon2Verify(user.passwordHash, currentPassword)))
+      throw new UnauthorizedException('Invalid credentials');
     const now = new Date();
     await this.prisma.$transaction([
-      this.prisma.user.update({ where: { id: userId }, data: { passwordHash: await argon2Hash(newPassword), passwordChangedAt: now } }),
-      this.prisma.session.updateMany({ where: { userId, id: { not: currentSessionId }, revokedAt: null }, data: { revokedAt: now } }),
+      this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          passwordHash: await argon2Hash(newPassword),
+          passwordChangedAt: now,
+        },
+      }),
+      this.prisma.session.updateMany({
+        where: { userId, id: { not: currentSessionId }, revokedAt: null },
+        data: { revokedAt: now },
+      }),
     ]);
   }
 
   private async buildSession(
-    user: Pick<UserModel, 'id' | 'username' | 'email' | 'companyId' | 'displayName'>,
+    user: Pick<
+      UserModel,
+      | 'id'
+      | 'username'
+      | 'email'
+      | 'companyId'
+      | 'displayName'
+      | 'locale'
+      | 'timeZone'
+    >,
   ): Promise<AuthSession> {
     const token = randomBytes(32).toString('base64url');
     const csrfToken = randomBytes(32).toString('base64url');
-    const cookieMaxAge = durationToMs(this.configService.get<string>('SESSION_ABSOLUTE_TTL', '12h'));
+    const cookieMaxAge = durationToMs(
+      this.configService.get<string>('SESSION_ABSOLUTE_TTL', '12h'),
+    );
     const now = new Date();
-    const maximumSessions = Number(this.configService.get<string>('SESSION_MAX_PER_USER', '5'));
+    const maximumSessions = Number(
+      this.configService.get<string>('SESSION_MAX_PER_USER', '5'),
+    );
     const activeSessions = await this.prisma.session.findMany({
       where: { userId: user.id, revokedAt: null },
       select: { id: true },
       orderBy: { lastUsedAt: 'asc' },
     });
-    const sessionsToRevoke = activeSessions.slice(Math.max(0, activeSessions.length - maximumSessions + 1));
+    const sessionsToRevoke = activeSessions.slice(
+      Math.max(0, activeSessions.length - maximumSessions + 1),
+    );
     if (sessionsToRevoke.length > 0) {
-      await this.prisma.session.updateMany({ where: { id: { in: sessionsToRevoke.map((session) => session.id) } }, data: { revokedAt: now } });
+      await this.prisma.session.updateMany({
+        where: { id: { in: sessionsToRevoke.map((session) => session.id) } },
+        data: { revokedAt: now },
+      });
     }
-    await this.prisma.session.create({ data: {
-      userId: user.id,
-      tokenHash: createHash('sha256').update(token).digest('hex'),
-      csrfTokenHash: createHash('sha256').update(csrfToken).digest('hex'),
-      idleExpiresAt: new Date(now.getTime() + durationToMs(this.configService.get<string>('SESSION_IDLE_TTL', '30m'))),
-      expiresAt: new Date(now.getTime() + cookieMaxAge),
-    } });
+    await this.prisma.session.create({
+      data: {
+        userId: user.id,
+        tokenHash: createHash('sha256').update(token).digest('hex'),
+        csrfTokenHash: createHash('sha256').update(csrfToken).digest('hex'),
+        idleExpiresAt: new Date(
+          now.getTime() +
+            durationToMs(
+              this.configService.get<string>('SESSION_IDLE_TTL', '30m'),
+            ),
+        ),
+        expiresAt: new Date(now.getTime() + cookieMaxAge),
+      },
+    });
 
     return { user: toAuthUser(user), token, csrfToken, cookieMaxAge };
   }

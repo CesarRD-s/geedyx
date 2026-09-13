@@ -4,6 +4,8 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Param,
+  Patch,
   Post,
   Req,
   Res,
@@ -18,6 +20,7 @@ import { AuthService } from './auth.service.js';
 import { LoginDto } from './dto/login.dto.js';
 import { SetupDto } from './dto/setup.dto.js';
 import { ChangePasswordDto } from './dto/change-password.dto.js';
+import { UpdateProfileDto } from './dto/update-profile.dto.js';
 import { SessionAuthGuard } from './guards/session-auth.guard.js';
 import { AccountStatusGuard } from './guards/account-status.guard.js';
 import { AUTH_COOKIE_NAME, CSRF_COOKIE_NAME } from './session.constants.js';
@@ -69,15 +72,31 @@ export class AuthController {
     return this.authService.getProfile(req.user.id);
   }
 
+  @Patch('profile')
+  @UseGuards(SessionAuthGuard, AccountStatusGuard)
+  @ApiCookieAuth()
+  async updateProfile(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: UpdateProfileDto,
+  ) {
+    return this.authService.updateProfile(req.user.id, dto);
+  }
+
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(SessionAuthGuard)
-  async logout(@Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
+  async logout(
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     if (req.user.sessionId) {
       await this.authService.revokeSession(req.user.sessionId);
     }
     res.clearCookie(AUTH_COOKIE_NAME, this.cookieOptions());
-    res.clearCookie(CSRF_COOKIE_NAME, { ...this.cookieOptions(), httpOnly: false });
+    res.clearCookie(CSRF_COOKIE_NAME, {
+      ...this.cookieOptions(),
+      httpOnly: false,
+    });
   }
 
   @Get('sessions')
@@ -90,25 +109,46 @@ export class AuthController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(SessionAuthGuard, AccountStatusGuard)
   async revokeOthers(@Req() req: AuthenticatedRequest) {
-    await this.authService.revokeOtherSessions(req.user.id, req.user.sessionId ?? '');
+    await this.authService.revokeOtherSessions(
+      req.user.id,
+      req.user.sessionId ?? '',
+    );
+  }
+
+  @Post('sessions/:id/revoke')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(SessionAuthGuard, AccountStatusGuard)
+  async revokeSession(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+  ) {
+    await this.authService.revokeSessionForUser(req.user.id, id);
   }
 
   @Post('password/change')
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(SessionAuthGuard, AccountStatusGuard)
-  async changePassword(@Req() req: AuthenticatedRequest, @Body() dto: ChangePasswordDto) {
-    await this.authService.changePassword(req.user.id, dto.currentPassword, dto.newPassword, req.user.sessionId ?? '');
+  async changePassword(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: ChangePasswordDto,
+  ) {
+    await this.authService.changePassword(
+      req.user.id,
+      dto.currentPassword,
+      dto.newPassword,
+      req.user.sessionId ?? '',
+    );
   }
 
   private setCsrfCookie(res: Response, token: string, maxAge: number): void {
-    res.cookie(CSRF_COOKIE_NAME, token, { ...this.cookieOptions(), httpOnly: false, maxAge });
+    res.cookie(CSRF_COOKIE_NAME, token, {
+      ...this.cookieOptions(),
+      httpOnly: false,
+      maxAge,
+    });
   }
 
-  private setSessionCookie(
-    res: Response,
-    token: string,
-    maxAge: number,
-  ): void {
+  private setSessionCookie(res: Response, token: string, maxAge: number): void {
     res.cookie(AUTH_COOKIE_NAME, token, {
       ...this.cookieOptions(),
       maxAge,

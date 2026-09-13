@@ -669,6 +669,17 @@ build an internal framework; add a component when it stops duplication.
 
 ## 24. Interaction, persistence and feedback
 
+## 24a. Account context and temporal inputs
+
+The future workspace navigation groups `Mi cuenta` (Perfil, Preferencias,
+Seguridad) and `Administración` (Empresa, Usuarios, Roles, Auditoría). These
+are parent modules with child routes, not independent duplicated settings.
+
+Date, time and date-range controls will be shared accessible primitives. They
+accept local user input, preserve the selected calendar date without implicit
+UTC shifts and submit a documented API value. They are not an agenda, schedule
+or operational calendar.
+
 Every interactive control follows the same lifecycle:
 
 1. **Idle**: action is available and its label explains the result.
@@ -740,11 +751,12 @@ must feel like part of the same product as `/login`:
   session it `redirect("/app")` (an authenticated user never sees the
   form). Without one it renders the `SetupForm`.
 - **Form**: `SetupForm` reuses `Input`/`FieldLabel`/`FieldError`/`Button`
-  (primary, `md`, full-width, `loading`/`loadingLabel`). Fields are company
-  name, username, email, password and installation secret with visible labels;
-  client validation is minimal (required, password ≥ 8 and secret ≥ 32), while
-  the backend remains the authority. On success the component navigates to
-  `/app` after the API sets the HttpOnly cookie.
+  (primary, `md`, full-width, `loading`/`loadingLabel`). Fields are username,
+  email, password and password confirmation with visible labels; client
+  validation is minimal (required, password ≥ 8 and matching confirmation),
+  while the backend remains the authority. On success the component navigates
+  to `/app` after the API sets the HttpOnly cookie. Company settings remain
+  optional and are completed later in `/app/settings`.
 - **Already configured**: the page first reads `GET /api/v1/auth/installation`
   and redirects to `/login` when installation is complete. A concurrent `403`
   from `POST /api/v1/auth/setup` is handled as the same state. Network/`400`

@@ -7,7 +7,8 @@ Prisma. Every schema change uses a reviewed Prisma migration; the Next.js admin
 application never reads it directly.
 
 The current schema contains `Installation`, `Company`, `User`, `Role`,
-`Permission`, `UserRole`, `RolePermission`, `Category` and `Product`.
+`Permission`, `UserRole`, `RolePermission`, `Session`, `PasswordResetToken`,
+`Category` and `Product`.
 `Installation` is a singleton that closes bootstrap permanently; every user
 and role belongs to the one configured company.
 
@@ -16,7 +17,7 @@ and role belongs to the one configured company.
 | Model | Purpose |
 | --- | --- |
 | `Installation` | Immutable singleton recording the completed installation, company and owner. |
-| `Company` | The legal and operational business configured during installation. |
+| `Company` | The single operational business. It begins with a provisional name and stores optional name, default locale, time zone, currency and configuration completion time. |
 | `User` | Internal credential identity; it belongs to one company. |
 | `Role`, `Permission`, `UserRole`, `RolePermission` | Explicit RBAC relations enforced by NestJS on every private operation. |
 
@@ -26,9 +27,12 @@ company and writing the installation singleton, so setup does not reopen.
 
 System roles are created per company: `OWNER`, `ADMIN`, `CATALOG_MANAGER` and
 `VIEWER`. Permission codes are global, stable values: `catalog.read`,
-`catalog.manage`, `users.read` and `users.manage`. The installation owner is
+`catalog.manage`, `users.read`, `users.manage` and `company.manage`. The installation owner is
 the only initial `OWNER`; it cannot be suspended or reassigned through the user
 management API.
+
+Company `locale` and `timeZone` are defaults. User `locale` and `timeZone` are
+personal overrides. Timestamps remain UTC; neither field changes stored data.
 
 ## Foundation data model - planned
 

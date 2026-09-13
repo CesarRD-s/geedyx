@@ -7,7 +7,7 @@ complete.
 ## Completed prototype foundation
 
 - Monorepo: Next.js admin console, NestJS API and PostgreSQL/Prisma.
-- Prototype bootstrap/login with Argon2id and JWT cookie.
+- Prototype bootstrap/login with Argon2id, now migrated to persistent opaque sessions.
 - Categories, products, simple stock field and local product images.
 - Private administration screens and basic count dashboard.
 
@@ -43,10 +43,12 @@ complete until its migration, API behavior, tests and documentation agree.
 
 **Complete.**
 
-- Add persisted installation state and the initial company record.
-- Protect setup with a one-time installation secret.
+- Add persisted installation state and a provisional company record.
+- Keep first-run setup simple: owner username, email, password and password confirmation.
 - Create company, owner and first session in one database transaction.
 - Make setup permanently unavailable after successful installation.
+- Allow company name, locale, time zone and base currency to remain pending and
+  be updated from the private workspace without an onboarding gate.
 
 ### P1.3 - Users, roles and permissions
 
@@ -64,7 +66,7 @@ enforced consistently.
 
 ### P1.4 - Professional authentication and sessions
 
-**Planned.**
+**Partial.**
 
 - Replace JWT-cookie authentication with random opaque server-side sessions;
   persist only token hashes.
@@ -75,6 +77,23 @@ enforced consistently.
   operations.
 - Enforce browser origin/CSRF controls and durable rate limiting; keep the data
   model ready for MFA without blocking the first internal release.
+
+### P1.4a - Account context and temporal foundation
+
+**Active.**
+
+- Establish parent modules and child routes for `Mi cuenta` and
+  `Administración` before adding more workspace domains.
+- Centralize personal profile, personal preferences and security so each value
+  has one owner and one write path.
+- Define company defaults and personal overrides for language and time zone;
+  retain base currency as a company-wide setting.
+- Implement real `es` and `en` catalogs before exposing an effective language
+  selector.
+- Create shared accessible date, time and date-range input primitives.
+- Persist instants in UTC and convert only at display or local-input boundaries.
+- Defer an operational calendar until a business domain owns appointments,
+  deadlines or scheduled work.
 
 ### P1.5 - Audit, integration and files foundation
 

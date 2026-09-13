@@ -39,14 +39,16 @@ The current repository contains a prototype foundation:
 
 - a Next.js private administration console;
 - a NestJS REST API backed by PostgreSQL and Prisma;
-- a first-run administrator flow, login, a JWT cookie and rate limiting;
+- a first-run administrator flow, login, persistent opaque browser sessions,
+  CSRF protection and rate limiting;
 - category and product CRUD, including simple `stock` values;
 - local product-image upload and a basic dashboard.
 
 These capabilities are implemented but are not yet the production platform
-defined in this document. In particular, there are no persistent sessions,
-multiple internal users, permissions, audit logs, API versioning, integration
-credentials, inventory movements, orders, payments or financial records.
+defined in this document. Persistent browser sessions, multiple internal users,
+permissions and API versioning are now present. Audit logs, integration
+credentials, inventory movements, orders, payments and financial records remain
+planned.
 
 ## Product phases
 
