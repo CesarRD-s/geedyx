@@ -30,6 +30,8 @@ import {
   DurableRateLimitService,
   type AuthRateLimitScope,
 } from './durable-rate-limit.service.js';
+import type { RequestWithId } from '../http/request-context.middleware.js';
+import type { AuditRequestContext } from '../audit/audit.service.js';
 
 @Controller('auth')
 export class AuthController {
@@ -42,12 +44,12 @@ export class AuthController {
   @Post('setup')
   @HttpCode(HttpStatus.CREATED)
   async setup(
-    @Req() req: Request,
+    @Req() req: RequestWithId,
     @Body() dto: SetupDto,
     @Res({ passthrough: true }) res: Response,
   ) {
     await this.enforceRateLimit(req, 'setup', dto.email);
-    const session = await this.authService.setup(dto);
+    const session = await this.authService.setup(dto, this.auditContext(req));
     this.setSessionCookie(res, session.token, session.cookieMaxAge);
     this.setCsrfCookie(res, session.csrfToken, session.cookieMaxAge);
     return session.user;
@@ -61,12 +63,12 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(
-    @Req() req: Request,
+    @Req() req: RequestWithId,
     @Body() dto: LoginDto,
     @Res({ passthrough: true }) res: Response,
   ) {
     await this.enforceRateLimit(req, 'login', dto.email);
-    const session = await this.authService.login(dto);
+    const session = await this.authService.login(dto, this.auditContext(req));
     this.setSessionCookie(res, session.token, session.cookieMaxAge);
     this.setCsrfCookie(res, session.csrfToken, session.cookieMaxAge);
     return session.user;
@@ -97,7 +99,12 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     if (req.user.sessionId) {
-      await this.authService.revokeSession(req.user.sessionId);
+      await this.authService.revokeSession(
+        req.user.id,
+        req.user.companyId,
+        req.user.sessionId,
+        this.auditContext(req),
+      );
     }
     res.clearCookie(AUTH_COOKIE_NAME, this.cookieOptions());
     res.clearCookie(CSRF_COOKIE_NAME, {
@@ -118,7 +125,9 @@ export class AuthController {
   async revokeOthers(@Req() req: AuthenticatedRequest) {
     await this.authService.revokeOtherSessions(
       req.user.id,
+      req.user.companyId,
       req.user.sessionId ?? '',
+      this.auditContext(req),
     );
   }
 
@@ -129,7 +138,12 @@ export class AuthController {
     @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
   ) {
-    await this.authService.revokeSessionForUser(req.user.id, id);
+    await this.authService.revokeSessionForUser(
+      req.user.id,
+      req.user.companyId,
+      id,
+      this.auditContext(req),
+    );
   }
 
   @Post('password/change')
@@ -143,9 +157,11 @@ export class AuthController {
     await this.enforceRateLimit(req, 'change-password', req.user.id);
     const session = await this.authService.changePassword(
       req.user.id,
+      req.user.companyId,
       dto.currentPassword,
       dto.newPassword,
       req.user.sessionId ?? '',
+      this.auditContext(req),
     );
     this.setSessionCookie(res, session.token, session.cookieMaxAge);
     this.setCsrfCookie(res, session.csrfToken, session.cookieMaxAge);
@@ -162,8 +178,10 @@ export class AuthController {
     await this.enforceRateLimit(req, 'reauthenticate', req.user.id);
     const session = await this.authService.reauthenticate(
       req.user.id,
+      req.user.companyId,
       req.user.sessionId ?? '',
       dto.password,
+      this.auditContext(req),
     );
     this.setSessionCookie(res, session.token, session.cookieMaxAge);
     this.setCsrfCookie(res, session.csrfToken, session.cookieMaxAge);
@@ -173,22 +191,29 @@ export class AuthController {
   @Post('password/reset-request')
   @HttpCode(HttpStatus.ACCEPTED)
   async requestPasswordReset(
-    @Req() req: Request,
+    @Req() req: RequestWithId,
     @Body() dto: RequestPasswordResetDto,
   ) {
     await this.enforceRateLimit(req, 'reset-request', dto.email);
-    await this.authService.requestPasswordReset(dto.email);
+    await this.authService.requestPasswordReset(
+      dto.email,
+      this.auditContext(req),
+    );
     return { accepted: true };
   }
 
   @Post('password/reset')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async resetPassword(@Req() req: Request, @Body() dto: ResetPasswordDto) {
+  async resetPassword(
+    @Req() req: RequestWithId,
+    @Body() dto: ResetPasswordDto,
+  ) {
     await this.enforceRateLimit(req, 'reset-password', dto.token);
     await this.authService.resetPassword(
       dto.token,
       dto.newPassword,
       dto.confirmPassword,
+      this.auditContext(req),
     );
   }
 
@@ -203,6 +228,15 @@ export class AuthController {
       subjects.push(`identity:${identity.trim().toLowerCase()}`);
     }
     await this.durableRateLimit.consume(scope, subjects);
+  }
+
+  private auditContext(req: RequestWithId): AuditRequestContext {
+    const userAgent = req.header('user-agent');
+    return {
+      requestId: req.requestId,
+      ipAddress: req.ip || req.socket.remoteAddress || 'unknown',
+      ...(userAgent ? { userAgent } : {}),
+    };
   }
 
   private setCsrfCookie(res: Response, token: string, maxAge: number): void {

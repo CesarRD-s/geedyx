@@ -1,5 +1,5 @@
-import type { Request } from 'express';
 import type { PermissionCode } from './permissions.js';
+import type { RequestWithId } from '../../http/request-context.middleware.js';
 
 export interface AuthenticatedRequestUser {
   id: string;
@@ -9,6 +9,6 @@ export interface AuthenticatedRequestUser {
   permissions: PermissionCode[];
 }
 
-export interface AuthenticatedRequest extends Request {
+export interface AuthenticatedRequest extends RequestWithId {
   user: AuthenticatedRequestUser;
 }

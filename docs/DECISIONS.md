@@ -141,6 +141,11 @@ commit. Metadata is deliberately small and rejects credential-related field
 names; retention and privileged read access are defined before a query API is
 introduced.
 
+P1.5a.2 applies this transaction rule to installation, login, password and
+session lifecycle writes. Failed attempts are recorded separately with the
+same public response semantics; submitted identities are hashed and secret
+credentials never become event fields or metadata.
+
 ## Legacy decisions
 
 The previous single-administrator, stateless JWT, public-catalog and local-image

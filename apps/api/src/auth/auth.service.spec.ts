@@ -1,4 +1,4 @@
-import { ForbiddenException } from '@nestjs/common';
+import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 import { ConfigService } from '@nestjs/config';
 import argon2 from 'argon2';
@@ -6,7 +6,15 @@ import { createHash } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AuthService } from './auth.service.js';
 
-function createService(installation: { id: string } | null): {
+const auditContext = { requestId: 'request-1' };
+
+function auditStub() {
+  return { record: vi.fn().mockResolvedValue({ id: 'event-1', sequence: 1n }) };
+}
+
+function createService(
+  installation: { id: string; companyId: string } | null,
+): {
   service: AuthService;
   transaction: ReturnType<typeof vi.fn>;
 } {
@@ -22,7 +30,7 @@ function createService(installation: { id: string } | null): {
   } as unknown as ConfigService;
 
   return {
-    service: new AuthService(prisma, config),
+    service: new AuthService(prisma, config, auditStub() as never),
     transaction,
   };
 }
@@ -37,15 +45,21 @@ describe('AuthService installation state', () => {
   });
 
   it('blocks setup before any write when installation already exists', async () => {
-    const { service, transaction } = createService({ id: 'singleton' });
+    const { service, transaction } = createService({
+      id: 'singleton',
+      companyId: 'company-1',
+    });
 
     await expect(
-      service.setup({
-        username: 'owner',
-        email: 'owner@example.com',
-        password: 'correct-horse-battery-staple',
-        confirmPassword: 'correct-horse-battery-staple',
-      }),
+      service.setup(
+        {
+          username: 'owner',
+          email: 'owner@example.com',
+          password: 'correct-horse-battery-staple',
+          confirmPassword: 'correct-horse-battery-staple',
+        },
+        auditContext,
+      ),
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(transaction).not.toHaveBeenCalled();
   });
@@ -55,7 +69,11 @@ describe('AuthService personal preferences', () => {
   it('persists explicit inheritance without overwriting omitted preferences', async () => {
     const update = vi.fn().mockResolvedValue({ id: 'user-1' });
     const prisma = { user: { update } } as unknown as PrismaService;
-    const service = new AuthService(prisma, new ConfigService());
+    const service = new AuthService(
+      prisma,
+      new ConfigService(),
+      auditStub() as never,
+    );
     const profile = {
       id: 'user-1',
       username: 'owner',
@@ -85,11 +103,36 @@ describe('AuthService personal preferences', () => {
   });
 });
 
+describe('AuthService authentication audit', () => {
+  it('audits a failed login with a hashed identity and no password', async () => {
+    const audit = auditStub();
+    const service = new AuthService(
+      {
+        user: { findUnique: vi.fn().mockResolvedValue(null) },
+      } as unknown as PrismaService,
+      new ConfigService(),
+      audit as never,
+    );
+
+    await expect(
+      service.login(
+        { email: 'missing@example.com', password: 'invalid-password' },
+        auditContext,
+      ),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+
+    const event = audit.record.mock.calls[0][0];
+    expect(event.metadata.identityHash).toHaveLength(64);
+    expect(JSON.stringify(event)).not.toContain('invalid-password');
+    expect(JSON.stringify(event)).not.toContain('missing@example.com');
+  });
+});
+
 describe('AuthService session capacity', () => {
   it('does not revoke existing sessions while capacity remains', async () => {
     const activeSession = { id: 'existing-session' };
     const updateMany = vi.fn();
-    const create = vi.fn();
+    const create = vi.fn().mockResolvedValue({ id: 'new-session' });
     const prisma = {
       session: {
         findMany: vi.fn().mockResolvedValue([activeSession]),
@@ -109,7 +152,7 @@ describe('AuthService session capacity', () => {
         key === 'SESSION_MAX_PER_USER' ? '5' : fallback,
       ),
     } as unknown as ConfigService;
-    const service = new AuthService(prisma, config);
+    const service = new AuthService(prisma, config, auditStub() as never);
     const user = {
       id: 'user-1',
       username: 'admin',
@@ -130,13 +173,15 @@ describe('AuthService session capacity', () => {
     const updateMany = vi.fn();
     const prisma = {
       session: {
-        findMany: vi.fn().mockResolvedValue([
-          { id: 'oldest' },
-          { id: 'middle' },
-          { id: 'newest' },
-        ]),
+        findMany: vi
+          .fn()
+          .mockResolvedValue([
+            { id: 'oldest' },
+            { id: 'middle' },
+            { id: 'newest' },
+          ]),
         updateMany,
-        create: vi.fn(),
+        create: vi.fn().mockResolvedValue({ id: 'new-session' }),
       },
       company: {
         findUniqueOrThrow: vi.fn().mockResolvedValue({
@@ -151,11 +196,16 @@ describe('AuthService session capacity', () => {
         key === 'SESSION_MAX_PER_USER' ? '3' : fallback,
       ),
     } as unknown as ConfigService;
-    const service = new AuthService(prisma, config);
+    const service = new AuthService(prisma, config, auditStub() as never);
 
     await service['buildSession']({
-      id: 'user-1', username: 'admin', email: 'admin@geedyx.test',
-      companyId: 'company-1', displayName: null, locale: null, timeZone: null,
+      id: 'user-1',
+      username: 'admin',
+      email: 'admin@geedyx.test',
+      companyId: 'company-1',
+      displayName: null,
+      locale: null,
+      timeZone: null,
     });
 
     expect(updateMany).toHaveBeenCalledWith({
@@ -187,12 +237,19 @@ describe('AuthService session credential rotation', () => {
           callback(transactionClient),
       ),
     } as unknown as PrismaService;
-    const service = new AuthService(prisma, new ConfigService());
+    const audit = auditStub();
+    const service = new AuthService(
+      prisma,
+      new ConfigService(),
+      audit as never,
+    );
 
     const result = await service.reauthenticate(
       'user-1',
+      'company-1',
       'session-1',
       password,
+      auditContext,
     );
 
     const rotation = updateMany.mock.calls[0][0];
@@ -210,6 +267,13 @@ describe('AuthService session credential rotation', () => {
     );
     expect(result.cookieMaxAge).toBeGreaterThan(0);
     expect(result.cookieMaxAge).toBeLessThanOrEqual(60 * 60_000);
+    expect(audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'authentication.reauthentication',
+        outcome: 'SUCCEEDED',
+      }),
+      transactionClient,
+    );
   });
 });
 
@@ -225,6 +289,7 @@ describe('AuthService password recovery', () => {
           id: 'user-1',
           email: 'admin@geedyx.test',
           status: 'ACTIVE',
+          companyId: 'company-1',
         }),
       },
       passwordResetToken: { deleteMany: vi.fn() },
@@ -237,9 +302,14 @@ describe('AuthService password recovery', () => {
       get: vi.fn((key: string, fallback: string) => fallback),
     } as unknown as ConfigService;
     const delivery = { deliver: vi.fn().mockResolvedValue(true) };
-    const service = new AuthService(prisma, config, delivery as never);
+    const service = new AuthService(
+      prisma,
+      config,
+      auditStub() as never,
+      delivery as never,
+    );
 
-    await service.requestPasswordReset(' ADMIN@geedyx.test ');
+    await service.requestPasswordReset(' ADMIN@geedyx.test ', auditContext);
 
     const resetUrl = new URL(delivery.deliver.mock.calls[0][0].resetUrl);
     const rawToken = resetUrl.searchParams.get('token');
@@ -259,11 +329,12 @@ describe('AuthService password recovery', () => {
     const service = new AuthService(
       prisma,
       new ConfigService(),
+      auditStub() as never,
       delivery as never,
     );
 
     await expect(
-      service.requestPasswordReset('missing@example.com'),
+      service.requestPasswordReset('missing@example.com', auditContext),
     ).resolves.toBeUndefined();
     expect(delivery.deliver).not.toHaveBeenCalled();
   });
@@ -279,7 +350,7 @@ describe('AuthService password recovery', () => {
           userId: 'user-1',
           expiresAt: new Date(Date.now() + 60_000),
           usedAt: null,
-          user: { status: 'ACTIVE' },
+          user: { status: 'ACTIVE', companyId: 'company-1' },
         }),
         updateMany: passwordResetUpdate,
       },
@@ -292,12 +363,17 @@ describe('AuthService password recovery', () => {
           callback(transactionClient),
       ),
     } as unknown as PrismaService;
-    const service = new AuthService(prisma, new ConfigService());
+    const service = new AuthService(
+      prisma,
+      new ConfigService(),
+      auditStub() as never,
+    );
 
     await service.resetPassword(
       'one-time-token',
       'new-password-value',
       'new-password-value',
+      auditContext,
     );
 
     expect(passwordResetUpdate).toHaveBeenCalledWith({

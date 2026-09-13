@@ -10,7 +10,15 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { randomBytes, createHash } from 'node:crypto';
 import type { UserModel } from '../generated/prisma/models.js';
+import type { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import {
+  AuditAction,
+  AuditActor,
+  AuditResult,
+  AuditService,
+  type AuditRequestContext,
+} from '../audit/audit.service.js';
 import { durationToMs } from './duration.js';
 import {
   ALL_PERMISSION_CODES,
@@ -51,6 +59,13 @@ export interface RotatedSessionCredentials {
 export interface ReauthenticationResult extends RotatedSessionCredentials {
   reauthenticatedUntil: Date;
 }
+
+interface BuiltAuthSession extends AuthSession {
+  sessionId: string;
+  revokedSessionCount: number;
+}
+
+type SessionDatabase = Pick<Prisma.TransactionClient, 'company' | 'session'>;
 
 function toAuthUser(
   user: Pick<
@@ -105,27 +120,48 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
+    private readonly audit: AuditService,
     @Optional()
     private readonly passwordResetDelivery?: PasswordResetDeliveryService,
   ) {}
 
-  async setup(dto: SetupDto): Promise<AuthSession> {
+  async setup(
+    dto: SetupDto,
+    auditContext: AuditRequestContext,
+  ): Promise<AuthSession> {
     const existingInstallation = await this.prisma.installation.findUnique({
       where: { id: 'singleton' },
-      select: { id: true },
+      select: { id: true, companyId: true },
     });
     if (existingInstallation) {
+      await this.audit.record({
+        companyId: existingInstallation.companyId,
+        actorType: AuditActor.Anonymous,
+        action: AuditAction.InstallationComplete,
+        outcome: AuditResult.Denied,
+        targetType: 'company',
+        targetId: existingInstallation.companyId,
+        ...auditContext,
+        metadata: { reason: 'already_completed' },
+      });
       throw new ForbiddenException('Setup already completed');
     }
 
     if (dto.password !== dto.confirmPassword) {
+      await this.audit.record({
+        actorType: AuditActor.Anonymous,
+        action: AuditAction.InstallationComplete,
+        outcome: AuditResult.Failed,
+        ...auditContext,
+        metadata: { reason: 'password_mismatch' },
+      });
       throw new BadRequestException('Passwords do not match');
     }
 
     const passwordHash = await argon2Hash(dto.password);
 
     try {
-      const user = await this.prisma.$transaction(async (transaction) => {
+      return await this.prisma.$transaction(async (transaction) => {
         const company = await transaction.company.create({
           data: {},
           select: { id: true },
@@ -172,12 +208,31 @@ export class AuthService {
             ownerId: owner.id,
           },
         });
-        return owner;
+        const session = await this.buildSession(owner, transaction);
+        await this.audit.record(
+          {
+            companyId: company.id,
+            actorType: AuditActor.InternalUser,
+            actorId: owner.id,
+            action: AuditAction.InstallationComplete,
+            outcome: AuditResult.Succeeded,
+            targetType: 'company',
+            targetId: company.id,
+            ...auditContext,
+          },
+          transaction,
+        );
+        return session;
       });
-
-      return this.buildSession(user);
     } catch (error) {
       if (isUniqueConstraintError(error)) {
+        await this.audit.record({
+          actorType: AuditActor.Anonymous,
+          action: AuditAction.InstallationComplete,
+          outcome: AuditResult.Denied,
+          ...auditContext,
+          metadata: { reason: 'concurrent_completion' },
+        });
         throw new ForbiddenException('Setup already completed');
       }
       throw error;
@@ -192,24 +247,66 @@ export class AuthService {
     return { installed: installation !== null };
   }
 
-  async login(dto: LoginDto): Promise<AuthSession> {
+  async login(
+    dto: LoginDto,
+    auditContext: AuditRequestContext,
+  ): Promise<AuthSession> {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
 
     if (!user || !(await argon2Verify(user.passwordHash, dto.password))) {
+      await this.audit.record({
+        companyId: user?.companyId,
+        actorType: AuditActor.Anonymous,
+        action: AuditAction.Login,
+        outcome: AuditResult.Failed,
+        targetType: user ? 'user' : undefined,
+        targetId: user?.id,
+        ...auditContext,
+        metadata: {
+          reason: 'invalid_credentials',
+          identityHash: this.hashCredential(dto.email.trim().toLowerCase()),
+        },
+      });
       throw new UnauthorizedException('Invalid credentials');
     }
     if (user.status === 'SUSPENDED') {
+      await this.audit.record({
+        companyId: user.companyId,
+        actorType: AuditActor.Anonymous,
+        action: AuditAction.Login,
+        outcome: AuditResult.Denied,
+        targetType: 'user',
+        targetId: user.id,
+        ...auditContext,
+        metadata: { reason: 'account_unavailable' },
+      });
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: { lastLoginAt: new Date() },
+    return this.prisma.$transaction(async (transaction) => {
+      await transaction.user.update({
+        where: { id: user.id },
+        data: { lastLoginAt: new Date() },
+      });
+      const session = await this.buildSession(user, transaction);
+      await this.audit.record(
+        {
+          companyId: user.companyId,
+          actorType: AuditActor.InternalUser,
+          actorId: user.id,
+          action: AuditAction.Login,
+          outcome: AuditResult.Succeeded,
+          targetType: 'session',
+          targetId: session.sessionId,
+          ...auditContext,
+          metadata: { revokedSessionCount: session.revokedSessionCount },
+        },
+        transaction,
+      );
+      return session;
     });
-
-    return this.buildSession(user);
   }
 
   async getProfile(userId: string): Promise<AuthUser> {
@@ -269,10 +366,31 @@ export class AuthService {
     return this.getProfile(user.id);
   }
 
-  async revokeSession(sessionId: string): Promise<void> {
-    await this.prisma.session.updateMany({
-      where: { id: sessionId, revokedAt: null },
-      data: { revokedAt: new Date() },
+  async revokeSession(
+    userId: string,
+    companyId: string,
+    sessionId: string,
+    auditContext: AuditRequestContext,
+  ): Promise<void> {
+    await this.prisma.$transaction(async (transaction) => {
+      const revoked = await transaction.session.updateMany({
+        where: { id: sessionId, userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+      await this.audit.record(
+        {
+          companyId,
+          actorType: AuditActor.InternalUser,
+          actorId: userId,
+          action: AuditAction.Logout,
+          outcome: AuditResult.Succeeded,
+          targetType: 'session',
+          targetId: sessionId,
+          ...auditContext,
+          metadata: { revoked: revoked.count === 1 },
+        },
+        transaction,
+      );
     });
   }
 
@@ -305,33 +423,86 @@ export class AuthService {
 
   async revokeOtherSessions(
     userId: string,
+    companyId: string,
     currentSessionId: string,
+    auditContext: AuditRequestContext,
   ): Promise<void> {
-    await this.prisma.session.updateMany({
-      where: { userId, id: { not: currentSessionId }, revokedAt: null },
-      data: { revokedAt: new Date() },
+    await this.prisma.$transaction(async (transaction) => {
+      const revoked = await transaction.session.updateMany({
+        where: { userId, id: { not: currentSessionId }, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+      await this.audit.record(
+        {
+          companyId,
+          actorType: AuditActor.InternalUser,
+          actorId: userId,
+          action: AuditAction.OtherSessionsRevoke,
+          outcome: AuditResult.Succeeded,
+          targetType: 'user',
+          targetId: userId,
+          ...auditContext,
+          metadata: { revokedSessionCount: revoked.count },
+        },
+        transaction,
+      );
     });
   }
 
-  async revokeSessionForUser(userId: string, sessionId: string): Promise<void> {
-    await this.prisma.session.updateMany({
-      where: { id: sessionId, userId, revokedAt: null },
-      data: { revokedAt: new Date() },
+  async revokeSessionForUser(
+    userId: string,
+    companyId: string,
+    sessionId: string,
+    auditContext: AuditRequestContext,
+  ): Promise<void> {
+    await this.prisma.$transaction(async (transaction) => {
+      const revoked = await transaction.session.updateMany({
+        where: { id: sessionId, userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+      await this.audit.record(
+        {
+          companyId,
+          actorType: AuditActor.InternalUser,
+          actorId: userId,
+          action: AuditAction.SessionRevoke,
+          outcome: AuditResult.Succeeded,
+          targetType: 'session',
+          targetId: sessionId,
+          ...auditContext,
+          metadata: { revoked: revoked.count === 1 },
+        },
+        transaction,
+      );
     });
   }
 
   async changePassword(
     userId: string,
+    companyId: string,
     currentPassword: string,
     newPassword: string,
     currentSessionId: string,
+    auditContext: AuditRequestContext,
   ): Promise<RotatedSessionCredentials> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { passwordHash: true },
     });
-    if (!user || !(await argon2Verify(user.passwordHash, currentPassword)))
+    if (!user || !(await argon2Verify(user.passwordHash, currentPassword))) {
+      await this.audit.record({
+        companyId,
+        actorType: AuditActor.InternalUser,
+        actorId: userId,
+        action: AuditAction.PasswordChange,
+        outcome: AuditResult.Failed,
+        targetType: 'user',
+        targetId: userId,
+        ...auditContext,
+        metadata: { reason: 'invalid_current_password' },
+      });
       throw new UnauthorizedException('Invalid credentials');
+    }
     const now = new Date();
     const passwordHash = await argon2Hash(newPassword);
     const credentials = this.createSessionCredentials();
@@ -365,6 +536,19 @@ export class AuthService {
       if (rotated.count !== 1) {
         throw new UnauthorizedException('Session expired');
       }
+      await this.audit.record(
+        {
+          companyId,
+          actorType: AuditActor.InternalUser,
+          actorId: userId,
+          action: AuditAction.PasswordChange,
+          outcome: AuditResult.Succeeded,
+          targetType: 'user',
+          targetId: userId,
+          ...auditContext,
+        },
+        transaction,
+      );
       return currentSession.expiresAt;
     });
     return {
@@ -375,14 +559,27 @@ export class AuthService {
 
   async reauthenticate(
     userId: string,
+    companyId: string,
     sessionId: string,
     password: string,
+    auditContext: AuditRequestContext,
   ): Promise<ReauthenticationResult> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { passwordHash: true },
     });
     if (!user || !(await argon2Verify(user.passwordHash, password))) {
+      await this.audit.record({
+        companyId,
+        actorType: AuditActor.InternalUser,
+        actorId: userId,
+        action: AuditAction.Reauthentication,
+        outcome: AuditResult.Failed,
+        targetType: 'session',
+        targetId: sessionId,
+        ...auditContext,
+        metadata: { reason: 'invalid_password' },
+      });
       throw new UnauthorizedException('Invalid credentials');
     }
 
@@ -407,6 +604,19 @@ export class AuthService {
       if (rotated.count !== 1) {
         throw new UnauthorizedException('Session expired');
       }
+      await this.audit.record(
+        {
+          companyId,
+          actorType: AuditActor.InternalUser,
+          actorId: userId,
+          action: AuditAction.Reauthentication,
+          outcome: AuditResult.Succeeded,
+          targetType: 'session',
+          targetId: sessionId,
+          ...auditContext,
+        },
+        transaction,
+      );
       return currentSession.expiresAt;
     });
     return {
@@ -424,12 +634,28 @@ export class AuthService {
     };
   }
 
-  async requestPasswordReset(email: string): Promise<void> {
+  async requestPasswordReset(
+    email: string,
+    auditContext: AuditRequestContext,
+  ): Promise<void> {
     const user = await this.prisma.user.findUnique({
       where: { email: email.trim().toLowerCase() },
-      select: { id: true, email: true, status: true },
+      select: { id: true, email: true, status: true, companyId: true },
     });
     if (!user || user.status !== 'ACTIVE') {
+      await this.audit.record({
+        companyId: user?.companyId,
+        actorType: AuditActor.Anonymous,
+        action: AuditAction.PasswordResetRequest,
+        outcome: AuditResult.Succeeded,
+        targetType: user ? 'user' : undefined,
+        targetId: user?.id,
+        ...auditContext,
+        metadata: {
+          eligible: false,
+          identityHash: this.hashCredential(email.trim().toLowerCase()),
+        },
+      });
       return;
     }
 
@@ -446,7 +672,7 @@ export class AuthService {
         where: { userId: user.id, usedAt: null },
         data: { usedAt: now },
       });
-      return transaction.passwordResetToken.create({
+      const record = await transaction.passwordResetToken.create({
         data: {
           userId: user.id,
           tokenHash: createHash('sha256').update(token).digest('hex'),
@@ -454,6 +680,20 @@ export class AuthService {
         },
         select: { id: true },
       });
+      await this.audit.record(
+        {
+          companyId: user.companyId,
+          actorType: AuditActor.Anonymous,
+          action: AuditAction.PasswordResetRequest,
+          outcome: AuditResult.Succeeded,
+          targetType: 'user',
+          targetId: user.id,
+          ...auditContext,
+          metadata: { eligible: true },
+        },
+        transaction,
+      );
+      return record;
     });
 
     const resetUrl = new URL(
@@ -480,49 +720,88 @@ export class AuthService {
     token: string,
     newPassword: string,
     confirmPassword: string,
+    auditContext: AuditRequestContext,
   ): Promise<void> {
     if (newPassword !== confirmPassword) {
+      await this.audit.record({
+        actorType: AuditActor.Anonymous,
+        action: AuditAction.PasswordReset,
+        outcome: AuditResult.Failed,
+        ...auditContext,
+        metadata: {
+          reason: 'password_mismatch',
+          subjectHash: this.hashCredential(token),
+        },
+      });
       throw new BadRequestException('Passwords do not match');
     }
     const now = new Date();
     const tokenHash = createHash('sha256').update(token).digest('hex');
     const passwordHash = await argon2Hash(newPassword);
 
-    await this.prisma.$transaction(async (transaction) => {
-      const record = await transaction.passwordResetToken.findUnique({
-        where: { tokenHash },
-        select: {
-          id: true,
-          userId: true,
-          expiresAt: true,
-          usedAt: true,
-          user: { select: { status: true } },
-        },
+    try {
+      await this.prisma.$transaction(async (transaction) => {
+        const record = await transaction.passwordResetToken.findUnique({
+          where: { tokenHash },
+          select: {
+            id: true,
+            userId: true,
+            expiresAt: true,
+            usedAt: true,
+            user: { select: { status: true, companyId: true } },
+          },
+        });
+        if (
+          !record ||
+          record.usedAt ||
+          record.expiresAt <= now ||
+          record.user.status !== 'ACTIVE'
+        ) {
+          throw new BadRequestException('Invalid password reset token');
+        }
+        const consumed = await transaction.passwordResetToken.updateMany({
+          where: { id: record.id, usedAt: null, expiresAt: { gt: now } },
+          data: { usedAt: now },
+        });
+        if (consumed.count !== 1) {
+          throw new BadRequestException('Invalid password reset token');
+        }
+        await transaction.user.update({
+          where: { id: record.userId },
+          data: { passwordHash, passwordChangedAt: now },
+        });
+        await transaction.session.updateMany({
+          where: { userId: record.userId, revokedAt: null },
+          data: { revokedAt: now },
+        });
+        await this.audit.record(
+          {
+            companyId: record.user.companyId,
+            actorType: AuditActor.Anonymous,
+            action: AuditAction.PasswordReset,
+            outcome: AuditResult.Succeeded,
+            targetType: 'user',
+            targetId: record.userId,
+            ...auditContext,
+          },
+          transaction,
+        );
       });
-      if (
-        !record ||
-        record.usedAt ||
-        record.expiresAt <= now ||
-        record.user.status !== 'ACTIVE'
-      ) {
-        throw new BadRequestException('Invalid password reset token');
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        await this.audit.record({
+          actorType: AuditActor.Anonymous,
+          action: AuditAction.PasswordReset,
+          outcome: AuditResult.Failed,
+          ...auditContext,
+          metadata: {
+            reason: 'invalid_or_expired',
+            subjectHash: tokenHash,
+          },
+        });
       }
-      const consumed = await transaction.passwordResetToken.updateMany({
-        where: { id: record.id, usedAt: null, expiresAt: { gt: now } },
-        data: { usedAt: now },
-      });
-      if (consumed.count !== 1) {
-        throw new BadRequestException('Invalid password reset token');
-      }
-      await transaction.user.update({
-        where: { id: record.userId },
-        data: { passwordHash, passwordChangedAt: now },
-      });
-      await transaction.session.updateMany({
-        where: { userId: record.userId, revokedAt: null },
-        data: { revokedAt: now },
-      });
-    });
+      throw error;
+    }
   }
 
   private async buildSession(
@@ -536,7 +815,8 @@ export class AuthService {
       | 'locale'
       | 'timeZone'
     >,
-  ): Promise<AuthSession> {
+    database: SessionDatabase = this.prisma,
+  ): Promise<BuiltAuthSession> {
     const { token, csrfToken } = this.createSessionCredentials();
     const cookieMaxAge = durationToMs(
       this.configService.get<string>('SESSION_ABSOLUTE_TTL', '12h'),
@@ -545,7 +825,7 @@ export class AuthService {
     const maximumSessions = Number(
       this.configService.get<string>('SESSION_MAX_PER_USER', '5'),
     );
-    const activeSessions = await this.prisma.session.findMany({
+    const activeSessions = await database.session.findMany({
       where: { userId: user.id, revokedAt: null },
       select: { id: true },
       orderBy: { lastUsedAt: 'asc' },
@@ -554,12 +834,12 @@ export class AuthService {
     const sessionsToRevoke =
       overflow > 0 ? activeSessions.slice(0, overflow) : [];
     if (sessionsToRevoke.length > 0) {
-      await this.prisma.session.updateMany({
+      await database.session.updateMany({
         where: { id: { in: sessionsToRevoke.map((session) => session.id) } },
         data: { revokedAt: now },
       });
     }
-    await this.prisma.session.create({
+    const createdSession = await database.session.create({
       data: {
         userId: user.id,
         tokenHash: this.hashCredential(token),
@@ -573,13 +853,21 @@ export class AuthService {
         ),
         expiresAt: new Date(now.getTime() + cookieMaxAge),
       },
+      select: { id: true },
     });
 
-    const company = await this.prisma.company.findUniqueOrThrow({
+    const company = await database.company.findUniqueOrThrow({
       where: { id: user.companyId },
       select: { locale: true, timeZone: true, currency: true },
     });
-    return { user: toAuthUser(user, company), token, csrfToken, cookieMaxAge };
+    return {
+      user: toAuthUser(user, company),
+      token,
+      csrfToken,
+      cookieMaxAge,
+      sessionId: createdSession.id,
+      revokedSessionCount: sessionsToRevoke.length,
+    };
   }
 
   private createSessionCredentials(): Pick<

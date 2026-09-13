@@ -66,6 +66,10 @@ action, outcome, target and request context plus a small metadata object that
 must not contain credentials or secrets. A monotonic sequence provides stable
 ordering while the opaque event ID is safe for later API use.
 
+Authentication and session mutations insert their successful event in the same
+transaction as their state change. Failed login and recovery identities use a
+SHA-256 subject hash instead of the submitted email or token.
+
 ## Foundation data model - planned
 
 Phase 1 introduces the following models before business modules are expanded:

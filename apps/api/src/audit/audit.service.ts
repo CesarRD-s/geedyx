@@ -41,6 +41,12 @@ export type AuditAction = (typeof AuditAction)[keyof typeof AuditAction];
 export type AuditMetadataValue = string | number | boolean | null;
 export type AuditMetadata = Record<string, AuditMetadataValue>;
 
+export interface AuditRequestContext {
+  requestId: string;
+  ipAddress?: string;
+  userAgent?: string;
+}
+
 export interface AuditEventInput {
   companyId?: string;
   actorType: AuditActor;

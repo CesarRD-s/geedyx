@@ -8,10 +8,11 @@ import { PermissionsGuard } from './guards/permissions.guard.js';
 import { RecentAuthenticationGuard } from './guards/recent-authentication.guard.js';
 import { PasswordResetDeliveryService } from './password-reset-delivery.service.js';
 import { DurableRateLimitService } from './durable-rate-limit.service.js';
+import { AuditModule } from '../audit/audit.module.js';
 
 @Global()
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, AuditModule],
   controllers: [AuthController],
   providers: [
     AuthService,

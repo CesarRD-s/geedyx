@@ -108,8 +108,11 @@ reauthentication or password changes without extending absolute expiry. P1.4c.3
 adds storage for encrypted TOTP factors, replay detection and hashed one-use
 recovery codes without exposing an incomplete MFA flow. P1.4c is complete.
 P1.5a.1 adds an append-only PostgreSQL audit ledger and a typed transactional
-writer with metadata safeguards. Next: connect authentication and session
-outcomes to the ledger atomically where a business write occurs.
+writer with metadata safeguards. P1.5a.2 records installation, successful and
+failed login, password recovery, password changes, reauthentication, logout and
+session revocation with request context. Successful state changes and their
+events share one transaction. Next: cover identity, company configuration and
+authorization denials.
 
 ## Documentation rule
 

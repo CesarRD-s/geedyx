@@ -83,6 +83,10 @@ the non-enumerating response and discard undeliverable tokens.
 - PostgreSQL blocks modification and truncation of persisted audit rows. The
   application writes through a service that limits metadata and rejects field
   names associated with passwords, tokens, cookies and other credentials.
+- Authentication and session events retain request ID, actor, outcome and
+  target where known. Unknown login and recovery identities are stored only as
+  SHA-256 hashes. Successful state changes fail and roll back if their audit
+  event cannot be committed in the same transaction.
 - Production uses backups with tested restoration, dependency updates, secret
   management, monitoring and alerts.
 
@@ -114,8 +118,9 @@ or stripped of its role by the user-management API.
 
 These controls do not yet enforce MFA or expose enrollment, challenge or
 recovery-code endpoints. Only the protected persistence model exists. Audit
-event storage is implemented, but domain coverage and integration credentials
-remain planned.
+event storage and authentication/session coverage are implemented, but identity,
+configuration and authorization coverage remains partial. Integration
+credentials remain planned.
 Password reset request, delivery and
 consumption boundaries are implemented; production must configure its HTTPS
 delivery adapter. Recent authentication is enforced for company settings and
