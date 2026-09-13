@@ -13,6 +13,7 @@ import { AuthModule } from './auth/auth.module.js';
 import { CategoriesModule } from './categories/categories.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { ProductsModule } from './products/products.module.js';
+import { UsersModule } from './users/users.module.js';
 import { validateEnvironment } from './config/environment.js';
 import { RequestContextMiddleware } from './http/request-context.middleware.js';
 
@@ -28,6 +29,7 @@ import { RequestContextMiddleware } from './http/request-context.middleware.js';
     AuthModule,
     CategoriesModule,
     ProductsModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [

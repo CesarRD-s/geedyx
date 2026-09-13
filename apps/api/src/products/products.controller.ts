@@ -16,7 +16,11 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBody, ApiConsumes, ApiCookieAuth } from '@nestjs/swagger';
+import { PermissionCode } from '../auth/authorization/permissions.js';
+import { RequirePermissions } from '../auth/authorization/require-permissions.decorator.js';
+import { AccountStatusGuard } from '../auth/guards/account-status.guard.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
+import { PermissionsGuard } from '../auth/guards/permissions.guard.js';
 import { CreateProductDto } from './dto/create-product.dto.js';
 import { ListProductsDto } from './dto/list-products.dto.js';
 import { UpdateProductDto } from './dto/update-product.dto.js';
@@ -24,8 +28,9 @@ import { ProductsService } from './products.service.js';
 import type { ImageUploadFile } from './products.service.js';
 
 @Controller('products')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, AccountStatusGuard, PermissionsGuard)
 @ApiCookieAuth()
+@RequirePermissions(PermissionCode.CatalogRead)
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
@@ -45,23 +50,27 @@ export class ProductsController {
   }
 
   @Post()
+  @RequirePermissions(PermissionCode.CatalogManage)
   @HttpCode(HttpStatus.CREATED)
   create(@Body() dto: CreateProductDto) {
     return this.productsService.create(dto);
   }
 
   @Patch(':id')
+  @RequirePermissions(PermissionCode.CatalogManage)
   update(@Param('id') id: string, @Body() dto: UpdateProductDto) {
     return this.productsService.update(id, dto);
   }
 
   @Delete(':id')
+  @RequirePermissions(PermissionCode.CatalogManage)
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(@Param('id') id: string) {
     await this.productsService.remove(id);
   }
 
   @Post(':id/image')
+  @RequirePermissions(PermissionCode.CatalogManage)
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -83,6 +92,7 @@ export class ProductsController {
   }
 
   @Delete(':id/image')
+  @RequirePermissions(PermissionCode.CatalogManage)
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteImage(@Param('id') id: string) {
     await this.productsService.deleteImage(id);

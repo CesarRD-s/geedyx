@@ -10,6 +10,12 @@ import { timingSafeEqual } from 'node:crypto';
 import type { UserModel } from '../generated/prisma/models.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { durationToMs } from './duration.js';
+import {
+  ALL_PERMISSION_CODES,
+  isPermissionCode,
+  PermissionCode,
+  SystemRoleCode,
+} from './authorization/permissions.js';
 import { LoginDto } from './dto/login.dto.js';
 import { SetupDto } from './dto/setup.dto.js';
 
@@ -18,6 +24,8 @@ export interface AuthUser {
   username: string;
   email: string;
   companyId: string;
+  displayName: string | null;
+  permissions: PermissionCode[];
 }
 
 export interface AuthSession {
@@ -27,13 +35,16 @@ export interface AuthSession {
 }
 
 function toAuthUser(
-  user: Pick<UserModel, 'id' | 'username' | 'email' | 'companyId'>,
+  user: Pick<UserModel, 'id' | 'username' | 'email' | 'companyId' | 'displayName'>,
+  permissions: PermissionCode[] = [],
 ): AuthUser {
   return {
     id: user.id,
     username: user.username,
     email: user.email,
     companyId: user.companyId,
+    displayName: user.displayName,
+    permissions,
   };
 }
 
@@ -101,7 +112,25 @@ export class AuthService {
             passwordHash,
             companyId: company.id,
           },
-          select: { id: true, username: true, email: true, companyId: true },
+          select: { id: true, username: true, email: true, companyId: true, displayName: true },
+        });
+        const ownerRole = await transaction.role.create({
+          data: {
+            companyId: company.id,
+            code: SystemRoleCode.Owner,
+            name: 'Propietario',
+            description: 'Acceso total e inmutable a la empresa',
+            isSystem: true,
+            permissions: {
+              create: ALL_PERMISSION_CODES.map((code) => ({
+                permission: { connect: { code } },
+              })),
+            },
+          },
+          select: { id: true },
+        });
+        await transaction.userRole.create({
+          data: { userId: owner.id, roleId: ownerRole.id },
         });
         await transaction.installation.create({
           data: {
@@ -138,6 +167,14 @@ export class AuthService {
     if (!user || !(await argon2Verify(user.passwordHash, dto.password))) {
       throw new UnauthorizedException('Invalid credentials');
     }
+    if (user.status === 'SUSPENDED') {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date() },
+    });
 
     return this.buildSession(user);
   }
@@ -145,18 +182,39 @@ export class AuthService {
   async getProfile(userId: string): Promise<AuthUser> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, username: true, email: true, companyId: true },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        companyId: true,
+        displayName: true,
+        roles: {
+          select: {
+            role: {
+              select: {
+                permissions: { select: { permission: { select: { code: true } } } },
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!user) {
       throw new UnauthorizedException('User not found');
     }
 
-    return toAuthUser(user);
+    const permissions = user.roles.flatMap((userRole) =>
+      userRole.role.permissions.flatMap((rolePermission) => {
+        const { code } = rolePermission.permission;
+        return isPermissionCode(code) ? [code] : [];
+      }),
+    );
+    return toAuthUser(user, [...new Set(permissions)]);
   }
 
   private async buildSession(
-    user: Pick<UserModel, 'id' | 'username' | 'email' | 'companyId'>,
+    user: Pick<UserModel, 'id' | 'username' | 'email' | 'companyId' | 'displayName'>,
   ): Promise<AuthSession> {
     const token = await this.jwtService.signAsync({
       sub: user.id,

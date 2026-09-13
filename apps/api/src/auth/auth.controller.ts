@@ -12,24 +12,16 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
 import { ApiCookieAuth } from '@nestjs/swagger';
-import type { Request, Response } from 'express';
+import type { Response } from 'express';
+import type { AuthenticatedRequest } from './authorization/authenticated-request.js';
 import { AuthService } from './auth.service.js';
 import { LoginDto } from './dto/login.dto.js';
 import { SetupDto } from './dto/setup.dto.js';
 import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
+import { AccountStatusGuard } from './guards/account-status.guard.js';
 import { AUTH_COOKIE_NAME } from './strategies/jwt.strategy.js';
 
 const LOGIN_ATTEMPTS = { default: { limit: 5, ttl: 60_000 } };
-
-export interface AuthenticatedUser {
-  id: string;
-  email: string;
-  companyId: string;
-}
-
-interface AuthenticatedRequest extends Request {
-  user: AuthenticatedUser;
-}
 
 @Controller('auth')
 export class AuthController {
@@ -68,7 +60,7 @@ export class AuthController {
   }
 
   @Get('me')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, AccountStatusGuard)
   @ApiCookieAuth()
   async me(@Req() req: AuthenticatedRequest) {
     return this.authService.getProfile(req.user.id);

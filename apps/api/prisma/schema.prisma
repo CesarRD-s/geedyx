@@ -13,11 +13,17 @@ datasource db {
   provider = "postgresql"
 }
 
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
 /// The single internal company configured during installation.
 model Company {
   id           String         @id @default(cuid())
   name         String
   users        User[]
+  roles        Role[]
   installation Installation?
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
@@ -44,10 +50,67 @@ model User {
   companyId    String
   company      Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
   installation Installation? @relation("InstallationOwner")
+  displayName  String?
+  locale       String   @default("es")
+  timeZone     String   @default("UTC")
+  status       UserStatus @default(ACTIVE)
+  passwordChangedAt DateTime @default(now())
+  lastLoginAt  DateTime?
+  roles        UserRole[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   @@index([companyId])
+}
+
+/// A role belongs to exactly one company. System roles are provisioned during
+/// installation and may not be renamed or removed by ordinary administration.
+model Role {
+  id          String           @id @default(cuid())
+  companyId   String
+  company     Company          @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  code        String
+  name        String
+  description String?
+  isSystem    Boolean          @default(false)
+  users       UserRole[]
+  permissions RolePermission[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([companyId, code])
+  @@index([companyId])
+}
+
+/// Stable capabilities enforced by the API. Codes are never displayed as UI
+/// labels and are intentionally global rather than company-specific.
+model Permission {
+  id          String           @id @default(cuid())
+  code        String           @unique
+  description String
+  roles       RolePermission[]
+  createdAt   DateTime         @default(now())
+}
+
+model UserRole {
+  userId    String
+  roleId    String
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([userId, roleId])
+  @@index([roleId])
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@index([permissionId])
 }
 
 /// Product categories. A category can contain many products.
