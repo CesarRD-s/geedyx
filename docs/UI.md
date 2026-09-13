@@ -734,7 +734,23 @@ must feel like part of the same product as `/login`:
 - No password hashing, localStorage tokens or new auth state on this screen;
   it only ships credentials to the existing API contract.
 
-## 26. Motion
+## 26. User management (`/app/users`)
+
+The internal users module follows the standard dense administration pattern:
+
+- `PageHeader` exposes “Nuevo usuario” only to users with `users.manage`.
+- Search and status filters remain in the compact toolbar; results use the
+  existing responsive table/mobile-list pattern.
+- Active and suspended accounts use `Badge` with semantic success and danger
+  tones. The status always has a visible text label.
+- Create and edit use the existing `Dialog`, `Input`, `Select`, visible labels
+  and field-level errors. Role assignment uses labeled checkboxes rather than
+  decorative pills.
+- Navigation and mutating controls are hidden when permissions are absent, but
+  NestJS remains the authorization authority. The owner is shown as immutable
+  for role/state changes.
+
+## 27. Motion
 
 GEEDYX is **predominantly static** — information density over show. Only
 functional, brief transitions are allowed (100–150ms) when they genuinely help:
@@ -748,7 +764,7 @@ feedback.
   collapses transitions and animations for users who request it. Never disable
   or override that rule.
 
-## 27. Borders
+## 28. Borders
 
 Borders are a primary structuring tool in a dense admin UI — used to separate
 surfaces, delimit structures, define controls and communicate states.

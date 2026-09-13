@@ -26,11 +26,12 @@ separate Node service.
 External store integrations call the commerce API from their backend. They do
 not share the admin cookie and they do not receive administrative credentials.
 
-## Domain modules — planned target
+## Domain modules
 
 - `installation` and `company`: initial configuration and company settings.
-- `identity`: internal users, profiles, passwords and MFA.
-- `authorization`: roles, permissions and API guards.
+- `identity`: internal users, basic profile metadata and passwords; recovery
+  and MFA remain planned.
+- `authorization`: implemented roles, permissions and API guards.
 - `sessions`: opaque browser sessions and device management.
 - `audit`: append-only security and business events.
 - `integrations`: clients, scopes, idempotency and webhook deliveries.
@@ -62,6 +63,7 @@ durable queue is introduced.
 
 ## Current state
 
-The repository currently has the prototype modules `auth`, `categories`,
-`products` and `images`. The target modules above are planned and must not be
-claimed as implemented.
+The repository currently has `auth`, `users`, `categories`, `products` and
+`images`. Roles and permissions are enforced by NestJS for the current catalog
+and users resources. Persisted sessions, audit, integrations, files and later
+business modules remain planned.

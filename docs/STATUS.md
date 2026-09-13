@@ -9,7 +9,7 @@ Last reviewed: 2026-09-12
 ## Active milestone
 
 **Phase 1 — Secure platform foundation**
-Current slice: **P1.3 — Users, roles and permissions**
+Current slice: **P1.4 — Professional authentication and sessions**
 
 ## Implemented
 
@@ -33,6 +33,12 @@ Current slice: **P1.3 — Users, roles and permissions**
 - Installation persists a singleton state plus the first company and owner in
   one transaction. Its server-side installation secret is required only once;
   completed installations redirect `/setup` to `/login`.
+- Internal users have display name, locale, time zone, account state and login
+  metadata. System roles and database-backed permissions protect catalog and
+  user operations; suspended users lose protected access immediately.
+- `/app/users` provides permission-aware administration of internal users,
+  account status and role assignments. The installation owner is protected from
+  suspension and reassignment.
 - Official GEEDYX UI contract: semantic colors, configurable accent,
   Light/Dark/System, Source Sans 3 and `md`/`lg`/`full` radius vocabulary.
 - Official Light/Dark brand assets applied to the sidebar, mobile drawer and
@@ -44,7 +50,6 @@ Current slice: **P1.3 — Users, roles and permissions**
 
 - Authentication uses a self-contained JWT and cannot revoke individual
   sessions server-side.
-- Users have no account state, profile, roles or permissions.
 - CSRF/origin enforcement, durable rate limiting, audit events and integration
   credentials are not implemented.
 - Product images are tied to local storage rather than a general file-asset
@@ -53,9 +58,8 @@ Current slice: **P1.3 — Users, roles and permissions**
 
 ## Next deliverable
 
-P1.3 adds internal user profile data, account state, roles and permissions.
-Authorization will be enforced by the API rather than by hiding workspace
-controls.
+P1.4 replaces the temporary JWT cookie with persisted opaque sessions, idle and
+absolute expiration, revocation and secure password-change/recovery flows.
 
 ## Documentation rule
 

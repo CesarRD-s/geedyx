@@ -73,7 +73,13 @@ receive correlation IDs and structured access logs. Every current category and
 product endpoint requires authentication; no catalog route is anonymously
 exposed.
 
-These controls do not yet provide server-side session revocation, granular
-permissions, CSRF protection, MFA, audit events, integration credentials or
+Current authorization is role and permission based. Permission checks read the
+current account status and role assignments on each protected request; a JWT
+does not carry authoritative permissions. Suspended accounts cannot log in or
+continue using protected resources. The installation owner cannot be suspended
+or stripped of its role by the user-management API.
+
+These controls do not yet provide server-side session revocation, CSRF
+protection, MFA, audit events, integration credentials or
 durable multi-instance rate limiting. The JWT cookie remains transitional until
 P1.4 introduces persisted opaque sessions.

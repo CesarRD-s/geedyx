@@ -6,9 +6,10 @@ PostgreSQL is the source of truth. Only the NestJS API accesses it through
 Prisma. Every schema change uses a reviewed Prisma migration; the Next.js admin
 application never reads it directly.
 
-The current schema contains `Installation`, `Company`, `User`, `Category` and
-`Product`. `Installation` is a singleton that closes bootstrap permanently;
-every user belongs to the one configured company.
+The current schema contains `Installation`, `Company`, `User`, `Role`,
+`Permission`, `UserRole`, `RolePermission`, `Category` and `Product`.
+`Installation` is a singleton that closes bootstrap permanently; every user
+and role belongs to the one configured company.
 
 ## Implemented identity foundation
 
@@ -17,10 +18,17 @@ every user belongs to the one configured company.
 | `Installation` | Immutable singleton recording the completed installation, company and owner. |
 | `Company` | The legal and operational business configured during installation. |
 | `User` | Internal credential identity; it belongs to one company. |
+| `Role`, `Permission`, `UserRole`, `RolePermission` | Explicit RBAC relations enforced by NestJS on every private operation. |
 
 The installation transaction creates all three records together. The migration
 also preserves pre-existing development users by assigning them to a legacy
 company and writing the installation singleton, so setup does not reopen.
+
+System roles are created per company: `OWNER`, `ADMIN`, `CATALOG_MANAGER` and
+`VIEWER`. Permission codes are global, stable values: `catalog.read`,
+`catalog.manage`, `users.read` and `users.manage`. The installation owner is
+the only initial `OWNER`; it cannot be suspended or reassigned through the user
+management API.
 
 ## Foundation data model — planned
 
@@ -28,8 +36,7 @@ Phase 1 introduces the following models before business modules are expanded:
 
 | Model | Purpose |
 | --- | --- |
-| `UserProfile` | Display name, locale, timezone and optional avatar asset. |
-| `Role`, `Permission`, `UserRole` | Internal authorization. |
+| `FileAsset` relation for profile avatar | Optional avatar storage after the provider-neutral file model exists. |
 | `Session` | Hashed opaque token, expiry, device data and revocation state. |
 | `PasswordResetToken` | Hashed, one-time, short-lived recovery token. |
 | `MfaFactor`, `RecoveryCode` | MFA readiness and recovery. |

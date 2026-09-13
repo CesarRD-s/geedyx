@@ -47,9 +47,13 @@ consume only intentionally public, rate-limited data.
   permanently unavailable after installation.
 - `POST /api/v1/auth/login` and `POST /api/v1/auth/logout` implement the
   temporary Phase 1 authentication flow; `GET /api/v1/auth/me` requires its
-  HttpOnly session cookie.
+  HttpOnly session cookie and returns the current profile and effective
+  permissions.
 - `/api/v1/categories` and `/api/v1/products` expose the current CRUD and image
-  operations. Every category and product operation requires authentication.
+  operations. Reads require `catalog.read`; mutations require `catalog.manage`.
+- `GET /api/v1/users` and `GET /api/v1/users/roles` require `users.read`.
+  `POST /api/v1/users` and `PATCH /api/v1/users/:id` require `users.manage`.
+  User operations are constrained to the authenticated user's company.
 
 There is currently no anonymous catalog API. Future storefront reads will be
 explicitly added below `/api/v1/public`; private resource routes will not be
@@ -83,6 +87,14 @@ Stable current codes are `VALIDATION_ERROR`, `UNAUTHENTICATED`, `FORBIDDEN`,
 `NOT_FOUND`, `CONFLICT`, `RATE_LIMITED`, `SERVICE_UNAVAILABLE` and
 `INTERNAL_ERROR`. Other HTTP failures use `HTTP_ERROR` until assigned a more
 specific contract code.
+
+## Current authorization
+
+Permissions are looked up from current database roles for every protected
+request; they are never trusted from the JWT. Suspended accounts cannot log in
+or use an existing protected session. The system roles are `OWNER`, `ADMIN`,
+`CATALOG_MANAGER` and `VIEWER`; their effective access is described in the API
+documentation generated at `/api/docs`.
 
 ## Conventions still planned
 

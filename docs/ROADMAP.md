@@ -50,13 +50,17 @@ complete until its migration, API behavior, tests and documentation agree.
 
 ### P1.3 — Users, roles and permissions
 
-**Planned.**
+**Complete.**
 
-- Add display name, optional profile image, locale/time zone, account status,
-  password-change timestamp and last-login metadata.
+- Add display name, locale/time zone, account status, password-change timestamp
+  and last-login metadata.
 - Define roles and granular permissions; enforce permissions in NestJS rather
   than hiding UI controls only.
-- Add user creation, activation, suspension and role assignment with audit.
+- Add user creation, activation, suspension and role assignment.
+
+Profile-avatar assets and append-only audit records are delivered with the file
+and audit foundation in P1.5, where their storage and retention rules can be
+enforced consistently.
 
 ### P1.4 — Professional authentication and sessions
 

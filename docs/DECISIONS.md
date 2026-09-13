@@ -35,7 +35,9 @@ complexity in the browser.
 
 Internal users receive roles and permissions. Every protected API operation
 checks current permission and company ownership. A login alone never grants
-administrative access.
+administrative access. Roles are resolved from the database on each protected
+request, so a role or suspension change takes effect without waiting for JWT
+expiry.
 
 ## ADR-007 — External integration credentials are scoped and revocable
 
