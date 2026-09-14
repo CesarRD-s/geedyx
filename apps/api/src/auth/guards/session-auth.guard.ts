@@ -20,18 +20,16 @@ export class SessionAuthGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context
-      .switchToHttp()
-      .getRequest<
-        Request & {
-          user?: {
-            id: string;
-            email: string;
-            companyId: string;
-            sessionId: string;
-          };
-        }
-      >();
+    const request = context.switchToHttp().getRequest<
+      Request & {
+        user?: {
+          id: string;
+          email: string;
+          companyId: string;
+          sessionId: string;
+        };
+      }
+    >();
     const token = request.cookies?.[AUTH_COOKIE_NAME];
     if (typeof token !== 'string' || token.length === 0)
       throw new UnauthorizedException('Authentication required');

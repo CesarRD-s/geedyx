@@ -33,7 +33,9 @@ export class PasswordResetDeliveryService {
         signal: AbortSignal.timeout(10_000),
       });
       if (!response.ok) {
-        this.logger.error('Password reset delivery provider rejected a request');
+        this.logger.error(
+          'Password reset delivery provider rejected a request',
+        );
         return false;
       }
       return true;

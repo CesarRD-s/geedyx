@@ -20,6 +20,10 @@ Read this file before implementing any task.
 - Avoid unnecessary type assertions.
 - Prefer explicit types.
 - Do not suppress compiler errors without a documented reason.
+- Format all project code consistently and vertically, including API, web,
+  tests, scripts and configuration. Do not compress declarations, decorators,
+  parameter lists, object literals or control flow into long horizontal lines.
+  Reformat affected existing files when modifying them.
 
 ## Architecture
 

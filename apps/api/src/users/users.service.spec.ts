@@ -20,9 +20,9 @@ describe('UsersService', () => {
     const service = new UsersService(
       {
         role: {
-          findMany: vi.fn().mockResolvedValue([
-            { id: 'role-1', code: 'ADMIN' },
-          ]),
+          findMany: vi
+            .fn()
+            .mockResolvedValue([{ id: 'role-1', code: 'ADMIN' }]),
         },
         $transaction: (callback: (transaction: unknown) => unknown) =>
           callback({ user: { create } }),

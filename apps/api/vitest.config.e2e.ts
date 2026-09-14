@@ -7,8 +7,8 @@ export default defineConfig({
     globals: true,
     root: './',
     include: ['**/*.e2e-spec.ts'],
-    // All e2e suites share the real development PostgreSQL. Running files
-    // sequentially keeps each suite's data isolation from interfering.
+    setupFiles: ['./test/setup-e2e.ts'],
+    // Suites run against the explicitly configured isolated test database.
     fileParallelism: false,
   },
 });

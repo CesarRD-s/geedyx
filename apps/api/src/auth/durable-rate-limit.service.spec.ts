@@ -44,9 +44,9 @@ describe('DurableRateLimitService', () => {
       } as never,
     );
 
-    await expect(service.consume('login', ['identity:user'])).rejects.toBeInstanceOf(
-      ThrottlerException,
-    );
+    await expect(
+      service.consume('login', ['identity:user']),
+    ).rejects.toBeInstanceOf(ThrottlerException);
     expect(update).toHaveBeenCalledOnce();
   });
 });

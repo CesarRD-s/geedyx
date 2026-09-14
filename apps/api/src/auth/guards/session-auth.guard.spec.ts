@@ -14,17 +14,15 @@ describe('SessionAuthGuard', () => {
   it('rejects a missing CSRF token for a mutation', async () => {
     const prisma = {
       session: {
-        findUnique: vi
-          .fn()
-          .mockResolvedValue({
-            id: 's1',
-            userId: 'u1',
-            csrfTokenHash: hash,
-            idleExpiresAt: new Date(Date.now() + 60_000),
-            expiresAt: new Date(Date.now() + 60_000),
-            revokedAt: null,
-            user: { email: 'a@example.com', companyId: 'c1' },
-          }),
+        findUnique: vi.fn().mockResolvedValue({
+          id: 's1',
+          userId: 'u1',
+          csrfTokenHash: hash,
+          idleExpiresAt: new Date(Date.now() + 60_000),
+          expiresAt: new Date(Date.now() + 60_000),
+          revokedAt: null,
+          user: { email: 'a@example.com', companyId: 'c1' },
+        }),
         update: vi.fn(),
       },
     } as never;
@@ -118,13 +116,11 @@ describe('SessionAuthGuard', () => {
   it('rejects a revoked session', async () => {
     const prisma = {
       session: {
-        findUnique: vi
-          .fn()
-          .mockResolvedValue({
-            revokedAt: new Date(),
-            idleExpiresAt: new Date(Date.now() + 60_000),
-            expiresAt: new Date(Date.now() + 60_000),
-          }),
+        findUnique: vi.fn().mockResolvedValue({
+          revokedAt: new Date(),
+          idleExpiresAt: new Date(Date.now() + 60_000),
+          expiresAt: new Date(Date.now() + 60_000),
+        }),
       },
     } as never;
     const guard = new SessionAuthGuard(prisma, {

@@ -68,9 +68,7 @@ export class ApiExceptionFilter implements ExceptionFilter {
       ? exception.getStatus()
       : HttpStatus.INTERNAL_SERVER_ERROR;
     const details = isHttpException ? exceptionMessages(exception) : undefined;
-    const explicitCode = isHttpException
-      ? exceptionCode(exception)
-      : undefined;
+    const explicitCode = isHttpException ? exceptionCode(exception) : undefined;
 
     if (!isHttpException) {
       const trace =

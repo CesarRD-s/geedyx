@@ -42,9 +42,7 @@ export class RecentAuthenticationGuard implements CanActivate {
     });
     const threshold =
       Date.now() -
-      durationToMs(
-        this.config.get<string>('REAUTHENTICATION_TTL', '10m'),
-      );
+      durationToMs(this.config.get<string>('REAUTHENTICATION_TTL', '10m'));
 
     if (!session || session.reauthenticatedAt.getTime() < threshold) {
       await this.recordDenial(request);
