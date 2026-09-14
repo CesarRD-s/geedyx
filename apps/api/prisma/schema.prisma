@@ -47,6 +47,7 @@ model Company {
   roles        Role[]
   installation Installation?
   auditEvents  AuditEvent[]
+  integrationClients IntegrationClient[]
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 }
@@ -201,6 +202,46 @@ model AuditEvent {
   @@index([action, outcome, occurredAt])
   @@index([targetType, targetId, occurredAt])
   @@index([requestId])
+}
+
+/// A server-to-server credential. The secret is stored only as a hash and is
+/// never exposed through normal reads after creation or rotation.
+model IntegrationClient {
+  id          String   @id @default(cuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  name        String
+  clientId    String   @unique
+  secretHash  String
+  scopes      String[]
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  lastUsedAt  DateTime?
+  idempotencyRecords IdempotencyRecord[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([companyId, revokedAt])
+  @@index([expiresAt])
+}
+
+/// Stored replay result for a future mutation from one integration client.
+/// The key and request digest are hashes, never the caller's raw values.
+model IdempotencyRecord {
+  id             String            @id @default(cuid())
+  integrationClientId String
+  integrationClient IntegrationClient @relation(fields: [integrationClientId], references: [id], onDelete: Cascade)
+  operation      String
+  keyHash        String
+  requestHash    String
+  responseStatus Int?
+  responseBody   Json?
+  completedAt    DateTime?
+  expiresAt      DateTime
+  createdAt      DateTime          @default(now())
+
+  @@unique([integrationClientId, operation, keyHash])
+  @@index([expiresAt])
 }
 
 /// A role belongs to exactly one company. System roles are provisioned during
