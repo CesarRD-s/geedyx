@@ -144,10 +144,17 @@ enforced consistently.
   settings changes, and authorization denials from permission, account-status
   and recent-authentication checks. P1.5a.4 records category and product
   creation, updates and deletion in the same transaction as each catalog write.
-  Prototype image storage remains deferred with the file-storage decision.
+  Image upload and deletion now emit catalog audit events. Prototype image
+  storage remains deferred with the file-storage decision.
 - Add integration clients with hashed scoped credentials, rotation, revocation
-  and idempotency records.
+  and idempotency records. P1.5b provides the private administration API,
+  Argon2id secret hashing, one-time reveal, recent authentication, typed
+  scopes, revocation and replay-safe idempotency records. Business routes do
+  not consume integration credentials until their domains exist.
 - Define signed inbound/outbound webhook envelopes and replay protection.
+  P1.5c provides encrypted HTTPS endpoint configuration, HMAC signing helpers,
+  outbound delivery records and persistent inbound-event reservation. A worker
+  and provider-specific inbound endpoint require a business event producer.
 - File storage is deferred until the product decision defines whether the
   deployment owner selects a provider and how that configuration is supplied.
   The future `FileAsset` foundation will replace product-only image handling

@@ -36,7 +36,10 @@ describe('validateEnvironment', () => {
 
   it('requires secure password reset delivery in production', () => {
     expect(() =>
-      validateEnvironment({ ...VALID_ENVIRONMENT, NODE_ENV: 'production' }),
+      validateEnvironment({
+        ...VALID_ENVIRONMENT,
+        NODE_ENV: 'production',
+      }),
     ).toThrow('PASSWORD_RESET_DELIVERY_ENDPOINT');
     expect(() =>
       validateEnvironment({
@@ -46,6 +49,24 @@ describe('validateEnvironment', () => {
         PASSWORD_RESET_DELIVERY_TOKEN: 'secret',
       }),
     ).toThrow('must use https');
+  });
+
+  it('validates webhook encryption keys before startup', () => {
+    expect(() =>
+      validateEnvironment({
+        ...VALID_ENVIRONMENT,
+        WEBHOOK_ENCRYPTION_KEY: 'invalid',
+      }),
+    ).toThrow('WEBHOOK_ENCRYPTION_KEY');
+    expect(() =>
+      validateEnvironment({
+        ...VALID_ENVIRONMENT,
+        NODE_ENV: 'production',
+        PASSWORD_RESET_DELIVERY_ENDPOINT: 'https://notifications.example/reset',
+        PASSWORD_RESET_DELIVERY_TOKEN: 'token',
+        PASSWORD_RESET_URL_BASE: 'https://app.example/reset-password',
+      }),
+    ).toThrow('WEBHOOK_ENCRYPTION_KEY');
   });
 
   it('rejects invalid session limits', () => {

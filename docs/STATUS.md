@@ -114,8 +114,13 @@ failed login, password recovery, password changes, reauthentication, logout and
 session revocation with request context. P1.5a.3 adds internal-user creation and
 updates, company configuration changes, and authorization denials. Successful
 state changes and their events share one transaction. P1.5a.4 adds the current
-category and product writes. Next: integration credentials. File storage waits
-for its provider-selection decision.
+category and product writes, including image upload and deletion. P1.5b adds
+managed integration credentials with Argon2id hashes, scopes, one-time secret
+reveal, rotation, revocation and idempotency. P1.5c adds encrypted webhook
+endpoint configuration, HMAC signing helpers, queued delivery records and
+inbound replay reservation. A provider-specific inbound route and delivery
+worker wait for the future business event producers. File storage waits for its
+provider-selection decision.
 
 ## Documentation rule
 

@@ -112,6 +112,13 @@ explicit product decision; the boundary never chooses an offset silently.
   authenticated company. `PATCH /api/v1/company/settings` requires
   `company.manage` and accepts `name`, `locale` (`es` or `en`), `timeZone` and
   `currency` (`HNL`, `USD`, `MXN`, `COP` or `EUR`).
+- `GET` and `POST /api/v1/integrations`, `POST /api/v1/integrations/:id/rotate`
+  and `DELETE /api/v1/integrations/:id` manage integration clients. They require
+  `company.manage` plus recent authentication. Raw secrets are returned only by
+  creation and rotation.
+- `POST /api/v1/webhooks` and `DELETE /api/v1/webhooks/:id` manage HTTPS
+  webhook endpoints under the same administration boundary. A raw endpoint
+  secret is returned only on creation.
 
 There is currently no anonymous catalog API. Future storefront reads will be
 explicitly added below `/api/v1/public`; private resource routes will not be
@@ -164,11 +171,29 @@ are implemented across API and web.
 - Mutation endpoints that may be retried accept `Idempotency-Key`; its result is
   stored and replayed for the same authenticated actor and operation.
 
-## Webhooks - planned
+## Integration administration
 
-Outbound deliveries include an event ID, timestamp, signed payload and retry
-record. Consumers deduplicate by event ID. Inbound providers are verified against
-their raw request body and provider signature before any business write occurs.
+The following private browser-session routes require `company.manage`, recent
+authentication, exact allowed origin and a valid CSRF token for mutations:
+
+- `GET /api/v1/integrations`
+- `POST /api/v1/integrations`
+- `POST /api/v1/integrations/:id/rotate`
+- `DELETE /api/v1/integrations/:id`
+- `GET /api/v1/webhooks`
+- `POST /api/v1/webhooks`
+- `DELETE /api/v1/webhooks/:id`
+
+Creation and rotation responses contain the generated secret exactly once. List
+responses never include a credential hash or a webhook signing secret.
+
+## Webhooks
+
+The current foundation stores signed outbound delivery work and endpoint
+configuration. A future delivery worker will attach an event ID, timestamp,
+payload version and HMAC signature, then record retries. Consumers deduplicate
+by event ID. Inbound providers will be verified against their raw request body
+and provider signature before any business write occurs.
 
 The current authentication and business endpoints remain internal prototype
 behavior. They are not an integration contract for a third-party store.

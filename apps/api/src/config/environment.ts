@@ -73,6 +73,23 @@ function httpUrlValue(
   return value;
 }
 
+function webhookEncryptionKeyValue(
+  environment: Record<string, unknown>,
+): string | undefined {
+  const rawValue = environment.WEBHOOK_ENCRYPTION_KEY;
+  if (rawValue === undefined || rawValue === '') {
+    if (environment.NODE_ENV === 'production') {
+      throw new Error('WEBHOOK_ENCRYPTION_KEY is required in production');
+    }
+    return undefined;
+  }
+  const value = String(rawValue).trim();
+  if (Buffer.from(value, 'base64').length !== 32) {
+    throw new Error('WEBHOOK_ENCRYPTION_KEY must be a base64 256-bit key');
+  }
+  return value;
+}
+
 function validateOrigins(rawOrigins: string): string {
   const origins = rawOrigins
     .split(',')
@@ -134,6 +151,7 @@ export function validateEnvironment(
   ) {
     throw new Error('PASSWORD_RESET_URL_BASE must use https in production');
   }
+  const webhookEncryptionKey = webhookEncryptionKeyValue(environment);
   return {
     ...environment,
     DATABASE_URL: requiredString(environment, 'DATABASE_URL'),
@@ -155,17 +173,14 @@ export function validateEnvironment(
       'REAUTHENTICATION_TTL',
       '10m',
     ),
-    PASSWORD_RESET_TTL: durationValue(
-      environment,
-      'PASSWORD_RESET_TTL',
-      '30m',
-    ),
+    PASSWORD_RESET_TTL: durationValue(environment, 'PASSWORD_RESET_TTL', '30m'),
     PASSWORD_RESET_URL_BASE: passwordResetUrlBase,
     PASSWORD_RESET_DELIVERY_ENDPOINT: passwordResetDeliveryEndpoint,
     PASSWORD_RESET_DELIVERY_TOKEN:
       typeof passwordResetDeliveryToken === 'string'
         ? passwordResetDeliveryToken.trim()
         : undefined,
+    WEBHOOK_ENCRYPTION_KEY: webhookEncryptionKey,
     AUTH_RATE_LIMIT_ATTEMPTS: integerValue(
       environment,
       'AUTH_RATE_LIMIT_ATTEMPTS',

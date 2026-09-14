@@ -48,6 +48,7 @@ model Company {
   installation Installation?
   auditEvents  AuditEvent[]
   integrationClients IntegrationClient[]
+  webhookEndpoints WebhookEndpoint[]
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 }
@@ -242,6 +243,51 @@ model IdempotencyRecord {
 
   @@unique([integrationClientId, operation, keyHash])
   @@index([expiresAt])
+}
+
+model WebhookEndpoint {
+  id          String   @id @default(cuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  url         String
+  secretCiphertext Bytes
+  secretNonce Bytes
+  secretAuthTag Bytes
+  encryptionKeyVersion Int @default(1)
+  eventTypes  String[]
+  revokedAt   DateTime?
+  deliveries  WebhookDelivery[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([companyId, revokedAt])
+}
+
+model WebhookDelivery {
+  id                String   @id @default(cuid())
+  webhookEndpointId String
+  webhookEndpoint   WebhookEndpoint @relation(fields: [webhookEndpointId], references: [id], onDelete: Cascade)
+  eventId           String
+  eventType         String
+  payload           Json
+  attempts          Int      @default(0)
+  deliveredAt       DateTime?
+  nextAttemptAt     DateTime?
+  createdAt         DateTime @default(now())
+
+  @@unique([webhookEndpointId, eventId])
+  @@index([nextAttemptAt])
+}
+
+model InboundWebhookEvent {
+  id          String   @id @default(cuid())
+  provider    String
+  eventId     String
+  receivedAt  DateTime @default(now())
+  processedAt DateTime?
+
+  @@unique([provider, eventId])
+  @@index([receivedAt])
 }
 
 /// A role belongs to exactly one company. System roles are provisioned during

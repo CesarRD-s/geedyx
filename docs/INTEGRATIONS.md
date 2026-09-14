@@ -18,7 +18,7 @@ The integration contract decides which business event is authoritative. A store
 must not assume a browser redirect means a payment has completed; the verified
 provider webhook decides that result.
 
-## Integration client - planned
+## Integration client foundation
 
 Each store backend receives a separately managed integration client:
 
@@ -28,6 +28,23 @@ Each store backend receives a separately managed integration client:
   `customers.write`;
 - expiry, rotation, revocation, rate limits and audit events;
 - test and production credentials kept separate.
+
+P1.5b implements private administration routes for creating, listing, rotating
+and revoking clients. They require a browser session with `company.manage` and
+recent authentication. Creation and rotation reveal a 256-bit secret only once;
+PostgreSQL retains only its Argon2id hash. The server-side authentication
+service rejects missing, expired and revoked credentials without revealing which
+condition failed, and records successful use. No commerce route consumes these
+credentials until its business domain exists.
+
+Declared scopes are `catalog.read`, `inventory.read`, `orders.write` and
+`customers.write`. Only `catalog.read` describes an existing concept; the
+others remain unavailable until their Phase 2 or 3 resources are introduced.
+
+Idempotency reserves a SHA-256 hash of a caller key and request for one client
+and operation. A completed matching request replays its stored response. A key
+with a different request conflicts, concurrent requests remain in progress,
+and a failed action releases its reservation.
 
 No integration secret may be embedded in JavaScript, mobile binaries or a public
 storefront. Browser catalog access uses only `/api/v1/public/*` resources.
@@ -46,7 +63,7 @@ storefront. Browser catalog access uses only `/api/v1/public/*` resources.
 Exact reservation timing is a Phase 3 decision; no store is allowed to mutate a
 product's stock balance directly.
 
-## Webhooks - planned
+## Webhook foundation
 
 GEEDYX delivers outbound events for data that an external system must reconcile,
 such as product publication, stock change, order state and invoice issuance.
@@ -61,6 +78,13 @@ such as product publication, stock change, order state and invoice issuance.
 Inbound webhooks use a provider-specific signature check over the raw body,
 timestamp/replay protection and persistent event deduplication before changing
 business state.
+
+P1.5c persists HTTPS endpoint configuration, encrypted signing secrets,
+outbound delivery records and inbound provider event IDs. The endpoint secret
+uses AES-256-GCM with `WEBHOOK_ENCRYPTION_KEY` outside PostgreSQL; it is shown
+only at creation. HMAC-SHA256 signs `timestamp.payload` and verification uses a
+constant-time comparison. A concrete provider-specific inbound route and a
+delivery worker await a business event producer.
 
 ## Payments - planned
 

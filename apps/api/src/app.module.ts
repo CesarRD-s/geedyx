@@ -18,6 +18,7 @@ import { CompanyModule } from './company/company.module.js';
 import { validateEnvironment } from './config/environment.js';
 import { RequestContextMiddleware } from './http/request-context.middleware.js';
 import { AuditModule } from './audit/audit.module.js';
+import { IntegrationsModule } from './integrations/integrations.module.js';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { AuditModule } from './audit/audit.module.js';
     ProductsModule,
     UsersModule,
     CompanyModule,
+    IntegrationsModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
