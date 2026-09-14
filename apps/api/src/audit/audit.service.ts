@@ -39,6 +39,13 @@ export const AuditAction = {
   ProductCreate: 'catalog.product.create',
   ProductUpdate: 'catalog.product.update',
   ProductDelete: 'catalog.product.delete',
+  ProductImageUpload: 'catalog.product.image.upload',
+  ProductImageDelete: 'catalog.product.image.delete',
+  IntegrationClientCreate: 'integration.client.create',
+  IntegrationClientRotate: 'integration.client.rotate',
+  IntegrationClientRevoke: 'integration.client.revoke',
+  WebhookEndpointCreate: 'webhook.endpoint.create',
+  WebhookEndpointRevoke: 'webhook.endpoint.revoke',
   AuthorizationDeny: 'authorization.deny',
 } as const;
 

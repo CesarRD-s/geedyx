@@ -212,7 +212,13 @@ export class ProductsService {
     this.maxImageBytes = getMaxImageBytes(asImageUploadConfig(config));
   }
 
-  async uploadImage(id: string, file: ImageUploadFile): Promise<ProductDetail> {
+  async uploadImage(
+    companyId: string,
+    actorId: string,
+    id: string,
+    file: ImageUploadFile,
+    context: AuditRequestContext,
+  ): Promise<ProductDetail> {
     const existing = await this.prisma.product.findUnique({
       where: { id },
       select: { id: true, imageUrl: true },
@@ -235,11 +241,27 @@ export class ProductsService {
       throw new InternalServerErrorException('Could not store the image');
     }
 
-    const updated = await this.prisma.product
-      .update({
-        where: { id },
-        data: { imageUrl: newImageUrl },
-        select: PRODUCT_DETAIL_SELECT,
+    const updated = await this.prisma
+      .$transaction(async (transaction) => {
+        const product = await transaction.product.update({
+          where: { id },
+          data: { imageUrl: newImageUrl },
+          select: PRODUCT_DETAIL_SELECT,
+        });
+        await this.audit.record(
+          {
+            companyId,
+            actorType: AuditActor.InternalUser,
+            actorId,
+            action: AuditAction.ProductImageUpload,
+            outcome: AuditResult.Succeeded,
+            targetType: 'product',
+            targetId: id,
+            ...context,
+          },
+          transaction,
+        );
+        return product;
       })
       .catch((error) => {
         // 2. The DB update failed after the new file was written: clean the new
@@ -267,7 +289,12 @@ export class ProductsService {
     return toDetail(updated);
   }
 
-  async deleteImage(id: string): Promise<void> {
+  async deleteImage(
+    companyId: string,
+    actorId: string,
+    id: string,
+    context: AuditRequestContext,
+  ): Promise<void> {
     const existing = await this.prisma.product.findUnique({
       where: { id },
       select: { id: true, imageUrl: true },
@@ -284,10 +311,25 @@ export class ProductsService {
       this.logger.error(`Failed to delete image ${existing.imageUrl}`, error);
     });
 
-    await this.prisma.product.update({
-      where: { id },
-      data: { imageUrl: null },
-      select: { id: true },
+    await this.prisma.$transaction(async (transaction) => {
+      await transaction.product.update({
+        where: { id },
+        data: { imageUrl: null },
+        select: { id: true },
+      });
+      await this.audit.record(
+        {
+          companyId,
+          actorType: AuditActor.InternalUser,
+          actorId,
+          action: AuditAction.ProductImageDelete,
+          outcome: AuditResult.Succeeded,
+          targetType: 'product',
+          targetId: id,
+          ...context,
+        },
+        transaction,
+      );
     });
   }
 

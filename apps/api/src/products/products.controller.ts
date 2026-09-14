@@ -104,17 +104,35 @@ export class ProductsController {
     },
   })
   @HttpCode(HttpStatus.OK)
-  uploadImage(@Param('id') id: string, @UploadedFile() file?: ImageUploadFile) {
+  uploadImage(
+    @Req() request: AuthenticatedRequest,
+    @Param('id') id: string,
+    @UploadedFile() file?: ImageUploadFile,
+  ) {
     if (!file) {
       throw new BadRequestException('Image file is required');
     }
-    return this.productsService.uploadImage(id, file);
+    return this.productsService.uploadImage(
+      request.user.companyId,
+      request.user.id,
+      id,
+      file,
+      requestAuditContext(request),
+    );
   }
 
   @Delete(':id/image')
   @RequirePermissions(PermissionCode.CatalogManage)
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteImage(@Param('id') id: string) {
-    await this.productsService.deleteImage(id);
+  async deleteImage(
+    @Req() request: AuthenticatedRequest,
+    @Param('id') id: string,
+  ) {
+    await this.productsService.deleteImage(
+      request.user.companyId,
+      request.user.id,
+      id,
+      requestAuditContext(request),
+    );
   }
 }
