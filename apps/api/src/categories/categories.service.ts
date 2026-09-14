@@ -5,6 +5,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
+import {
+  AuditAction,
+  AuditActor,
+  AuditResult,
+  AuditService,
+  type AuditRequestContext,
+} from '../audit/audit.service.js';
 import { CreateCategoryDto } from './dto/create-category.dto.js';
 import { UpdateCategoryDto } from './dto/update-category.dto.js';
 import { normalizeName, slugify } from './slug.js';
@@ -42,9 +49,17 @@ function normalizedSlug(name: string): string {
 
 @Injectable()
 export class CategoriesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
-  async create(dto: CreateCategoryDto) {
+  async create(
+    companyId: string,
+    actorUserId: string,
+    dto: CreateCategoryDto,
+    auditContext: AuditRequestContext,
+  ) {
     const name = normalizeName(dto.name);
     const slug = normalizedSlug(name);
 
@@ -57,9 +72,25 @@ export class CategoriesService {
     }
 
     try {
-      return await this.prisma.category.create({
-        data: { name, slug },
-        select: CATEGORY_SELECT,
+      return await this.prisma.$transaction(async (transaction) => {
+        const category = await transaction.category.create({
+          data: { name, slug },
+          select: CATEGORY_SELECT,
+        });
+        await this.audit.record(
+          {
+            companyId,
+            actorType: AuditActor.InternalUser,
+            actorId: actorUserId,
+            action: AuditAction.CategoryCreate,
+            outcome: AuditResult.Succeeded,
+            targetType: 'category',
+            targetId: category.id,
+            ...auditContext,
+          },
+          transaction,
+        );
+        return category;
       });
     } catch (error) {
       if (isPrismaError(error, UNIQUE_VIOLATION)) {
@@ -98,7 +129,13 @@ export class CategoriesService {
     return category;
   }
 
-  async update(id: string, dto: UpdateCategoryDto) {
+  async update(
+    companyId: string,
+    actorUserId: string,
+    id: string,
+    dto: UpdateCategoryDto,
+    auditContext: AuditRequestContext,
+  ) {
     if (dto.name === undefined) {
       throw new BadRequestException('Provide a field to update');
     }
@@ -123,10 +160,26 @@ export class CategoriesService {
     }
 
     try {
-      return await this.prisma.category.update({
-        where: { id },
-        data: { name, slug },
-        select: CATEGORY_SELECT,
+      return await this.prisma.$transaction(async (transaction) => {
+        const category = await transaction.category.update({
+          where: { id },
+          data: { name, slug },
+          select: CATEGORY_SELECT,
+        });
+        await this.audit.record(
+          {
+            companyId,
+            actorType: AuditActor.InternalUser,
+            actorId: actorUserId,
+            action: AuditAction.CategoryUpdate,
+            outcome: AuditResult.Succeeded,
+            targetType: 'category',
+            targetId: category.id,
+            ...auditContext,
+          },
+          transaction,
+        );
+        return category;
       });
     } catch (error) {
       if (isPrismaError(error, UNIQUE_VIOLATION)) {
@@ -136,7 +189,12 @@ export class CategoriesService {
     }
   }
 
-  async remove(id: string) {
+  async remove(
+    companyId: string,
+    actorUserId: string,
+    id: string,
+    auditContext: AuditRequestContext,
+  ) {
     const existing = await this.prisma.category.findUnique({
       where: { id },
       select: CATEGORY_SELECT,
@@ -155,7 +213,22 @@ export class CategoriesService {
     }
 
     try {
-      await this.prisma.category.delete({ where: { id } });
+      await this.prisma.$transaction(async (transaction) => {
+        await transaction.category.delete({ where: { id } });
+        await this.audit.record(
+          {
+            companyId,
+            actorType: AuditActor.InternalUser,
+            actorId: actorUserId,
+            action: AuditAction.CategoryDelete,
+            outcome: AuditResult.Succeeded,
+            targetType: 'category',
+            targetId: id,
+            ...auditContext,
+          },
+          transaction,
+        );
+      });
     } catch (error) {
       if (isPrismaError(error, FOREIGN_KEY_VIOLATION, RELATION_VIOLATION)) {
         throw new ConflictException(

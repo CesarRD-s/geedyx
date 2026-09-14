@@ -113,9 +113,9 @@ writer with metadata safeguards. P1.5a.2 records installation, successful and
 failed login, password recovery, password changes, reauthentication, logout and
 session revocation with request context. P1.5a.3 adds internal-user creation and
 updates, company configuration changes, and authorization denials. Successful
-state changes and their events share one transaction. Next: cover the remaining
-security-sensitive domain mutations, then integration credentials. File storage
-waits for its provider-selection decision.
+state changes and their events share one transaction. P1.5a.4 adds the current
+category and product writes. Next: integration credentials. File storage waits
+for its provider-selection decision.
 
 ## Documentation rule
 

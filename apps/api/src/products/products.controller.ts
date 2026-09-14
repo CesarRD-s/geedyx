@@ -10,6 +10,7 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -26,6 +27,8 @@ import { ListProductsDto } from './dto/list-products.dto.js';
 import { UpdateProductDto } from './dto/update-product.dto.js';
 import { ProductsService } from './products.service.js';
 import type { ImageUploadFile } from './products.service.js';
+import type { AuthenticatedRequest } from '../auth/authorization/authenticated-request.js';
+import { requestAuditContext } from '../audit/request-audit-context.js';
 
 @Controller('products')
 @UseGuards(SessionAuthGuard, AccountStatusGuard, PermissionsGuard)
@@ -52,21 +55,41 @@ export class ProductsController {
   @Post()
   @RequirePermissions(PermissionCode.CatalogManage)
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() dto: CreateProductDto) {
-    return this.productsService.create(dto);
+  create(@Req() request: AuthenticatedRequest, @Body() dto: CreateProductDto) {
+    return this.productsService.create(
+      request.user.companyId,
+      request.user.id,
+      dto,
+      requestAuditContext(request),
+    );
   }
 
   @Patch(':id')
   @RequirePermissions(PermissionCode.CatalogManage)
-  update(@Param('id') id: string, @Body() dto: UpdateProductDto) {
-    return this.productsService.update(id, dto);
+  update(
+    @Req() request: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() dto: UpdateProductDto,
+  ) {
+    return this.productsService.update(
+      request.user.companyId,
+      request.user.id,
+      id,
+      dto,
+      requestAuditContext(request),
+    );
   }
 
   @Delete(':id')
   @RequirePermissions(PermissionCode.CatalogManage)
   @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@Param('id') id: string) {
-    await this.productsService.remove(id);
+  async remove(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
+    await this.productsService.remove(
+      request.user.companyId,
+      request.user.id,
+      id,
+      requestAuditContext(request),
+    );
   }
 
   @Post(':id/image')

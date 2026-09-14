@@ -142,8 +142,9 @@ enforced consistently.
   logout, password recovery, password changes, reauthentication and session
   revocation. P1.5a.3 records internal-user creation and updates, company
   settings changes, and authorization denials from permission, account-status
-  and recent-authentication checks. Remaining sensitive domain mutations follow
-  in later P1.5a slices.
+  and recent-authentication checks. P1.5a.4 records category and product
+  creation, updates and deletion in the same transaction as each catalog write.
+  Prototype image storage remains deferred with the file-storage decision.
 - Add integration clients with hashed scoped credentials, rotation, revocation
   and idempotency records.
 - Define signed inbound/outbound webhook envelopes and replay protection.

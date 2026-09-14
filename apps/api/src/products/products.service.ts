@@ -23,6 +23,13 @@ import {
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { ImageStorage } from '../images/image-storage.js';
 import type { Prisma } from '../generated/prisma/client.js';
+import {
+  AuditAction,
+  AuditActor,
+  AuditResult,
+  AuditService,
+  type AuditRequestContext,
+} from '../audit/audit.service.js';
 import { CreateProductDto } from './dto/create-product.dto.js';
 import { ListProductsDto } from './dto/list-products.dto.js';
 import { UpdateProductDto } from './dto/update-product.dto.js';
@@ -200,6 +207,7 @@ export class ProductsService {
     private readonly prisma: PrismaService,
     @Inject(IMAGE_STORAGE) private readonly images: ImageStorage,
     config: ConfigService,
+    private readonly audit: AuditService,
   ) {
     this.maxImageBytes = getMaxImageBytes(asImageUploadConfig(config));
   }
@@ -311,7 +319,12 @@ export class ProductsService {
     return IMAGE_FORMAT_EXTENSION[detected];
   }
 
-  async create(dto: CreateProductDto): Promise<ProductDetail> {
+  async create(
+    companyId: string,
+    actorUserId: string,
+    dto: CreateProductDto,
+    auditContext: AuditRequestContext,
+  ): Promise<ProductDetail> {
     const name = normalizeName(dto.name);
     const baseSlug = productSlug(dto.name);
     const sku = normalizeSku(dto.sku);
@@ -338,11 +351,26 @@ export class ProductsService {
     for (let attempt = 0; attempt < MAX_SLUG_ATTEMPTS; attempt += 1) {
       const slug = await this.findAvailableSlug(baseSlug);
       try {
-        const created = await this.prisma.product.create({
-          data: { ...data, slug },
-          select: PRODUCT_DETAIL_SELECT,
+        return await this.prisma.$transaction(async (transaction) => {
+          const created = await transaction.product.create({
+            data: { ...data, slug },
+            select: PRODUCT_DETAIL_SELECT,
+          });
+          await this.audit.record(
+            {
+              companyId,
+              actorType: AuditActor.InternalUser,
+              actorId: actorUserId,
+              action: AuditAction.ProductCreate,
+              outcome: AuditResult.Succeeded,
+              targetType: 'product',
+              targetId: created.id,
+              ...auditContext,
+            },
+            transaction,
+          );
+          return toDetail(created);
         });
-        return toDetail(created);
       } catch (error) {
         if (!isPrismaError(error, UNIQUE_VIOLATION)) {
           throw error;
@@ -416,7 +444,13 @@ export class ProductsService {
     return toDetail(row);
   }
 
-  async update(id: string, dto: UpdateProductDto): Promise<ProductDetail> {
+  async update(
+    companyId: string,
+    actorUserId: string,
+    id: string,
+    dto: UpdateProductDto,
+    auditContext: AuditRequestContext,
+  ): Promise<ProductDetail> {
     if (hasNoUpdatableFields(dto)) {
       throw new BadRequestException('Provide at least one field to update');
     }
@@ -475,12 +509,28 @@ export class ProductsService {
     for (let attempt = 0; attempt < MAX_SLUG_ATTEMPTS; attempt += 1) {
       const slug = await this.findAvailableSlug(baseSlug, id);
       try {
-        const updated = await this.prisma.product.update({
-          where: { id },
-          data: { ...data, slug },
-          select: PRODUCT_DETAIL_SELECT,
+        return await this.prisma.$transaction(async (transaction) => {
+          const updated = await transaction.product.update({
+            where: { id },
+            data: { ...data, slug },
+            select: PRODUCT_DETAIL_SELECT,
+          });
+          await this.audit.record(
+            {
+              companyId,
+              actorType: AuditActor.InternalUser,
+              actorId: actorUserId,
+              action: AuditAction.ProductUpdate,
+              outcome: AuditResult.Succeeded,
+              targetType: 'product',
+              targetId: updated.id,
+              ...auditContext,
+              metadata: { changedFieldCount: Object.keys(data).length },
+            },
+            transaction,
+          );
+          return toDetail(updated);
         });
-        return toDetail(updated);
       } catch (error) {
         if (!isPrismaError(error, UNIQUE_VIOLATION)) {
           throw error;
@@ -500,7 +550,12 @@ export class ProductsService {
     );
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(
+    companyId: string,
+    actorUserId: string,
+    id: string,
+    auditContext: AuditRequestContext,
+  ): Promise<void> {
     const existing = await this.prisma.product.findUnique({
       where: { id },
       select: { id: true, imageUrl: true },
@@ -508,7 +563,22 @@ export class ProductsService {
     if (!existing) {
       throw new NotFoundException('Product not found');
     }
-    await this.prisma.product.delete({ where: { id } });
+    await this.prisma.$transaction(async (transaction) => {
+      await transaction.product.delete({ where: { id } });
+      await this.audit.record(
+        {
+          companyId,
+          actorType: AuditActor.InternalUser,
+          actorId: actorUserId,
+          action: AuditAction.ProductDelete,
+          outcome: AuditResult.Succeeded,
+          targetType: 'product',
+          targetId: id,
+          ...auditContext,
+        },
+        transaction,
+      );
+    });
     if (existing.imageUrl !== null) {
       // The product is already gone; failures are logged so an orphaned file
       // is not left unnoticed. No garbage collector exists by design.

@@ -33,6 +33,12 @@ export const AuditAction = {
   UserCreate: 'identity.user.create',
   UserUpdate: 'identity.user.update',
   CompanySettingsUpdate: 'company.settings.update',
+  CategoryCreate: 'catalog.category.create',
+  CategoryUpdate: 'catalog.category.update',
+  CategoryDelete: 'catalog.category.delete',
+  ProductCreate: 'catalog.product.create',
+  ProductUpdate: 'catalog.product.update',
+  ProductDelete: 'catalog.product.delete',
   AuthorizationDeny: 'authorization.deny',
 } as const;
 

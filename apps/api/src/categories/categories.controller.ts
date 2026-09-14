@@ -8,6 +8,7 @@ import {
   Param,
   Patch,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { SessionAuthGuard } from '../auth/guards/session-auth.guard.js';
@@ -19,6 +20,8 @@ import { RequirePermissions } from '../auth/authorization/require-permissions.de
 import { CategoriesService } from './categories.service.js';
 import { CreateCategoryDto } from './dto/create-category.dto.js';
 import { UpdateCategoryDto } from './dto/update-category.dto.js';
+import type { AuthenticatedRequest } from '../auth/authorization/authenticated-request.js';
+import { requestAuditContext } from '../audit/request-audit-context.js';
 
 @Controller('categories')
 @UseGuards(SessionAuthGuard, AccountStatusGuard, PermissionsGuard)
@@ -45,20 +48,40 @@ export class CategoriesController {
   @Post()
   @RequirePermissions(PermissionCode.CatalogManage)
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() dto: CreateCategoryDto) {
-    return this.categoriesService.create(dto);
+  create(@Req() request: AuthenticatedRequest, @Body() dto: CreateCategoryDto) {
+    return this.categoriesService.create(
+      request.user.companyId,
+      request.user.id,
+      dto,
+      requestAuditContext(request),
+    );
   }
 
   @Patch(':id')
   @RequirePermissions(PermissionCode.CatalogManage)
-  update(@Param('id') id: string, @Body() dto: UpdateCategoryDto) {
-    return this.categoriesService.update(id, dto);
+  update(
+    @Req() request: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() dto: UpdateCategoryDto,
+  ) {
+    return this.categoriesService.update(
+      request.user.companyId,
+      request.user.id,
+      id,
+      dto,
+      requestAuditContext(request),
+    );
   }
 
   @Delete(':id')
   @RequirePermissions(PermissionCode.CatalogManage)
   @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@Param('id') id: string) {
-    await this.categoriesService.remove(id);
+  async remove(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
+    await this.categoriesService.remove(
+      request.user.companyId,
+      request.user.id,
+      id,
+      requestAuditContext(request),
+    );
   }
 }

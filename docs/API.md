@@ -96,6 +96,9 @@ explicit product decision; the boundary never chooses an offset silently.
   outcome. Permission, suspended-account and recent-authentication denials also
   produce events. Raw passwords, reset tokens, session values and CSRF values
   never enter audit metadata. Audit records have no read API yet.
+- Category and product creation, updates and deletion also produce immutable
+  audit events. The existing prototype image operations are deferred with the
+  future private file-storage foundation.
 - Every non-safe request authenticated by a browser session must send an
   `Origin` that exactly matches `CORS_ORIGINS` and the current CSRF token in
   `X-CSRF-Token`. Successful password changes also rotate both credentials
