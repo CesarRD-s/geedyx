@@ -76,7 +76,8 @@ Current slice: **P1.5 - Audit, integration and files foundation**
   production; local development intentionally leaves delivery disabled unless
   configured.
 - Product images are tied to local storage rather than a general file-asset
-  provider contract.
+  provider contract. File storage is deferred pending a product decision on
+  deployment-owner provider selection and configuration.
 - CI, an isolated e2e database and a tested restore procedure are not complete.
 
 ## Next deliverable
@@ -113,7 +114,8 @@ failed login, password recovery, password changes, reauthentication, logout and
 session revocation with request context. P1.5a.3 adds internal-user creation and
 updates, company configuration changes, and authorization denials. Successful
 state changes and their events share one transaction. Next: cover the remaining
-security-sensitive domain mutations.
+security-sensitive domain mutations, then integration credentials. File storage
+waits for its provider-selection decision.
 
 ## Documentation rule
 

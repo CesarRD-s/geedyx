@@ -90,6 +90,13 @@ Development may use local storage. Production targets S3-compatible object
 storage. Business data stores asset IDs and object keys, not permanent public
 URLs. Supabase and Cloudinary remain optional adapters.
 
+### Implementation status
+
+The file-asset foundation is deferred. Before implementation, the product must
+define whether the deployment owner selects the provider and how provider
+credentials and bucket configuration are supplied. Existing local product-image
+handling remains prototype behavior and is not the future provider contract.
+
 ## ADR-011 - API compatibility is a product commitment
 
 URI major versioning, generated OpenAPI, documented deprecations, idempotency

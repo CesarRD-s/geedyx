@@ -147,9 +147,10 @@ enforced consistently.
 - Add integration clients with hashed scoped credentials, rotation, revocation
   and idempotency records.
 - Define signed inbound/outbound webhook envelopes and replay protection.
-- Replace product-only image handling with private `FileAsset` metadata and a
-  provider interface: local development storage plus S3-compatible production
-  storage.
+- File storage is deferred until the product decision defines whether the
+  deployment owner selects a provider and how that configuration is supplied.
+  The future `FileAsset` foundation will replace product-only image handling
+  with private metadata and a provider-neutral interface.
 
 ### P1.6 - Release gate
 
