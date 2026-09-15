@@ -42,7 +42,8 @@ database access.
 
 ## Local development
 
-Prerequisites: Node.js 20.9+, pnpm 9+ and Docker.
+Prerequisites: Node.js 24.16.0, pnpm 11.13+ and Docker. Node 24 is the
+project's current LTS line; use `.nvmrc` when your version manager supports it.
 
 ```bash
 pnpm install
