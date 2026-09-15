@@ -133,7 +133,7 @@ export interface InternalUser {
   displayName: string | null;
   locale: string | null;
   timeZone: string | null;
-  status: "ACTIVE" | "SUSPENDED";
+  status: "ACTIVE" | "INVITED" | "SUSPENDED";
   lastLoginAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -149,13 +149,12 @@ export interface UserListQuery {
   page: number;
   limit: number;
   search?: string;
-  status?: "ACTIVE" | "SUSPENDED";
+  status?: "ACTIVE" | "INVITED" | "SUSPENDED";
 }
 
 export interface UserInput {
   username: string;
   email: string;
-  password: string;
   displayName?: string;
   roleIds: string[];
 }

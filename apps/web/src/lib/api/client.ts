@@ -231,6 +231,32 @@ export async function resetPassword(input: {
   });
 }
 
+export async function acceptInvitation(input: {
+  token: string;
+  password: string;
+  confirmPassword: string;
+}): Promise<void> {
+  await clientFetch<void>("/auth/invitations/accept", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function requestEmailChange(newEmail: string): Promise<boolean> {
+  const result = await clientFetch<{ accepted: boolean; delivered: boolean }>("/auth/email/change-request", {
+    method: "POST",
+    body: JSON.stringify({ newEmail }),
+  });
+  return result.delivered;
+}
+
+export async function confirmEmailChange(token: string): Promise<void> {
+  await clientFetch<void>("/auth/email/change-confirm", {
+    method: "POST",
+    body: JSON.stringify({ token }),
+  });
+}
+
 export async function getCompanySettings(): Promise<CompanySettings> {
   return clientFetch<CompanySettings>("/company/settings");
 }

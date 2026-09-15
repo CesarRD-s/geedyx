@@ -32,9 +32,8 @@ export function UserFormDialog({
   const usernameRef = useRef<HTMLInputElement>(null);
   const [username, setUsername] = useState(user?.username ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
-  const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState(user?.displayName ?? "");
-  const [status, setStatus] = useState<"ACTIVE" | "SUSPENDED">(
+  const [status, setStatus] = useState<"ACTIVE" | "INVITED" | "SUSPENDED">(
     user?.status ?? "ACTIVE",
   );
   const [roleIds, setRoleIds] = useState<string[]>(
@@ -67,12 +66,8 @@ export function UserFormDialog({
       return;
     }
     if (!isEdit) {
-      if (!username.trim() || !email.trim() || !password) {
-        setError("Completa el usuario, correo y contraseña temporal.");
-        return;
-      }
-      if (password.length < 12) {
-        setError("La contraseña temporal debe tener al menos 12 caracteres.");
+      if (!username.trim() || !email.trim()) {
+        setError("Completa el usuario y correo electrónico.");
         return;
       }
     }
@@ -92,7 +87,6 @@ export function UserFormDialog({
         await onSave({
           username: username.trim(),
           email: email.trim(),
-          password,
           displayName: cleanDisplayName || undefined,
           roleIds,
         });
@@ -127,7 +121,7 @@ export function UserFormDialog({
       description={
         isEdit
           ? "Actualiza el perfil, estado y roles internos."
-          : "Crea una cuenta interna con una contraseña temporal."
+          : "Crea una cuenta interna y envía una invitación para definir la contraseña."
       }
       onClose={onClose}
       initialFocusRef={usernameRef}
@@ -177,22 +171,10 @@ export function UserFormDialog({
                 autoComplete="email"
               />
             </div>
-            <div className="sm:col-span-2">
-              <FieldLabel htmlFor="user-password">
-                Contraseña temporal
-              </FieldLabel>
-              <Input
-                id="user-password"
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                autoComplete="new-password"
-              />
-              <p className="mt-1 text-xs text-muted">
-                Debe tener al menos 12 caracteres. El cambio obligatorio de
-                contraseña llega en P1.4.
-              </p>
-            </div>
+            <p className="sm:col-span-2 text-xs text-muted">
+              La persona recibirá un enlace de un solo uso para crear su propia
+              contraseña. La cuenta permanecerá pendiente hasta aceptarlo.
+            </p>
           </fieldset>
         ) : null}
 
@@ -214,10 +196,15 @@ export function UserFormDialog({
                 id="user-status"
                 value={status}
                 onChange={(event) =>
-                  setStatus(event.target.value as "ACTIVE" | "SUSPENDED")
+                  setStatus(
+                    event.target.value as "ACTIVE" | "INVITED" | "SUSPENDED",
+                  )
                 }
               >
-                <option value="ACTIVE">Activo</option>
+              <option value="ACTIVE">Activo</option>
+              <option value="INVITED" disabled>
+                Invitado pendiente
+              </option>
                 <option value="SUSPENDED">Suspendido</option>
               </Select>
             </div>

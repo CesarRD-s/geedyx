@@ -47,7 +47,9 @@ export function UsersView({
 }) {
   const [page, setPage] = useState(initialPage);
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<"" | "ACTIVE" | "SUSPENDED">("");
+  const [status, setStatus] = useState<
+    "" | "ACTIVE" | "INVITED" | "SUSPENDED"
+  >("");
   const [dialog, setDialog] = useState<DialogState>(null);
   const [banner, setBanner] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -85,7 +87,7 @@ export function UsersView({
         return;
       }
       await createUser(input);
-      setBanner("Usuario creado.");
+      setBanner("Invitación creada.");
     }
     await refresh();
     setDialog(null);
@@ -123,10 +125,19 @@ export function UsersView({
           <Select
             id="user-status-filter"
             value={status}
-            onChange={(event) => setStatus(event.target.value as "" | "ACTIVE" | "SUSPENDED")}
+            onChange={(event) =>
+              setStatus(
+                event.target.value as
+                  | ""
+                  | "ACTIVE"
+                  | "INVITED"
+                  | "SUSPENDED",
+              )
+            }
           >
             <option value="">Todos</option>
             <option value="ACTIVE">Activo</option>
+            <option value="INVITED">Invitado pendiente</option>
             <option value="SUSPENDED">Suspendido</option>
           </Select>
         </div>
@@ -183,15 +194,21 @@ function UserMobileRow({ user, canManage, onEdit }: { user: InternalUser; canMan
 }
 
 function StatusBadge({ status }: { status: InternalUser["status"] }) {
-  return <Badge tone={status === "ACTIVE" ? "success" : "danger"}>{status === "ACTIVE" ? "Activo" : "Suspendido"}</Badge>;
+  if (status === "ACTIVE") {
+    return <Badge tone="success">Activo</Badge>;
+  }
+  if (status === "INVITED") {
+    return <Badge tone="warning">Invitado pendiente</Badge>;
+  }
+  return <Badge tone="danger">Suspendido</Badge>;
 }
 
 function isUserInput(input: UserInput | UserUpdateInput): input is UserInput {
-  return "password" in input;
+  return "username" in input;
 }
 
 function isUserUpdateInput(
   input: UserInput | UserUpdateInput,
 ): input is UserUpdateInput {
-  return !("password" in input);
+  return !("username" in input);
 }
