@@ -86,16 +86,17 @@ orders, inventory or financial records.
 
 ## ADR-010 - Files use provider-neutral private assets
 
-Development may use local storage. Production targets S3-compatible object
-storage. Business data stores asset IDs and object keys, not permanent public
-URLs. Supabase and Cloudinary remain optional adapters.
+Development may use local storage or MinIO. Production initially uses Supabase
+Storage through its S3-compatible interface. Business data stores asset IDs and
+object keys, not permanent public URLs. A later adapter may target another
+S3-compatible provider without changing business data.
 
 ### Implementation status
 
-The file-asset foundation is deferred. Before implementation, the product must
-define whether the deployment owner selects the provider and how provider
-credentials and bucket configuration are supplied. Existing local product-image
-handling remains prototype behavior and is not the future provider contract.
+The file-asset foundation is implemented in P1.5c. Provider credentials and
+bucket configuration are deployment secrets, not workspace configuration.
+Product images now use `FileAsset`; the former public local upload route is not
+served by the API.
 
 ## ADR-011 - API compatibility is a product commitment
 
@@ -158,6 +159,19 @@ writes. Permission, account-status and recent-authentication guards record their
 denials before returning the existing safe response. Their metadata identifies a
 stable reason only; it does not contain request bodies, credentials or settings
 values.
+
+## ADR-032 - P1 uses one provider per infrastructure capability
+
+GEEDYX owns identity, authorization, audit records and business data. Providers
+only deliver infrastructure. P1 uses Resend for transactional security email and
+Supabase Storage for private file objects. Each is reached through an internal
+provider boundary, so a later adapter can change the deployment provider without
+changing business modules.
+
+P1 does not implement automatic cross-provider fallback. Automatic fallback can
+duplicate security email or create divergent file copies. Development uses
+non-delivering email and local or MinIO file adapters. Provider secrets remain
+outside the database and workspace UI.
 
 ## Legacy decisions
 

@@ -30,7 +30,8 @@ System roles are created per company: `OWNER`, `ADMIN`, `CATALOG_MANAGER` and
 `VIEWER`. Permission codes are global, stable values: `catalog.read`,
 `catalog.manage`, `users.read`, `users.manage` and `company.manage`. The installation owner is
 the only initial `OWNER`; it cannot be suspended or reassigned through the user
-management API.
+management API. The system-role repair migration completes this vocabulary and
+its permissions for companies created by earlier installations.
 
 Company `locale` and `timeZone` are defaults. User `locale` and `timeZone` are
 personal overrides. Timestamps remain UTC; neither field changes stored data.
@@ -70,16 +71,19 @@ Authentication and session mutations insert their successful event in the same
 transaction as their state change. Failed login and recovery identities use a
 SHA-256 subject hash instead of the submitted email or token.
 
-## Foundation data model - planned
+## P1 platform data model
 
 Phase 1 introduces the following models before business modules are expanded:
 
 | Model | Purpose |
 | --- | --- |
-| `FileAsset` relation for profile avatar | Optional avatar storage after the provider-neutral file model exists. |
-| `IntegrationClient` | Hashed credential and scopes for an external store/backend. |
-| `WebhookEndpoint`, `WebhookDelivery` | Signed outbound webhook configuration and delivery record. |
-| `FileAsset` | Provider/key/mime/size/checksum/status; never a permanent public URL. |
+| `EmailDelivery` | Implemented transactional email evidence: template, provider, delivery state, retry metadata and recipient hash. It never stores a recipient address, message body or token. |
+| `UserInvitation`, `EmailChangeToken` | Implemented single-use hashed tokens for invitation and verified email change. |
+| `FileAsset` | Implemented private object metadata: company and creator context, provider/key, MIME type, byte size, checksum and lifecycle state. It never stores a permanent public URL. |
+
+`IntegrationClient`, `IdempotencyRecord`, `WebhookEndpoint`, `WebhookDelivery`
+and `InboundWebhookEvent` are implemented technical boundary models. No P1
+business route consumes them.
 
 `Customer` is a future business model owned by the company. It may reference an
 external-store account but it is not an internal `User` role.
@@ -102,11 +106,15 @@ external-store account but it is not an internal `User` role.
 
 ## File storage
 
-Local filesystem storage remains suitable for development only. Production file
-assets will use a provider abstraction. The default target is S3-compatible
-storage, allowing S3, MinIO, Cloudflare R2 and similar services. Supabase and
-Cloudinary are optional adapters. Private files are served by authorization or
-short-lived signed URLs.
+Local filesystem storage is suitable for development and test only. It is not
+served as a static directory. Production uses the same provider abstraction
+with Supabase Storage through its S3-compatible interface. `FileAsset` stores
+the opaque object key and validated metadata, while the API issues a signed URL
+with a short expiry only after an authorized catalog request. The local and S3
+providers are selected explicitly by `FILE_STORAGE_PROVIDER`; a production
+deployment fails to start without the S3 configuration and file URL signing
+secret. A later adapter may support MinIO, Cloudflare R2 or another compatible
+provider without changing business rows.
 
 ## Operational requirements
 

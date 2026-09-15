@@ -11,8 +11,9 @@ database.
 
 ### Installation and internal identity
 
-- Setup is completed atomically with the provisional company, first owner and
-  session. It is unavailable as soon as the installation singleton exists.
+- Setup is completed atomically with the provisional company, four system
+  roles, first owner and session. It is unavailable as soon as the installation
+  singleton exists.
 - A persisted installation state prevents setup from reopening if users change.
 - Passwords use Argon2id with explicit parameters and rehashing when needed.
 - Password reset tokens are random, single-use, short-lived and stored hashed.
@@ -25,6 +26,10 @@ database.
   storage; limits survive process restarts and apply across API instances.
 - Account status, password change time, failed login events and MFA readiness
   are server-side state.
+- User invitations and email changes use separate random, single-use,
+  short-lived hashed tokens. An invited account has no password and cannot log
+  in before accepting its invitation. Email changes require recent
+  authentication to request and revoke every active session on confirmation.
 - MFA is required for privileged roles before production financial operations.
 - MFA-ready storage never has a plaintext-secret column. Future TOTP enrollment
   must encrypt secrets with AES-256-GCM under a versioned key outside the
@@ -51,10 +56,12 @@ database.
   session token and CSRF token. Rotation retains the session's original
   absolute expiry and does not create a new session.
 
-Production requires an HTTPS `PASSWORD_RESET_DELIVERY_ENDPOINT`. GEEDYX sends
-the configured adapter a recipient, expiry and one-time reset URL using a bearer
-credential. Development may leave delivery disabled; requests still preserve
-the non-enumerating response and discard undeliverable tokens.
+P1 uses one configured transactional email provider. Its initial production
+adapter is Resend. Development uses a non-delivering `disabled` adapter and
+never sends a security message to a real recipient by default. Provider
+credentials are deployment secrets; the API records delivery outcomes without
+storing the recipient address, raw message or one-time link. A suppressed or
+failed recovery delivery invalidates its reset token.
 - Secrets, passwords, raw session values and reset tokens are never logged.
 
 ### Authorization and APIs
@@ -72,8 +79,10 @@ the non-enumerating response and discard undeliverable tokens.
 
 ### Files, webhooks and operations
 
-- Files are size-limited, MIME and magic-byte validated, named by the server,
-  authorization-protected and quarantined/scanned when documents are supported.
+- Product images are size-limited, MIME and magic-byte validated, named by the
+  server and held in private storage. The database retains only an opaque key
+  and checksum; catalog responses issue short-lived HMAC-signed read URLs.
+  Documents require quarantine and scanning before that file type is added.
 - Inbound webhooks verify raw-body signatures, timestamps and duplicate event
   IDs before writes.
 - Security headers, HTTPS, body limits, safe error responses and request IDs are

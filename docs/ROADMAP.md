@@ -66,7 +66,7 @@ enforced consistently.
 
 ### P1.4 - Professional authentication and sessions
 
-**Partial.**
+**Complete.**
 
 - Replace JWT-cookie authentication with random opaque server-side sessions;
   persist only token hashes.
@@ -112,8 +112,8 @@ enforced consistently.
 - Add single-use, expiring password-reset tokens without exposing stored token
   values. Completed.
 - Define a delivery boundary for recovery messages and the audit events that
-  P1.5 will persist for recovery and reauthentication outcomes. Completed with
-  a provider-neutral authenticated HTTP boundary.
+  P1.5 will persist for recovery and reauthentication outcomes. The temporary
+  HTTP boundary was replaced by the notifications module in P1.5b.
 
 ### P1.4c - Authentication hardening
 
@@ -132,41 +132,103 @@ enforced consistently.
   encrypted TOTP secrets, replay state and hashed one-use recovery-code records.
   No MFA route or UI is exposed.
 
-### P1.5 - Audit, integration and files foundation
+### P1.5 - Operational platform modules
+
+**Active.** P1.5 closes the platform modules that every later business domain
+uses. It intentionally avoids inventory, orders, payments and external-store
+behavior.
+
+#### P1.5a - Audit foundation
+
+**Partial.** The immutable PostgreSQL ledger and typed writer exist.
+Authentication, session, authorization, user, company and current catalog
+mutations record events transactionally.
+
+- Add the private audit reader for authorized operators: pagination and filters
+  by date, actor, action, outcome and target.
+- Define retention and the `audit.read` permission. Audit records never expose
+  passwords, tokens, cookies, secrets or complete file contents.
+- Exports, SIEM forwarding and broad activity telemetry are deferred.
+
+#### P1.5b - Notifications and email delivery
 
 **Partial.**
 
-- Add append-only audit events for authentication, authorization, configuration
-  and security-sensitive mutations. P1.5a.1 adds the immutable PostgreSQL
-  ledger and typed transactional writer. P1.5a.2 records installation, login,
-  logout, password recovery, password changes, reauthentication and session
-  revocation. P1.5a.3 records internal-user creation and updates, company
-  settings changes, and authorization denials from permission, account-status
-  and recent-authentication checks. P1.5a.4 records category and product
-  creation, updates and deletion in the same transaction as each catalog write.
-  Image upload and deletion now emit catalog audit events. Prototype image
-  storage remains deferred with the file-storage decision.
-- Add integration clients with hashed scoped credentials, rotation, revocation
-  and idempotency records. P1.5b provides the private administration API,
-  Argon2id secret hashing, one-time reveal, recent authentication, typed
-  scopes, revocation and replay-safe idempotency records. Business routes do
-  not consume integration credentials until their domains exist.
-- Define signed inbound/outbound webhook envelopes and replay protection.
-  P1.5c provides encrypted HTTPS endpoint configuration, HMAC signing helpers,
-  outbound delivery records and persistent inbound-event reservation. A worker
-  and provider-specific inbound endpoint require a business event producer.
-- File storage is deferred until the product decision defines whether the
-  deployment owner selects a provider and how that configuration is supplied.
-  The future `FileAsset` foundation will replace product-only image handling
-  with private metadata and a provider-neutral interface.
+- The notifications module persists provider-neutral `EmailDelivery` records
+  for password recovery. They contain template, provider, delivery state,
+  attempt count and a recipient hash, never the recipient address, message or
+  one-time link.
+- Resend is the initial production adapter. Local development uses the
+  `disabled` adapter, which records a suppressed delivery and never reaches a
+  real recipient. Failed Resend calls retry a bounded number of times with one
+  idempotency key.
+- Password recovery now uses this boundary. An undelivered link is invalidated.
+- Deliver only password recovery, user invitation and email-change
+  verification in P1. Internal notification center, SMS, WhatsApp, push,
+  marketing and multiple active email providers are deferred.
+- Provider credentials remain deployment secrets. The workspace may show
+  provider status and recent delivery outcomes, but never stores or displays
+  secret values.
+
+#### P1.5c - File assets and storage
+
+**Complete.**
+
+- `FileAsset` retains owner, storage key, MIME type, size, checksum, state and
+  audit context. Files are private by default.
+- Supabase Storage is the initial production adapter through its S3-compatible
+  interface. Local development uses an explicit local provider.
+- NestJS authorizes catalog access and issues short-lived signed URLs. New
+  product images use `FileAsset` rather than public local paths.
+- Do not add multiple active storage providers, automatic fallback, public
+  permanent URLs, document scanning or user avatars in P1.
+
+#### P1.5d - Identity and account completion
+
+**Complete.**
+
+- Installation now provisions the four system roles and their permissions:
+  `OWNER`, `ADMIN`, `CATALOG_MANAGER` and `VIEWER`. A migration repairs
+  already-installed companies that were affected by the earlier omission.
+- Replace the unsupported temporary-password promise with an invitation flow
+  that lets a new internal user choose a password through a one-time email
+  link. Completed with the `INVITED` account state and a separate hashed token.
+- Add verified email lifecycle: email verification where needed, secure email
+  change with recent authentication, and the existing non-enumerating password
+  recovery flow. The API now creates and confirms a separate hashed email-change
+  token, then revokes every session after changing the address.
+- Keep opaque sessions, session rotation, idle and absolute expiry, device
+  management, CSRF, exact origin checks and durable rate limits. Do not add
+  JWT refresh tokens.
+- MFA persistence remains dormant. MFA, SSO, social login, passkeys, SMS and
+  external identity providers require a future product decision.
+
+#### P1.5e - Integration boundary
+
+**Partial and not user-visible in P1.**
+
+- The existing credential, scope, idempotency and signed-webhook persistence
+  remains a protected technical boundary. Secrets are hashed or encrypted and
+  may be rotated or revoked through the private API.
+- No P1 business route accepts integration credentials and no webhook is sent
+  until P3 owns catalog, availability or order events. Do not add an operator
+  UI that configures inactive connectors.
+
+#### P1.5 closing sequence
+
+1. Cover role provisioning and its repair with isolated E2E tests.
+2. Expose the authorized audit reader and provider-status views.
+3. Complete the P1.6 release gate.
 
 ### P1.6 - Release gate
 
 **Planned.**
 
-- Isolated e2e database and tests for setup, login, expiry, revocation,
-  authorization, CSRF and audit trails.
-- CI checks for build, lint, tests, migrations and generated API contract.
+- Isolated e2e database and tests for setup, role provisioning, invitation,
+  login, expiry, revocation, authorization, CSRF, email lifecycle, file access
+  and audit trails.
+- CI checks for build, lint, unit and e2e tests, migrations and generated API
+  contract. The current CI unit, lint and build checks are a partial baseline.
 - Backup and tested restore procedure, dependency/security review and production
   deployment checklist.
 - No unresolved critical/high security findings and no undocumented endpoint or
@@ -174,6 +236,30 @@ enforced consistently.
 
 Phase 1 deliberately excludes variants, warehouses, orders, payments,
 accounting and the public storefront. Those domains begin only after P1.6.
+
+### Phase 1 administration structure
+
+The private workspace uses compact parent modules and child routes:
+
+```text
+Mi cuenta
+├─ Perfil
+└─ Seguridad
+
+Administración
+├─ Organización
+│  └─ Empresa
+├─ Identidad y seguridad
+│  ├─ Usuarios y roles
+│  └─ Auditoría
+└─ Plataforma
+   ├─ Notificaciones
+   └─ Archivos
+```
+
+Integration administration becomes visible in Phase 3, when a business domain
+can use it. Company language is a global organization setting; P1 does not add
+new per-user language choices.
 
 ## Phase 2 - Master data and inventory
 

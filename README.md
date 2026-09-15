@@ -21,7 +21,7 @@ The repository contains a prototype foundation, not the final ERP platform:
 - PostgreSQL and Prisma;
 - first-run setup and login using Argon2id with persistent opaque browser sessions;
 - internal users, roles, permissions, session management and optional company settings;
-- category and product CRUD, simple stock values and local image uploads;
+- category and product CRUD, simple stock values and private product-image uploads;
 - a basic administration dashboard.
 
 The active milestone is the secure platform foundation: atomic installation,
@@ -75,9 +75,8 @@ pnpm test:api
 pnpm build
 ```
 
-Current e2e tests use a real configured PostgreSQL database. Do not run them
-against a database containing work you need to keep; Phase 1 will provide an
-isolated test database.
+E2E tests require `E2E_DATABASE_URL`, which must identify a database distinct
+from development. The P1 release gate will run that suite in CI before release.
 
 ## Documentation
 

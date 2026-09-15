@@ -46,10 +46,28 @@ The current repository contains a prototype foundation:
 
 These capabilities are implemented but are not yet the production platform
 defined in this document. Persistent browser sessions, multiple internal users,
-permissions, password recovery, MFA-ready persistence and API versioning are
-now present. MFA enrollment and enforcement, audit logs, integration
-credentials, inventory movements, orders, payments and financial records remain
-planned.
+permissions, password recovery, MFA-ready persistence, immutable audit writes,
+integration credentials and API versioning are now present. P1 still closes the
+email delivery, file-asset, audit-reader, identity-lifecycle and release
+boundaries before inventory movements, orders, payments and financial records.
+
+## Phase 1 platform boundary
+
+P1 provides the private operational foundation used by later domains:
+
+- organization configuration with global language, time zone and base currency;
+- internal identity: users, fixed roles, opaque sessions, password and verified
+  email lifecycle;
+- append-only audit records and a private audit reader;
+- transactional email for security messages through one configured provider;
+- private file assets through one configured storage provider;
+- integration credential and webhook persistence, without exposing inactive
+  external connectors to operators.
+
+GEEDYX remains the authority for identity, authorization, business data and
+audit records. Providers supply infrastructure only. P1 uses one active email
+provider and one active storage provider, with no automatic cross-provider
+fallback.
 
 ## Product phases
 

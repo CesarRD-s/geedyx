@@ -29,14 +29,16 @@ not share the admin cookie and they do not receive administrative credentials.
 ## Domain modules
 
 - `installation` and `company`: initial configuration and company settings.
-- `identity`: internal users, profiles, passwords and recovery. MFA persistence
-  is prepared; enrollment, challenge verification and enforcement remain
-  planned.
+- `identity`: internal users, fixed roles, profiles, opaque sessions, password,
+  invitation and verified-email lifecycle. MFA persistence is prepared;
+  enrollment, challenge verification and enforcement remain planned.
 - `authorization`: implemented roles, permissions and API guards.
 - `sessions`: opaque browser sessions and device management.
-- `account-context`: effective language, time zone and regional formatting.
+- `account-context`: company language, time zone and regional formatting.
 - `audit`: append-only security and business events through one typed writer
   that can join domain transactions.
+- `notifications`: transactional security email, templates and delivery records
+  through one configured provider.
 - `integrations`: clients, scopes, idempotency and webhook deliveries.
 - `files`: private assets and provider adapters.
 - `catalog`, `inventory`, `customers`, `orders`, `payments`, `invoicing`,
@@ -49,9 +51,11 @@ business action is not lost when a webhook or notification fails.
 
 ## Account and temporal context
 
-`Mi cuenta` contains personal profile, preferences and security as child areas.
-`Administración` contains company configuration, internal users and later roles
-and auditability. A value has one owner and one write path.
+`Mi cuenta` contains personal profile and security as child areas.
+`Administración` groups `Organización`, `Identidad y seguridad` and
+`Plataforma`. The P1 child modules are company, users and roles, audit,
+notifications and files. Integration management stays hidden until Phase 3 has
+a business route that can consume it. A value has one owner and one write path.
 
 Persisted instants are UTC. The company time zone governs business rules,
 documents and reporting. A user's time zone changes only that user's display.
@@ -85,12 +89,11 @@ reads the persisted confirmation timestamp and configured validity window.
 Password verification stays in the authentication domain and browser state is
 never an authorization input.
 
-Password recovery is split between token ownership and message delivery.
-`AuthService` creates and consumes hashed one-time tokens.
-`PasswordResetDelivery` owns the external message boundary and receives the raw
-link only for the duration of one call. The default adapter posts a
-provider-neutral JSON envelope to a configured HTTPS endpoint; no provider SDK
-is coupled to the authentication domain.
+Password recovery, invitation and email change share a transactional email
+boundary. Identity owns hashed one-time tokens and message intent; the
+notifications module owns templates, delivery records and provider calls.
+Password recovery is implemented with Resend as the P1 production target and a
+disabled local adapter. No provider SDK is coupled to identity.
 
 Authentication rate limits use PostgreSQL-backed fixed windows in the auth
 domain. Controllers consume separate hashed IP and identity subjects before
@@ -100,18 +103,21 @@ recovery abuse controls.
 
 ## Files and asynchronous work
 
-Files are stored by an adapter and described by `FileAsset`. Business rows refer
-to an asset ID, not a filesystem path or permanent public URL. Background jobs
-will handle webhooks, notifications, scans and generated documents once a
-durable queue is introduced.
+Files are stored by an adapter and described by `FileAsset`. Business rows
+refer to an asset ID, not a filesystem path or permanent public URL. The P1
+production target is Supabase Storage through its S3-compatible interface.
+NestJS authorizes catalog access and issues short-lived signed URLs. Background jobs
+will handle retries, webhooks, scans and generated documents once a durable
+queue is introduced.
 
 ## Current state
 
 The repository currently has `auth`, `company`, `users`, `categories`,
-`products` and `images`. Roles and permissions are enforced by NestJS for the
-current catalog, company and users resources. Browser sessions are persisted in
-PostgreSQL. The immutable audit store and writer are implemented; domain event
-coverage, integrations, files and later business modules remain planned.
+`products`, `images`, `files`, `audit` and `integrations`. Roles and permissions are
+enforced by NestJS for the current catalog, company and users resources. Browser
+sessions are persisted in PostgreSQL. Audit writes and the integration boundary
+are implemented; their P1 reader and provider-status work is tracked in the
+roadmap.
 
 The API resolves regional context from user overrides, company defaults and
 es/UTC fallbacks, independently per field. Invalid legacy values fall through.

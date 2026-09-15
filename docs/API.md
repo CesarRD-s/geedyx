@@ -56,10 +56,10 @@ explicit product decision; the boundary never chooses an offset silently.
 - `GET /api/v1/health/ready` checks API readiness, including PostgreSQL.
 - `GET /api/v1/auth/installation` returns the public, non-sensitive
   installation state used by the first-run screen.
-- `POST /api/v1/auth/setup` creates a provisional company, initial owner and
-  opaque browser session in one transaction. It requires `username`, `email`,
-  `password` and `confirmPassword`; it is permanently unavailable after
-  installation.
+- `POST /api/v1/auth/setup` creates a provisional company, initial owner, the
+  four system roles and an opaque browser session in one transaction. It
+  requires `username`, `email`, `password` and `confirmPassword`; it is
+  permanently unavailable after installation.
 - `POST /api/v1/auth/login` and `POST /api/v1/auth/logout` create and revoke
   opaque sessions; `GET /api/v1/auth/me` requires its
   HttpOnly session cookie and returns the current profile and effective
@@ -87,6 +87,15 @@ explicit product decision; the boundary never chooses an offset silently.
 - MFA has no API endpoint yet. The database can represent pending, verified and
   revoked TOTP factors plus one-use recovery-code hashes, but P1.4c intentionally
   exposes no partial enrollment, challenge or recovery flow.
+- Password recovery, user invitations and email-change verification use the
+  notifications module. Delivery records contain provider outcome but no
+  recipient address, message body or one-time link.
+- `POST /api/v1/users` creates an `INVITED` internal user and sends a one-time
+  invitation. `POST /api/v1/auth/invitations/accept` sets its first password and
+  activates it.
+- `POST /api/v1/auth/email/change-request` requires recent authentication and
+  sends verification to the requested address. `POST /api/v1/auth/email/change-confirm`
+  changes the address with its one-time token and revokes every active session.
 - Authentication and recovery endpoints can return `429 RATE_LIMITED`. Their
   critical counters are persisted in PostgreSQL and keyed by hashed IP plus a
   hashed account, session or token subject as applicable.
@@ -186,6 +195,25 @@ authentication, exact allowed origin and a valid CSRF token for mutations:
 
 Creation and rotation responses contain the generated secret exactly once. List
 responses never include a credential hash or a webhook signing secret.
+
+## P1 platform contracts
+
+The audit reader remains planned. Notification and file-storage boundaries below
+describe the P1 implementation:
+
+- Audit reader: authorized pagination and filters by date, actor, action,
+  outcome and target. It requires the future `audit.read` permission.
+- Notifications: internal services create typed transactional intents; only the
+  security email templates for password recovery, invitation and email change
+  are in P1 scope. Provider configuration is deployment-only.
+- Files: `FileAsset` metadata is private. Authorized catalog responses expose
+  only a short-lived signed read URL. `GET /api/v1/files/:id` verifies its
+  expiry and signature before reading the private object. Raw provider
+  credentials and permanent public URLs are never API values.
+
+External integration credentials, scopes and webhooks remain technical
+foundations in P1. No integration-authenticated business endpoint is published
+until Phase 3.
 
 ## Webhooks
 

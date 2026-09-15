@@ -4,12 +4,12 @@ This file is the living handoff for development. Update it in the same change
 whenever a milestone, schema, public API contract, security control or shared UI
 pattern changes. Detailed decisions remain in their domain document.
 
-Last reviewed: 2026-09-13
+Last reviewed: 2026-09-15
 
 ## Active milestone
 
 **Phase 1 - Secure platform foundation**
-Current slice: **P1.5 - Audit, integration and files foundation**
+Current slice: **P1.5 - Operational platform modules**
 
 ## Implemented
 
@@ -18,7 +18,7 @@ Current slice: **P1.5 - Audit, integration and files foundation**
 - Setup/login/logout/me with Argon2id and persisted opaque browser sessions.
   Concurrent login retains existing sessions within the configured limit and
   revokes only the oldest excess sessions.
-- Prototype category and product CRUD, simple stock and local product images.
+- Prototype category and product CRUD, simple stock and private product images.
 - Private administration shell, responsive drawer and persistent collapsible
   sidebar.
 - Role-neutral authenticated workspace at `/app`; prototype `/admin/*` paths
@@ -69,58 +69,29 @@ Current slice: **P1.5 - Audit, integration and files foundation**
   API instances. The critical five-attempt window survives process restarts;
   the general in-memory API throttle remains an additional coarse limit.
 
-## Prototype limitations to remove in Phase 1
+The current personal language preference remains implemented behavior. P1.5
+will consolidate the product contract around a company-level language before
+adding any further regional preference behavior.
 
-- Broad domain audit coverage and integration credentials are not implemented.
-  Password-reset delivery requires an external HTTPS adapter in
-  production; local development intentionally leaves delivery disabled unless
-  configured.
-- Product images are tied to local storage rather than a general file-asset
-  provider contract. File storage is deferred pending a product decision on
-  deployment-owner provider selection and configuration.
-- CI, an isolated e2e database and a tested restore procedure are not complete.
+## Known P1 gaps
+
+- User creation sends an invitation and leaves the account pending until its
+  recipient creates a password through the one-time link.
+- Password recovery uses the notification boundary. Production deployment still
+  requires Resend credentials and a verified sender; local configuration
+  intentionally suppresses delivery.
+- Audit rows are immutable and written, but there is no audit reader in the
+  workspace or read API.
+- Integration credentials and webhook records exist only as a future technical
+  boundary. There is no P1 business consumer or operator UI.
+- CI has unit tests, lint and build checks. E2E execution, migration deploy,
+  API-contract validation, restore verification and release checklist remain
+  open.
 
 ## Next deliverable
 
-P1.4a.1 reorganized the workspace around `Mi cuenta` and `Administración`.
-P1.4a.2 implements effective regional context, nullable personal overrides,
-validated time zones and a single personal preference write path. Session dates
-use the shared display context. Existing preferences are preserved by migration.
-P1.4a.3 adds type-checked es/en catalogs for the secure platform shell, dashboard,
-account, company and security surfaces. Personal and company language selectors
-are active, inheritance refreshes server context and the document language follows
-the effective locale. P1.4a.4 adds shared accessible date, time and inclusive
-date-range fields plus strict calendar-value parsing and stable formatting.
-P1.4a.5 completes the account and temporal foundation with strict UTC instant
-parsing, explicit IANA-zone conversion in both directions and regional instant
-formatting. Nonexistent and ambiguous local times are rejected instead of being
-silently adjusted. Session activity now consumes the shared formatter. P1.4a
-does not add operational calendar or scheduling. P1.4a.6 adds the current date
-and time to the workspace header without displaying a city, zone abbreviation
-or seconds. The compact mobile header shows time only and the value refreshes at
-minute boundaries. P1.4b enforces recent authentication for company and
-internal-user mutations with a default 10-minute session window. It also adds
-non-enumerating recovery requests, provider-neutral delivery, hashed one-time
-tokens, public recovery screens and transactional session revocation after a
-reset. P1.4c.1 replaces critical in-memory authentication limits with durable,
-hashed PostgreSQL buckets. P1.4c.2 enforces approved browser origins alongside
-session-bound CSRF and rotates session and CSRF credentials after successful
-reauthentication or password changes without extending absolute expiry. P1.4c.3
-adds storage for encrypted TOTP factors, replay detection and hashed one-use
-recovery codes without exposing an incomplete MFA flow. P1.4c is complete.
-P1.5a.1 adds an append-only PostgreSQL audit ledger and a typed transactional
-writer with metadata safeguards. P1.5a.2 records installation, successful and
-failed login, password recovery, password changes, reauthentication, logout and
-session revocation with request context. P1.5a.3 adds internal-user creation and
-updates, company configuration changes, and authorization denials. Successful
-state changes and their events share one transaction. P1.5a.4 adds the current
-category and product writes, including image upload and deletion. P1.5b adds
-managed integration credentials with Argon2id hashes, scopes, one-time secret
-reveal, rotation, revocation and idempotency. P1.5c adds encrypted webhook
-endpoint configuration, HMAC signing helpers, queued delivery records and
-inbound replay reservation. A provider-specific inbound route and delivery
-worker wait for the future business event producers. File storage waits for its
-provider-selection decision.
+Add the audit reader and P1.6 release gate in the order
+defined by `ROADMAP.md`. Isolated E2E coverage remains part of the release gate.
 
 ## Documentation rule
 

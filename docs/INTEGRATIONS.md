@@ -35,11 +35,12 @@ recent authentication. Creation and rotation reveal a 256-bit secret only once;
 PostgreSQL retains only its Argon2id hash. The server-side authentication
 service rejects missing, expired and revoked credentials without revealing which
 condition failed, and records successful use. No commerce route consumes these
-credentials until its business domain exists.
+credentials until its business domain exists. P1 intentionally does not expose
+an operator UI for inactive connectors; that UI starts in Phase 3.
 
-Declared scopes are `catalog.read`, `inventory.read`, `orders.write` and
-`customers.write`. Only `catalog.read` describes an existing concept; the
-others remain unavailable until their Phase 2 or 3 resources are introduced.
+Declared scope names are reserved for later contracts. No scope grants a P1
+business operation to an external client. Phase 3 defines only the scopes that
+its implemented commerce routes consume.
 
 Idempotency reserves a SHA-256 hash of a caller key and request for one client
 and operation. A completed matching request replays its stored response. A key
