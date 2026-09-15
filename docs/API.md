@@ -198,11 +198,10 @@ responses never include a credential hash or a webhook signing secret.
 
 ## P1 platform contracts
 
-The audit reader remains planned. Notification and file-storage boundaries below
-describe the P1 implementation:
+Notification and file-storage boundaries below describe the P1 implementation:
 
-- Audit reader: authorized pagination and filters by date, actor, action,
-  outcome and target. It requires the future `audit.read` permission.
+- Audit reader: `GET /api/v1/audit-events` requires `audit.read` and supports
+  pagination plus filters by date, actor, action, outcome and target.
 - Notifications: internal services create typed transactional intents; only the
   security email templates for password recovery, invitation and email change
   are in P1 scope. Provider configuration is deployment-only.

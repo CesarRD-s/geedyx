@@ -15,6 +15,7 @@ import type {
   InternalUser,
   RoleSummary,
   UserListQuery,
+  AuditEvent,
 } from "./types";
 
 export const SESSION_COOKIE_NAME = "geedyx_session";
@@ -135,4 +136,10 @@ export async function getUsers(
 
 export async function getAssignableRoles(): Promise<RoleSummary[]> {
   return authenticatedFetch<RoleSummary[]>("/users/roles");
+}
+
+export async function getAuditEvents(): Promise<Paginated<AuditEvent>> {
+  return authenticatedFetch<Paginated<AuditEvent>>(
+    "/audit-events?page=1&limit=25",
+  );
 }

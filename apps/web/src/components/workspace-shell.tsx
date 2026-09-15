@@ -20,6 +20,7 @@ import {
   Building2,
   Users,
   Shield,
+  ScrollText,
   Settings,
   X,
 } from "lucide-react";
@@ -78,6 +79,12 @@ const NAV_SECTIONS = [
         icon: Users,
         permission: "users.read",
       },
+      {
+        href: "/app/administration/audit",
+        label: "Auditoría",
+        icon: ScrollText,
+        permission: "audit.read",
+      },
     ],
   },
   {
@@ -111,6 +118,7 @@ const SECTION_TITLES: Record<string, MessageKey> = {
   "/app/categories": "nav.categories",
   "/app/administration/users": "nav.users",
   "/app/administration/company": "nav.company",
+  "/app/administration/audit": "nav.administration",
   "/app/account/security": "nav.security",
   "/app/account/profile": "nav.profile",
   "/app/account/preferences": "nav.preferences",

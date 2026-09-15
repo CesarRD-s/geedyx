@@ -4,6 +4,7 @@ export const PermissionCode = {
   UsersRead: 'users.read',
   UsersManage: 'users.manage',
   CompanyManage: 'company.manage',
+  AuditRead: 'audit.read',
 } as const;
 
 export type PermissionCode =

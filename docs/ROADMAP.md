@@ -140,13 +140,14 @@ behavior.
 
 #### P1.5a - Audit foundation
 
-**Partial.** The immutable PostgreSQL ledger and typed writer exist.
+**Complete.** The immutable PostgreSQL ledger, typed writer and authorized
+reader exist.
 Authentication, session, authorization, user, company and current catalog
 mutations record events transactionally.
 
-- Add the private audit reader for authorized operators: pagination and filters
+- The private reader requires `audit.read` and supports pagination and filters
   by date, actor, action, outcome and target.
-- Define retention and the `audit.read` permission. Audit records never expose
+- Audit records never expose
   passwords, tokens, cookies, secrets or complete file contents.
 - Exports, SIEM forwarding and broad activity telemetry are deferred.
 

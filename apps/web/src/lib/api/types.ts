@@ -3,7 +3,9 @@ export type PermissionCode =
   | "catalog.manage"
   | "users.read"
   | "users.manage"
-  | "company.manage";
+  | "company.manage"
+  | "audit.read";
+  | "audit.read";
 
 export interface AuthUser {
   id: string;
@@ -71,6 +73,18 @@ export interface ProductListItem {
 
 export interface ProductDetail extends ProductListItem {
   description: string | null;
+}
+
+export interface AuditEvent {
+  id: string;
+  sequence: string;
+  actorType: string;
+  actorId: string | null;
+  action: string;
+  outcome: "SUCCEEDED" | "FAILED" | "DENIED";
+  targetType: string | null;
+  targetId: string | null;
+  occurredAt: string;
 }
 
 export type ProductSortField = "name" | "price" | "stock" | "createdAt";

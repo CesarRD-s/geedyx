@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import type { ListAuditEventsDto } from './dto/list-audit-events.dto.js';
 
 export const AuditActor = {
   Anonymous: 'ANONYMOUS',
@@ -110,6 +111,23 @@ export class AuditService {
       },
       select: { id: true, sequence: true },
     });
+  }
+
+  async findAll(companyId: string, query: ListAuditEventsDto) {
+    const where: Prisma.AuditEventWhereInput = {
+      companyId,
+      ...(query.actorId ? { actorId: query.actorId } : {}),
+      ...(query.action ? { action: query.action } : {}),
+      ...(query.outcome ? { outcome: query.outcome } : {}),
+      ...(query.targetType ? { targetType: query.targetType } : {}),
+      ...(query.targetId ? { targetId: query.targetId } : {}),
+      ...((query.from || query.to) ? { occurredAt: { ...(query.from ? { gte: new Date(query.from) } : {}), ...(query.to ? { lte: new Date(query.to) } : {}) } } : {}),
+    };
+    const [total, data] = await this.prisma.$transaction([
+      this.prisma.auditEvent.count({ where }),
+      this.prisma.auditEvent.findMany({ where, orderBy: [{ occurredAt: 'desc' }, { sequence: 'desc' }], skip: (query.page - 1) * query.limit, take: query.limit, select: { id: true, sequence: true, actorType: true, actorId: true, action: true, outcome: true, targetType: true, targetId: true, occurredAt: true } }),
+    ]);
+    return { data: data.map((event) => ({ ...event, sequence: event.sequence.toString() })), meta: { page: query.page, limit: query.limit, total, totalPages: Math.ceil(total / query.limit) } };
   }
 
   private validateMetadata(metadata: AuditMetadata | undefined): void {
