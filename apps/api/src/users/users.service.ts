@@ -1,4 +1,3 @@
-import argon2 from 'argon2';
 import {
   BadRequestException,
   ConflictException,
@@ -6,6 +5,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { createHash, randomBytes } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service.js';
 import {
   AuditAction,
@@ -15,6 +16,8 @@ import {
   type AuditRequestContext,
 } from '../audit/audit.service.js';
 import { SystemRoleCode } from '../auth/authorization/permissions.js';
+import { durationToMs } from '../auth/duration.js';
+import { EmailDeliveryService } from '../notifications/email-delivery.service.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { ListUsersDto } from './dto/list-users.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
@@ -42,6 +45,8 @@ export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly config: ConfigService,
+    private readonly emailDelivery: EmailDeliveryService,
   ) {}
 
   async findAll(companyId: string, query: ListUsersDto) {
@@ -120,22 +125,32 @@ export class UsersService {
     auditContext: AuditRequestContext,
   ) {
     const roleIds = await this.validateAssignableRoles(companyId, dto.roleIds);
-    const passwordHash = await argon2.hash(dto.password, {
-      type: argon2.argon2id,
-    });
+    const token = randomBytes(32).toString('base64url');
+    const now = new Date();
+    const expiresAt = new Date(
+      now.getTime() +
+        durationToMs(this.config.get<string>('INVITATION_TTL', '7d')),
+    );
 
     try {
-      return await this.prisma.$transaction(async (transaction) => {
+      const invitation = await this.prisma.$transaction(async (transaction) => {
         const user = await transaction.user.create({
           data: {
             companyId,
             username: dto.username,
             email: dto.email,
-            passwordHash,
+            status: 'INVITED',
             displayName: dto.displayName || null,
             roles: { create: roleIds.map((roleId) => ({ roleId })) },
           },
           select: USER_SELECT,
+        });
+        await transaction.userInvitation.create({
+          data: {
+            userId: user.id,
+            tokenHash: this.hashToken(token),
+            expiresAt,
+          },
         });
         await this.audit.record(
           {
@@ -147,12 +162,26 @@ export class UsersService {
             targetType: 'user',
             targetId: user.id,
             ...auditContext,
-            metadata: { roleCount: roleIds.length },
+            metadata: { roleCount: roleIds.length, invitation: true },
           },
           transaction,
         );
         return this.toUserResponse(user);
       });
+      const invitationUrl = new URL(
+        this.config.get<string>(
+          'INVITATION_URL_BASE',
+          'http://localhost:3000/accept-invitation',
+        ),
+      );
+      invitationUrl.searchParams.set('token', token);
+      await this.emailDelivery.deliverInvitation({
+        companyId,
+        recipient: dto.email,
+        invitationUrl: invitationUrl.toString(),
+        expiresAt: expiresAt.toISOString(),
+      });
+      return invitation;
     } catch (error) {
       if (isUniqueConstraintError(error)) {
         throw new ConflictException('Username or email is already in use');
@@ -170,10 +199,15 @@ export class UsersService {
   ) {
     const target = await this.prisma.user.findFirst({
       where: { id: userId, companyId },
-      select: { id: true },
+      select: { id: true, status: true },
     });
     if (!target) {
       throw new NotFoundException('User not found');
+    }
+    if (target.status === 'INVITED' && dto.status === 'ACTIVE') {
+      throw new BadRequestException(
+        'An invited user must accept the invitation before activation',
+      );
     }
 
     const installation = await this.prisma.installation.findUnique({
@@ -282,6 +316,10 @@ export class UsersService {
       updatedAt: user.updatedAt,
       roles: user.roles.map(({ role }) => role),
     };
+  }
+
+  private hashToken(token: string): string {
+    return createHash('sha256').update(token).digest('hex');
   }
 }
 

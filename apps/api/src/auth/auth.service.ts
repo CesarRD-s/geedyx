@@ -2,6 +2,7 @@ import { resolveRegionalContext } from './regional-context.js';
 import argon2 from 'argon2';
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   Optional,
@@ -21,15 +22,15 @@ import {
 } from '../audit/audit.service.js';
 import { durationToMs } from './duration.js';
 import {
-  ALL_PERMISSION_CODES,
   isPermissionCode,
   PermissionCode,
   SystemRoleCode,
+  SYSTEM_ROLE_DEFINITIONS,
 } from './authorization/permissions.js';
 import { LoginDto } from './dto/login.dto.js';
 import { SetupDto } from './dto/setup.dto.js';
 import { UpdateProfileDto } from './dto/update-profile.dto.js';
-import { PasswordResetDeliveryService } from './password-reset-delivery.service.js';
+import { EmailDeliveryService } from '../notifications/email-delivery.service.js';
 
 export interface AuthUser {
   id: string;
@@ -122,7 +123,7 @@ export class AuthService {
     private readonly configService: ConfigService,
     private readonly audit: AuditService,
     @Optional()
-    private readonly passwordResetDelivery?: PasswordResetDeliveryService,
+    private readonly emailDelivery?: EmailDeliveryService,
   ) {}
 
   async setup(
@@ -183,21 +184,31 @@ export class AuthService {
             timeZone: true,
           },
         });
-        const ownerRole = await transaction.role.create({
-          data: {
-            companyId: company.id,
-            code: SystemRoleCode.Owner,
-            name: 'Propietario',
-            description: 'Acceso total e inmutable a la empresa',
-            isSystem: true,
-            permissions: {
-              create: ALL_PERMISSION_CODES.map((code) => ({
-                permission: { connect: { code } },
-              })),
-            },
-          },
-          select: { id: true },
-        });
+        const roles = await Promise.all(
+          SYSTEM_ROLE_DEFINITIONS.map((role) =>
+            transaction.role.create({
+              data: {
+                companyId: company.id,
+                code: role.code,
+                name: role.name,
+                description: role.description,
+                isSystem: true,
+                permissions: {
+                  create: role.permissions.map((code) => ({
+                    permission: { connect: { code } },
+                  })),
+                },
+              },
+              select: { id: true, code: true },
+            }),
+          ),
+        );
+        const ownerRole = roles.find(
+          (role) => role.code === SystemRoleCode.Owner,
+        );
+        if (!ownerRole) {
+          throw new Error('The owner system role was not provisioned');
+        }
         await transaction.userRole.create({
           data: { userId: owner.id, roleId: ownerRole.id },
         });
@@ -255,7 +266,11 @@ export class AuthService {
       where: { email: dto.email },
     });
 
-    if (!user || !(await argon2Verify(user.passwordHash, dto.password))) {
+    if (
+      !user ||
+      !user.passwordHash ||
+      !(await argon2Verify(user.passwordHash, dto.password))
+    ) {
       await this.audit.record({
         companyId: user?.companyId,
         actorType: AuditActor.Anonymous,
@@ -489,7 +504,11 @@ export class AuthService {
       where: { id: userId },
       select: { passwordHash: true },
     });
-    if (!user || !(await argon2Verify(user.passwordHash, currentPassword))) {
+    if (
+      !user ||
+      !user.passwordHash ||
+      !(await argon2Verify(user.passwordHash, currentPassword))
+    ) {
       await this.audit.record({
         companyId,
         actorType: AuditActor.InternalUser,
@@ -568,7 +587,11 @@ export class AuthService {
       where: { id: userId },
       select: { passwordHash: true },
     });
-    if (!user || !(await argon2Verify(user.passwordHash, password))) {
+    if (
+      !user ||
+      !user.passwordHash ||
+      !(await argon2Verify(user.passwordHash, password))
+    ) {
       await this.audit.record({
         companyId,
         actorType: AuditActor.InternalUser,
@@ -704,7 +727,8 @@ export class AuthService {
     );
     resetUrl.searchParams.set('token', token);
     const delivered =
-      (await this.passwordResetDelivery?.deliver({
+      (await this.emailDelivery?.deliverPasswordReset({
+        companyId: user.companyId,
         recipient: user.email,
         resetUrl: resetUrl.toString(),
         expiresAt: expiresAt.toISOString(),
@@ -798,6 +822,217 @@ export class AuthService {
             reason: 'invalid_or_expired',
             subjectHash: tokenHash,
           },
+        });
+      }
+      throw error;
+    }
+  }
+
+  async acceptInvitation(
+    token: string,
+    password: string,
+    confirmPassword: string,
+    auditContext: AuditRequestContext,
+  ): Promise<void> {
+    if (password !== confirmPassword) {
+      throw new BadRequestException('Passwords do not match');
+    }
+    const now = new Date();
+    const tokenHash = this.hashCredential(token);
+    const passwordHash = await argon2Hash(password);
+    try {
+      await this.prisma.$transaction(async (transaction) => {
+        const invitation = await transaction.userInvitation.findUnique({
+          where: { tokenHash },
+          select: {
+            id: true,
+            userId: true,
+            acceptedAt: true,
+            expiresAt: true,
+            user: { select: { companyId: true, status: true } },
+          },
+        });
+        if (
+          !invitation ||
+          invitation.acceptedAt ||
+          invitation.expiresAt <= now ||
+          invitation.user.status !== 'INVITED'
+        ) {
+          throw new BadRequestException('Invalid invitation token');
+        }
+        const accepted = await transaction.userInvitation.updateMany({
+          where: { id: invitation.id, acceptedAt: null, expiresAt: { gt: now } },
+          data: { acceptedAt: now },
+        });
+        if (accepted.count !== 1) {
+          throw new BadRequestException('Invalid invitation token');
+        }
+        await transaction.user.update({
+          where: { id: invitation.userId },
+          data: { passwordHash, passwordChangedAt: now, status: 'ACTIVE' },
+        });
+        await this.audit.record(
+          {
+            companyId: invitation.user.companyId,
+            actorType: AuditActor.Anonymous,
+            action: AuditAction.InvitationAccept,
+            outcome: AuditResult.Succeeded,
+            targetType: 'user',
+            targetId: invitation.userId,
+            ...auditContext,
+          },
+          transaction,
+        );
+      });
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        await this.audit.record({
+          actorType: AuditActor.Anonymous,
+          action: AuditAction.InvitationAccept,
+          outcome: AuditResult.Failed,
+          ...auditContext,
+          metadata: { reason: 'invalid_or_expired' },
+        });
+      }
+      throw error;
+    }
+  }
+
+  async requestEmailChange(
+    userId: string,
+    companyId: string,
+    currentEmail: string,
+    newEmail: string,
+    auditContext: AuditRequestContext,
+  ): Promise<boolean> {
+    if (currentEmail === newEmail) {
+      throw new BadRequestException('The new email must be different');
+    }
+    const existing = await this.prisma.user.findUnique({
+      where: { email: newEmail },
+      select: { id: true },
+    });
+    if (existing) {
+      throw new ConflictException('Email is already in use');
+    }
+    const token = randomBytes(32).toString('base64url');
+    const now = new Date();
+    const expiresAt = new Date(
+      now.getTime() +
+        durationToMs(this.configService.get<string>('EMAIL_CHANGE_TTL', '30m')),
+    );
+    const record = await this.prisma.$transaction(async (transaction) => {
+      await transaction.emailChangeToken.updateMany({
+        where: { userId, usedAt: null },
+        data: { usedAt: now },
+      });
+      const created = await transaction.emailChangeToken.create({
+        data: {
+          userId,
+          newEmail,
+          tokenHash: this.hashCredential(token),
+          expiresAt,
+        },
+        select: { id: true },
+      });
+      await this.audit.record(
+        {
+          companyId,
+          actorType: AuditActor.InternalUser,
+          actorId: userId,
+          action: AuditAction.EmailChangeRequest,
+          outcome: AuditResult.Succeeded,
+          targetType: 'user',
+          targetId: userId,
+          ...auditContext,
+        },
+        transaction,
+      );
+      return created;
+    });
+    const verificationUrl = new URL(
+      this.configService.get<string>(
+        'EMAIL_CHANGE_URL_BASE',
+        'http://localhost:3000/confirm-email-change',
+      ),
+    );
+    verificationUrl.searchParams.set('token', token);
+    const delivered =
+      (await this.emailDelivery?.deliverEmailChangeVerification({
+        companyId,
+        recipient: newEmail,
+        verificationUrl: verificationUrl.toString(),
+        expiresAt: expiresAt.toISOString(),
+      })) ?? false;
+    if (!delivered) {
+      await this.prisma.emailChangeToken.deleteMany({ where: { id: record.id } });
+    }
+    return delivered;
+  }
+
+  async confirmEmailChange(
+    token: string,
+    auditContext: AuditRequestContext,
+  ): Promise<void> {
+    const now = new Date();
+    const tokenHash = this.hashCredential(token);
+    try {
+      await this.prisma.$transaction(async (transaction) => {
+        const record = await transaction.emailChangeToken.findUnique({
+          where: { tokenHash },
+          select: {
+            id: true,
+            userId: true,
+            newEmail: true,
+            usedAt: true,
+            expiresAt: true,
+            user: { select: { companyId: true, status: true } },
+          },
+        });
+        if (
+          !record ||
+          record.usedAt ||
+          record.expiresAt <= now ||
+          record.user.status !== 'ACTIVE'
+        ) {
+          throw new BadRequestException('Invalid email change token');
+        }
+        const consumed = await transaction.emailChangeToken.updateMany({
+          where: { id: record.id, usedAt: null, expiresAt: { gt: now } },
+          data: { usedAt: now },
+        });
+        if (consumed.count !== 1) {
+          throw new BadRequestException('Invalid email change token');
+        }
+        await transaction.user.update({
+          where: { id: record.userId },
+          data: { email: record.newEmail },
+        });
+        await transaction.session.updateMany({
+          where: { userId: record.userId, revokedAt: null },
+          data: { revokedAt: now },
+        });
+        await this.audit.record(
+          {
+            companyId: record.user.companyId,
+            actorType: AuditActor.Anonymous,
+            action: AuditAction.EmailChangeConfirm,
+            outcome: AuditResult.Succeeded,
+            targetType: 'user',
+            targetId: record.userId,
+            ...auditContext,
+          },
+          transaction,
+        );
+      });
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        await this.audit.record({
+          actorType: AuditActor.Anonymous,
+          action: AuditAction.EmailChangeConfirm,
+          outcome: AuditResult.Failed,
+          ...auditContext,
+          metadata: { reason: 'invalid_or_expired' },
         });
       }
       throw error;

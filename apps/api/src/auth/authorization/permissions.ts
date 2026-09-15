@@ -32,3 +32,37 @@ export const SystemRoleCode = {
 
 export type SystemRoleCode =
   (typeof SystemRoleCode)[keyof typeof SystemRoleCode];
+
+export interface SystemRoleDefinition {
+  code: SystemRoleCode;
+  name: string;
+  description: string;
+  permissions: readonly PermissionCode[];
+}
+
+export const SYSTEM_ROLE_DEFINITIONS: readonly SystemRoleDefinition[] = [
+  {
+    code: SystemRoleCode.Owner,
+    name: 'Propietario',
+    description: 'Acceso total e inmutable a la empresa',
+    permissions: ALL_PERMISSION_CODES,
+  },
+  {
+    code: SystemRoleCode.Admin,
+    name: 'Administrador',
+    description: 'Gestiona la configuración, el catálogo y los usuarios internos',
+    permissions: ALL_PERMISSION_CODES,
+  },
+  {
+    code: SystemRoleCode.CatalogManager,
+    name: 'Gestor de catálogo',
+    description: 'Gestiona productos y categorías',
+    permissions: [PermissionCode.CatalogRead, PermissionCode.CatalogManage],
+  },
+  {
+    code: SystemRoleCode.Viewer,
+    name: 'Consulta',
+    description: 'Consulta el catálogo interno',
+    permissions: [PermissionCode.CatalogRead],
+  },
+];

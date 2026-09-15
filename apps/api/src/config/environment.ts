@@ -114,44 +114,125 @@ function validateOrigins(rawOrigins: string): string {
   return origins.join(',');
 }
 
+function emailProviderValue(
+  environment: Record<string, unknown>,
+): 'disabled' | 'resend' {
+  const value = String(environment.EMAIL_PROVIDER ?? 'disabled')
+    .trim()
+    .toLowerCase();
+  if (value !== 'disabled' && value !== 'resend') {
+    throw new Error('EMAIL_PROVIDER must be disabled or resend');
+  }
+  if (environment.NODE_ENV === 'production' && value !== 'resend') {
+    throw new Error('EMAIL_PROVIDER must be resend in production');
+  }
+  return value;
+}
+
+function fileStorageProviderValue(
+  environment: Record<string, unknown>,
+): 'local' | 's3' {
+  const value = String(environment.FILE_STORAGE_PROVIDER ?? 'local')
+    .trim()
+    .toLowerCase();
+  if (value !== 'local' && value !== 's3') {
+    throw new Error('FILE_STORAGE_PROVIDER must be local or s3');
+  }
+  return value;
+}
+
+function optionalSecret(
+  environment: Record<string, unknown>,
+  key: string,
+): string | undefined {
+  const value = environment[key];
+  return typeof value === 'string' && value.trim() !== ''
+    ? value.trim()
+    : undefined;
+}
+
 export function validateEnvironment(
   environment: Record<string, unknown>,
 ): Record<string, unknown> {
-  const passwordResetDeliveryEndpoint = httpUrlValue(
-    environment,
-    'PASSWORD_RESET_DELIVERY_ENDPOINT',
-  );
   const passwordResetUrlBase = httpUrlValue(
     environment,
     'PASSWORD_RESET_URL_BASE',
     'http://localhost:3000/reset-password',
   );
-  const passwordResetDeliveryToken = environment.PASSWORD_RESET_DELIVERY_TOKEN;
-  if (
-    passwordResetDeliveryEndpoint &&
-    (typeof passwordResetDeliveryToken !== 'string' ||
-      passwordResetDeliveryToken.trim() === '')
-  ) {
-    throw new Error(
-      'PASSWORD_RESET_DELIVERY_TOKEN is required when delivery is enabled',
-    );
+  const emailProvider = emailProviderValue(environment);
+  const fileStorageProvider = fileStorageProviderValue(environment);
+  const resendApiKey = optionalSecret(environment, 'RESEND_API_KEY');
+  const emailFrom = optionalSecret(environment, 'EMAIL_FROM');
+  const fileUrlSigningSecret = optionalSecret(
+    environment,
+    'FILE_URL_SIGNING_SECRET',
+  );
+  if (emailProvider === 'resend' && !resendApiKey) {
+    throw new Error('RESEND_API_KEY is required when EMAIL_PROVIDER is resend');
+  }
+  if (emailProvider === 'resend' && !emailFrom) {
+    throw new Error('EMAIL_FROM is required when EMAIL_PROVIDER is resend');
   }
   if (
-    environment.NODE_ENV === 'production' &&
-    (!passwordResetDeliveryEndpoint ||
-      !passwordResetDeliveryEndpoint.startsWith('https://'))
+    emailProvider === 'resend' &&
+    (!emailFrom ||
+      /[\r\n]/.test(emailFrom) ||
+      !/[^\s@]+@[^\s@]+\.[^\s@]+/.test(emailFrom))
   ) {
-    throw new Error(
-      'PASSWORD_RESET_DELIVERY_ENDPOINT must use https in production',
-    );
+    throw new Error('EMAIL_FROM must contain a valid sender address');
   }
+  const s3Endpoint = httpUrlValue(environment, 'S3_ENDPOINT');
+  const s3Region = optionalSecret(environment, 'S3_REGION');
+  const s3Bucket = optionalSecret(environment, 'S3_BUCKET');
+  const s3AccessKeyId = optionalSecret(environment, 'S3_ACCESS_KEY_ID');
+  const s3SecretAccessKey = optionalSecret(environment, 'S3_SECRET_ACCESS_KEY');
   if (
     environment.NODE_ENV === 'production' &&
     !passwordResetUrlBase?.startsWith('https://')
   ) {
     throw new Error('PASSWORD_RESET_URL_BASE must use https in production');
   }
+  const invitationUrlBase = httpUrlValue(
+    environment,
+    'INVITATION_URL_BASE',
+    'http://localhost:3000/accept-invitation',
+  );
+  const emailChangeUrlBase = httpUrlValue(
+    environment,
+    'EMAIL_CHANGE_URL_BASE',
+    'http://localhost:3000/confirm-email-change',
+  );
+  if (
+    environment.NODE_ENV === 'production' &&
+    (!invitationUrlBase?.startsWith('https://') ||
+      !emailChangeUrlBase?.startsWith('https://'))
+  ) {
+    throw new Error('Invitation and email change URLs must use https in production');
+  }
   const webhookEncryptionKey = webhookEncryptionKeyValue(environment);
+  if (environment.NODE_ENV === 'production' && fileStorageProvider !== 's3') {
+    throw new Error('FILE_STORAGE_PROVIDER must be s3 in production');
+  }
+  if (
+    environment.NODE_ENV === 'production' &&
+    (!fileUrlSigningSecret || fileUrlSigningSecret.length < 32)
+  ) {
+    throw new Error(
+      'FILE_URL_SIGNING_SECRET must contain at least 32 characters in production',
+    );
+  }
+  if (
+    fileStorageProvider === 's3' &&
+    (!s3Endpoint ||
+      !s3Region ||
+      !s3Bucket ||
+      !s3AccessKeyId ||
+      !s3SecretAccessKey)
+  ) {
+    throw new Error(
+      'S3_ENDPOINT, S3_REGION, S3_BUCKET, S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY are required when FILE_STORAGE_PROVIDER is s3',
+    );
+  }
   return {
     ...environment,
     DATABASE_URL: requiredString(environment, 'DATABASE_URL'),
@@ -175,11 +256,34 @@ export function validateEnvironment(
     ),
     PASSWORD_RESET_TTL: durationValue(environment, 'PASSWORD_RESET_TTL', '30m'),
     PASSWORD_RESET_URL_BASE: passwordResetUrlBase,
-    PASSWORD_RESET_DELIVERY_ENDPOINT: passwordResetDeliveryEndpoint,
-    PASSWORD_RESET_DELIVERY_TOKEN:
-      typeof passwordResetDeliveryToken === 'string'
-        ? passwordResetDeliveryToken.trim()
-        : undefined,
+    INVITATION_TTL: durationValue(environment, 'INVITATION_TTL', '7d'),
+    INVITATION_URL_BASE: invitationUrlBase,
+    EMAIL_CHANGE_TTL: durationValue(environment, 'EMAIL_CHANGE_TTL', '30m'),
+    EMAIL_CHANGE_URL_BASE: emailChangeUrlBase,
+    EMAIL_PROVIDER: emailProvider,
+    RESEND_API_KEY: resendApiKey,
+    EMAIL_FROM: emailFrom,
+    EMAIL_DELIVERY_MAX_ATTEMPTS: integerValue(
+      environment,
+      'EMAIL_DELIVERY_MAX_ATTEMPTS',
+      2,
+      1,
+      3,
+    ),
+    FILE_STORAGE_PROVIDER: fileStorageProvider,
+    UPLOAD_DIR:
+      typeof environment.UPLOAD_DIR === 'string' &&
+      environment.UPLOAD_DIR.trim() !== ''
+        ? environment.UPLOAD_DIR.trim()
+        : 'uploads',
+    FILE_URL_TTL: durationValue(environment, 'FILE_URL_TTL', '10m'),
+    FILE_URL_SIGNING_SECRET:
+      fileUrlSigningSecret ?? 'development-only-file-url-signing-secret',
+    S3_ENDPOINT: s3Endpoint,
+    S3_REGION: s3Region,
+    S3_BUCKET: s3Bucket,
+    S3_ACCESS_KEY_ID: s3AccessKeyId,
+    S3_SECRET_ACCESS_KEY: s3SecretAccessKey,
     WEBHOOK_ENCRYPTION_KEY: webhookEncryptionKey,
     AUTH_RATE_LIMIT_ATTEMPTS: integerValue(
       environment,

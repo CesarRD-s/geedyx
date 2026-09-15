@@ -23,6 +23,10 @@ import { UpdateProfileDto } from './dto/update-profile.dto.js';
 import { ReauthenticateDto } from './dto/reauthenticate.dto.js';
 import { RequestPasswordResetDto } from './dto/request-password-reset.dto.js';
 import { ResetPasswordDto } from './dto/reset-password.dto.js';
+import { AcceptInvitationDto } from './dto/accept-invitation.dto.js';
+import { RequestEmailChangeDto } from './dto/request-email-change.dto.js';
+import { ConfirmEmailChangeDto } from './dto/confirm-email-change.dto.js';
+import { RecentAuthenticationGuard } from './guards/recent-authentication.guard.js';
 import { SessionAuthGuard } from './guards/session-auth.guard.js';
 import { AccountStatusGuard } from './guards/account-status.guard.js';
 import { AUTH_COOKIE_NAME, CSRF_COOKIE_NAME } from './session.constants.js';
@@ -215,6 +219,50 @@ export class AuthController {
       dto.confirmPassword,
       this.auditContext(req),
     );
+  }
+
+  @Post('invitations/accept')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async acceptInvitation(
+    @Req() req: RequestWithId,
+    @Body() dto: AcceptInvitationDto,
+  ) {
+    await this.enforceRateLimit(req, 'invitation-accept', dto.token);
+    await this.authService.acceptInvitation(
+      dto.token,
+      dto.password,
+      dto.confirmPassword,
+      this.auditContext(req),
+    );
+  }
+
+  @Post('email/change-request')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @UseGuards(SessionAuthGuard, AccountStatusGuard, RecentAuthenticationGuard)
+  @ApiCookieAuth()
+  async requestEmailChange(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: RequestEmailChangeDto,
+  ) {
+    await this.enforceRateLimit(req, 'email-change-request', req.user.id);
+    const delivered = await this.authService.requestEmailChange(
+      req.user.id,
+      req.user.companyId,
+      req.user.email,
+      dto.newEmail,
+      this.auditContext(req),
+    );
+    return { accepted: true, delivered };
+  }
+
+  @Post('email/change-confirm')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async confirmEmailChange(
+    @Req() req: RequestWithId,
+    @Body() dto: ConfirmEmailChangeDto,
+  ) {
+    await this.enforceRateLimit(req, 'email-change-confirm', dto.token);
+    await this.authService.confirmEmailChange(dto.token, this.auditContext(req));
   }
 
   private async enforceRateLimit(

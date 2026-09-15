@@ -6,7 +6,7 @@ import {
   getMaxImageBytes,
   imageMimeFileFilter,
 } from '../images/image-upload-options.js';
-import { ImagesModule } from '../images/images.module.js';
+import { FilesModule } from '../files/files.module.js';
 import { PrismaModule } from '../prisma/prisma.module.js';
 import { ProductsController } from './products.controller.js';
 import { ProductsService } from './products.service.js';
@@ -14,7 +14,7 @@ import { ProductsService } from './products.service.js';
 @Module({
   imports: [
     PrismaModule,
-    ImagesModule,
+    FilesModule,
     // Multer options are merged into the FileInterceptor at runtime, so the
     // explicit MAX_IMAGE_SIZE_MB limit and MIME gate are enforced while the
     // body streams in (before the file is fully buffered).

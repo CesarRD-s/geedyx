@@ -11,7 +11,10 @@ export type AuthRateLimitScope =
   | 'reauthenticate'
   | 'change-password'
   | 'reset-request'
-  | 'reset-password';
+  | 'reset-password'
+  | 'invitation-accept'
+  | 'email-change-request'
+  | 'email-change-confirm';
 
 @Injectable()
 export class DurableRateLimitService {

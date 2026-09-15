@@ -7,7 +7,6 @@ import {
   IsOptional,
   IsString,
   MaxLength,
-  MinLength,
 } from 'class-validator';
 
 export class CreateUserDto {
@@ -24,11 +23,6 @@ export class CreateUserDto {
   )
   @IsEmail()
   email: string;
-
-  @IsString()
-  @IsNotEmpty()
-  @MinLength(12)
-  password: string;
 
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim() : value,

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { ConfigService } from '@nestjs/config';
 import { UsersService } from './users.service.js';
 
 describe('UsersService', () => {
@@ -10,7 +11,7 @@ describe('UsersService', () => {
       displayName: null,
       locale: null,
       timeZone: null,
-      status: 'ACTIVE',
+      status: 'INVITED',
       lastLoginAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -25,9 +26,14 @@ describe('UsersService', () => {
             .mockResolvedValue([{ id: 'role-1', code: 'ADMIN' }]),
         },
         $transaction: (callback: (transaction: unknown) => unknown) =>
-          callback({ user: { create } }),
+          callback({
+            user: { create },
+            userInvitation: { create: vi.fn().mockResolvedValue({}) },
+          }),
       } as never,
       audit as never,
+      new ConfigService({ INVITATION_TTL: '7d' }),
+      { deliverInvitation: vi.fn().mockResolvedValue(true) } as never,
     );
 
     await service.create(
@@ -36,7 +42,6 @@ describe('UsersService', () => {
       {
         username: 'operator',
         email: 'operator@geedyx.test',
-        password: 'correct-horse-battery-staple',
         roleIds: ['role-1'],
       },
       { requestId: 'request-1' },
@@ -47,7 +52,7 @@ describe('UsersService', () => {
         action: 'identity.user.create',
         outcome: 'SUCCEEDED',
         targetId: 'user-2',
-        metadata: { roleCount: 1 },
+        metadata: { roleCount: 1, invitation: true },
       }),
       expect.anything(),
     );

@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   ConflictException,
-  Inject,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -15,13 +14,13 @@ import {
   detectImageFormat,
   IMAGE_FORMAT_EXTENSION,
 } from '../images/image-formats.js';
-import { IMAGE_STORAGE } from '../images/image-storage.js';
 import {
   asImageUploadConfig,
   getMaxImageBytes,
 } from '../images/image-upload-options.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import type { ImageStorage } from '../images/image-storage.js';
+import { FileAssetsService } from '../files/file-assets.service.js';
+import type { PendingFileAsset } from '../files/file-assets.service.js';
 import type { Prisma } from '../generated/prisma/client.js';
 import {
   AuditAction,
@@ -42,7 +41,7 @@ const PRODUCT_LIST_SELECT = {
   price: true,
   stock: true,
   lowStockThreshold: true,
-  imageUrl: true,
+  imageAsset: { select: { id: true } },
   isActive: true,
   createdAt: true,
   updatedAt: true,
@@ -58,7 +57,7 @@ const PRODUCT_DETAIL_SELECT = {
   price: true,
   stock: true,
   lowStockThreshold: true,
-  imageUrl: true,
+  imageAsset: { select: { id: true } },
   isActive: true,
   createdAt: true,
   updatedAt: true,
@@ -190,14 +189,6 @@ function hasNoUpdatableFields(dto: UpdateProductDto): boolean {
   );
 }
 
-function toListItem(row: ProductListItemRow): ProductListItem {
-  return { ...row, price: row.price.toNumber() };
-}
-
-function toDetail(row: ProductDetailRow): ProductDetail {
-  return { ...row, price: row.price.toNumber() };
-}
-
 @Injectable()
 export class ProductsService {
   private readonly logger = new Logger(ProductsService.name);
@@ -205,7 +196,7 @@ export class ProductsService {
 
   constructor(
     private readonly prisma: PrismaService,
-    @Inject(IMAGE_STORAGE) private readonly images: ImageStorage,
+    private readonly fileAssets: FileAssetsService,
     config: ConfigService,
     private readonly audit: AuditService,
   ) {
@@ -221,7 +212,7 @@ export class ProductsService {
   ): Promise<ProductDetail> {
     const existing = await this.prisma.product.findUnique({
       where: { id },
-      select: { id: true, imageUrl: true },
+      select: { id: true, imageAssetId: true },
     });
     if (!existing) {
       throw new NotFoundException('Product not found');
@@ -230,10 +221,12 @@ export class ProductsService {
 
     // 1. Persist the new file first so the previous image stays available if
     //    anything below fails.
-    let newImageUrl: string;
+    let pendingAsset: PendingFileAsset;
     try {
-      newImageUrl = await this.images.save(
+      pendingAsset = await this.fileAssets.storeImage(
+        companyId,
         file.buffer,
+        file.mimetype,
         this.imageExtension(file.buffer),
       );
     } catch (error) {
@@ -245,7 +238,15 @@ export class ProductsService {
       .$transaction(async (transaction) => {
         const product = await transaction.product.update({
           where: { id },
-          data: { imageUrl: newImageUrl },
+          data: {
+            imageAsset: {
+              create: {
+                companyId,
+                createdByUserId: actorId,
+                ...pendingAsset,
+              },
+            },
+          },
           select: PRODUCT_DETAIL_SELECT,
         });
         await this.audit.record(
@@ -266,9 +267,9 @@ export class ProductsService {
       .catch((error) => {
         // 2. The DB update failed after the new file was written: clean the new
         //    file up so it does not become orphaned.
-        this.images.delete(newImageUrl).catch((cleanupError) => {
+        this.fileAssets.discardPending(pendingAsset).catch((cleanupError) => {
           this.logger.error(
-            `Failed to clean up image ${newImageUrl}`,
+            `Failed to clean up pending image for product ${id}`,
             cleanupError,
           );
         });
@@ -277,16 +278,16 @@ export class ProductsService {
 
     // 3. DB updated: remove the previous image. A failure here is logged, not
     //    thrown, so it never reverts the product or fails the request.
-    if (existing.imageUrl !== null) {
-      await this.images.delete(existing.imageUrl).catch((error) => {
+    if (existing.imageAssetId !== null) {
+      await this.fileAssets.deleteAsset(existing.imageAssetId).catch((error) => {
         this.logger.error(
-          `Failed to delete old image ${existing.imageUrl}`,
+          `Failed to delete old image asset ${existing.imageAssetId}`,
           error,
         );
       });
     }
 
-    return toDetail(updated);
+    return this.toDetail(updated);
   }
 
   async deleteImage(
@@ -297,24 +298,20 @@ export class ProductsService {
   ): Promise<void> {
     const existing = await this.prisma.product.findUnique({
       where: { id },
-      select: { id: true, imageUrl: true },
+      select: { id: true, imageAssetId: true },
     });
     if (!existing) {
       throw new NotFoundException('Product not found');
     }
-    if (existing.imageUrl === null) {
+    if (existing.imageAssetId === null) {
       // Idempotent: a product without an image is already in the desired state.
       return;
     }
 
-    await this.images.delete(existing.imageUrl).catch((error) => {
-      this.logger.error(`Failed to delete image ${existing.imageUrl}`, error);
-    });
-
     await this.prisma.$transaction(async (transaction) => {
       await transaction.product.update({
         where: { id },
-        data: { imageUrl: null },
+        data: { imageAsset: { disconnect: true }, imageUrl: null },
         select: { id: true },
       });
       await this.audit.record(
@@ -329,6 +326,12 @@ export class ProductsService {
           ...context,
         },
         transaction,
+      );
+    });
+    await this.fileAssets.deleteAsset(existing.imageAssetId).catch((error) => {
+      this.logger.error(
+        `Failed to delete image asset ${existing.imageAssetId}`,
+        error,
       );
     });
   }
@@ -411,7 +414,7 @@ export class ProductsService {
             },
             transaction,
           );
-          return toDetail(created);
+          return this.toDetail(created);
         });
       } catch (error) {
         if (!isPrismaError(error, UNIQUE_VIOLATION)) {
@@ -452,7 +455,7 @@ export class ProductsService {
     ]);
 
     return {
-      data: rows.map((row) => toListItem(row)),
+      data: rows.map((row) => this.toListItem(row)),
       meta: {
         page: query.page,
         limit: query.limit,
@@ -472,7 +475,7 @@ export class ProductsService {
     if (!row) {
       throw new NotFoundException('Product not found');
     }
-    return toDetail(row);
+    return this.toDetail(row);
   }
 
   async findBySlug(slug: string): Promise<ProductDetail> {
@@ -483,7 +486,7 @@ export class ProductsService {
     if (!row) {
       throw new NotFoundException('Product not found');
     }
-    return toDetail(row);
+    return this.toDetail(row);
   }
 
   async update(
@@ -571,7 +574,7 @@ export class ProductsService {
             },
             transaction,
           );
-          return toDetail(updated);
+          return this.toDetail(updated);
         });
       } catch (error) {
         if (!isPrismaError(error, UNIQUE_VIOLATION)) {
@@ -600,7 +603,7 @@ export class ProductsService {
   ): Promise<void> {
     const existing = await this.prisma.product.findUnique({
       where: { id },
-      select: { id: true, imageUrl: true },
+      select: { id: true, imageAssetId: true },
     });
     if (!existing) {
       throw new NotFoundException('Product not found');
@@ -621,16 +624,34 @@ export class ProductsService {
         transaction,
       );
     });
-    if (existing.imageUrl !== null) {
+    if (existing.imageAssetId !== null) {
       // The product is already gone; failures are logged so an orphaned file
       // is not left unnoticed. No garbage collector exists by design.
-      await this.images.delete(existing.imageUrl).catch((error) => {
+      await this.fileAssets.deleteAsset(existing.imageAssetId).catch((error) => {
         this.logger.error(
-          `Failed to delete image ${existing.imageUrl} after deleting product ${id}`,
+          `Failed to delete image asset ${existing.imageAssetId} after deleting product ${id}`,
           error,
         );
       });
     }
+  }
+
+  private toListItem(row: ProductListItemRow): ProductListItem {
+    const { imageAsset, ...product } = row;
+    return {
+      ...product,
+      price: product.price.toNumber(),
+      imageUrl: imageAsset ? this.fileAssets.accessUrl(imageAsset.id) : null,
+    };
+  }
+
+  private toDetail(row: ProductDetailRow): ProductDetail {
+    const { imageAsset, ...product } = row;
+    return {
+      ...product,
+      price: product.price.toNumber(),
+      imageUrl: imageAsset ? this.fileAssets.accessUrl(imageAsset.id) : null,
+    };
   }
 
   private async findAvailableSlug(

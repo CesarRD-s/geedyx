@@ -29,6 +29,6 @@ export class ListUsersDto {
   search?: string;
 
   @IsOptional()
-  @IsIn(['ACTIVE', 'SUSPENDED'])
-  status?: 'ACTIVE' | 'SUSPENDED';
+  @IsIn(['ACTIVE', 'INVITED', 'SUSPENDED'])
+  status?: 'ACTIVE' | 'INVITED' | 'SUSPENDED';
 }

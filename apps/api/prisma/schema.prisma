@@ -15,6 +15,7 @@ datasource db {
 
 enum UserStatus {
   ACTIVE
+  INVITED
   SUSPENDED
 }
 
@@ -35,6 +36,24 @@ enum AuditOutcome {
   DENIED
 }
 
+enum EmailDeliveryStatus {
+  PENDING
+  DELIVERED
+  FAILED
+  SUPPRESSED
+}
+
+enum EmailTemplate {
+  PASSWORD_RESET
+  USER_INVITATION
+  EMAIL_CHANGE_VERIFICATION
+}
+
+enum FileAssetStatus {
+  ACTIVE
+  DELETED
+}
+
 /// The single internal company configured during installation.
 model Company {
   id           String         @id @default(cuid())
@@ -49,6 +68,8 @@ model Company {
   auditEvents  AuditEvent[]
   integrationClients IntegrationClient[]
   webhookEndpoints WebhookEndpoint[]
+  emailDeliveries EmailDelivery[]
+  fileAssets      FileAsset[]
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 }
@@ -70,7 +91,7 @@ model User {
   id           String   @id @default(cuid())
   username     String   @unique
   email        String   @unique
-  passwordHash String
+  passwordHash String?
   companyId    String
   company      Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
   installation Installation? @relation("InstallationOwner")
@@ -83,8 +104,11 @@ model User {
   roles        UserRole[]
   sessions     Session[]
   passwordResetTokens PasswordResetToken[]
+  invitations  UserInvitation[]
+  emailChangeTokens EmailChangeToken[]
   mfaFactors   MfaFactor[]
   mfaRecoveryCodes MfaRecoveryCode[]
+  createdFileAssets FileAsset[] @relation("FileAssetCreator")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -123,6 +147,52 @@ model PasswordResetToken {
   createdAt DateTime @default(now())
 
   @@index([userId, expiresAt])
+}
+
+model UserInvitation {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  acceptedAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId, expiresAt])
+}
+
+model EmailChangeToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  newEmail  String
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId, expiresAt])
+}
+
+/// Delivery evidence intentionally excludes the recipient address, email body
+/// and any link token. Those values exist only while the provider is called.
+model EmailDelivery {
+  id                String              @id @default(cuid())
+  companyId         String?
+  company           Company?            @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  template          EmailTemplate
+  recipientHash     String
+  provider          String
+  status            EmailDeliveryStatus @default(PENDING)
+  attempts          Int                 @default(0)
+  providerMessageId String?
+  lastErrorCode     String?
+  deliveredAt       DateTime?
+  completedAt       DateTime?
+  createdAt         DateTime            @default(now())
+
+  @@index([companyId, createdAt])
+  @@index([template, status, createdAt])
 }
 
 /// Persistent fixed-window counters for security-sensitive API operations.
@@ -361,7 +431,11 @@ model Product {
   price             Decimal  @db.Decimal(10, 2)
   stock             Int      @default(0)
   lowStockThreshold Int      @default(5)
+  /// Deprecated prototype reference. New images use imageAssetId and are never
+  /// exposed through the former public /uploads route.
   imageUrl          String?
+  imageAssetId      String?  @unique
+  imageAsset        FileAsset? @relation(fields: [imageAssetId], references: [id], onDelete: SetNull)
   isActive          Boolean  @default(true)
   categoryId        String
   category          Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
@@ -369,4 +443,28 @@ model Product {
   updatedAt         DateTime @updatedAt
 
   @@index([categoryId])
+}
+
+/// A private object stored outside PostgreSQL. The database retains only
+/// provider-neutral metadata and the opaque storage key, never a public URL.
+model FileAsset {
+  id            String          @id @default(cuid())
+  companyId     String
+  company       Company         @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  createdByUserId String?
+  createdByUser User?           @relation("FileAssetCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  storageProvider String
+  storageKey    String
+  mimeType      String
+  sizeBytes     Int
+  checksum      String
+  status        FileAssetStatus @default(ACTIVE)
+  deletedAt     DateTime?
+  productImage  Product?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@unique([storageProvider, storageKey])
+  @@index([companyId, status, createdAt])
+  @@index([createdByUserId])
 }

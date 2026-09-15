@@ -5,6 +5,10 @@ import argon2 from 'argon2';
 import { createHash } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AuthService } from './auth.service.js';
+import {
+  SystemRoleCode,
+  SYSTEM_ROLE_DEFINITIONS,
+} from './authorization/permissions.js';
 
 const auditContext = { requestId: 'request-1' };
 
@@ -62,6 +66,87 @@ describe('AuthService installation state', () => {
       ),
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(transaction).not.toHaveBeenCalled();
+  });
+
+  it('provisions every system role with its declared permissions at setup', async () => {
+    const roleCreate = vi.fn(({ data }: { data: { code: string } }) => ({
+      id: `role-${data.code.toLowerCase()}`,
+      code: data.code,
+    }));
+    const transactionClient = {
+      company: {
+        create: vi.fn().mockResolvedValue({ id: 'company-1' }),
+        findUniqueOrThrow: vi.fn().mockResolvedValue({
+          locale: 'es',
+          timeZone: 'America/Tegucigalpa',
+          currency: 'HNL',
+        }),
+      },
+      user: {
+        create: vi.fn().mockResolvedValue({
+          id: 'user-1',
+          username: 'owner',
+          email: 'owner@example.com',
+          companyId: 'company-1',
+          displayName: null,
+          locale: null,
+          timeZone: null,
+        }),
+      },
+      role: { create: roleCreate },
+      userRole: { create: vi.fn().mockResolvedValue({}) },
+      installation: { create: vi.fn().mockResolvedValue({}) },
+      session: {
+        findMany: vi.fn().mockResolvedValue([]),
+        create: vi.fn().mockResolvedValue({ id: 'session-1' }),
+      },
+    };
+    const prisma = {
+      installation: { findUnique: vi.fn().mockResolvedValue(null) },
+      $transaction: vi.fn(
+        (callback: (client: typeof transactionClient) => Promise<unknown>) =>
+          callback(transactionClient),
+      ),
+    } as unknown as PrismaService;
+    const service = new AuthService(
+      prisma,
+      new ConfigService(),
+      auditStub() as never,
+    );
+
+    await service.setup(
+      {
+        username: 'owner',
+        email: 'owner@example.com',
+        password: 'correct-horse-battery-staple',
+        confirmPassword: 'correct-horse-battery-staple',
+      },
+      auditContext,
+    );
+
+    expect(roleCreate).toHaveBeenCalledTimes(SYSTEM_ROLE_DEFINITIONS.length);
+    expect(roleCreate.mock.calls.map(([argument]) => argument.data.code)).toEqual(
+      SYSTEM_ROLE_DEFINITIONS.map((role) => role.code),
+    );
+    expect(transactionClient.userRole.create).toHaveBeenCalledWith({
+      data: {
+        userId: 'user-1',
+        roleId: `role-${SystemRoleCode.Owner.toLowerCase()}`,
+      },
+    });
+    expect(roleCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          code: SystemRoleCode.Admin,
+          permissions: {
+            create: expect.arrayContaining([
+              { permission: { connect: { code: 'company.manage' } } },
+              { permission: { connect: { code: 'users.manage' } } },
+            ]),
+          },
+        }),
+      }),
+    );
   });
 });
 
@@ -301,7 +386,7 @@ describe('AuthService password recovery', () => {
     const config = {
       get: vi.fn((key: string, fallback: string) => fallback),
     } as unknown as ConfigService;
-    const delivery = { deliver: vi.fn().mockResolvedValue(true) };
+    const delivery = { deliverPasswordReset: vi.fn().mockResolvedValue(true) };
     const service = new AuthService(
       prisma,
       config,
@@ -311,7 +396,9 @@ describe('AuthService password recovery', () => {
 
     await service.requestPasswordReset(' ADMIN@geedyx.test ', auditContext);
 
-    const resetUrl = new URL(delivery.deliver.mock.calls[0][0].resetUrl);
+    const resetUrl = new URL(
+      delivery.deliverPasswordReset.mock.calls[0][0].resetUrl,
+    );
     const rawToken = resetUrl.searchParams.get('token');
     const storedHash = create.mock.calls[0][0].data.tokenHash as string;
     expect(rawToken).toBeTruthy();
@@ -325,7 +412,7 @@ describe('AuthService password recovery', () => {
       user: { findUnique: vi.fn().mockResolvedValue(null) },
       $transaction: vi.fn(),
     } as unknown as PrismaService;
-    const delivery = { deliver: vi.fn() };
+    const delivery = { deliverPasswordReset: vi.fn() };
     const service = new AuthService(
       prisma,
       new ConfigService(),
@@ -336,7 +423,7 @@ describe('AuthService password recovery', () => {
     await expect(
       service.requestPasswordReset('missing@example.com', auditContext),
     ).resolves.toBeUndefined();
-    expect(delivery.deliver).not.toHaveBeenCalled();
+    expect(delivery.deliverPasswordReset).not.toHaveBeenCalled();
   });
 
   it('consumes one valid token and revokes every active session', async () => {
@@ -385,6 +472,109 @@ describe('AuthService password recovery', () => {
       data: { usedAt: expect.any(Date) },
     });
     expect(userUpdate).toHaveBeenCalledOnce();
+    expect(sessionUpdate).toHaveBeenCalledWith({
+      where: { userId: 'user-1', revokedAt: null },
+      data: { revokedAt: expect.any(Date) },
+    });
+  });
+});
+
+describe('AuthService invitation and email change', () => {
+  it('activates an invited account after consuming its token', async () => {
+    const invitationUpdate = vi.fn().mockResolvedValue({ count: 1 });
+    const userUpdate = vi.fn().mockResolvedValue({});
+    const transactionClient = {
+      userInvitation: {
+        findUnique: vi.fn().mockResolvedValue({
+          id: 'invitation-1',
+          userId: 'user-1',
+          acceptedAt: null,
+          expiresAt: new Date(Date.now() + 60_000),
+          user: { companyId: 'company-1', status: 'INVITED' },
+        }),
+        updateMany: invitationUpdate,
+      },
+      user: { update: userUpdate },
+    };
+    const service = new AuthService(
+      {
+        $transaction: vi.fn(
+          (callback: (client: typeof transactionClient) => Promise<unknown>) =>
+            callback(transactionClient),
+        ),
+      } as unknown as PrismaService,
+      new ConfigService(),
+      auditStub() as never,
+    );
+
+    await service.acceptInvitation(
+      'invitation-token',
+      'new-password-value',
+      'new-password-value',
+      auditContext,
+    );
+
+    expect(invitationUpdate).toHaveBeenCalledWith({
+      where: {
+        id: 'invitation-1',
+        acceptedAt: null,
+        expiresAt: { gt: expect.any(Date) },
+      },
+      data: { acceptedAt: expect.any(Date) },
+    });
+    expect(userUpdate).toHaveBeenCalledWith({
+      where: { id: 'user-1' },
+      data: expect.objectContaining({
+        status: 'ACTIVE',
+        passwordHash: expect.any(String),
+      }),
+    });
+  });
+
+  it('confirms an email change once and revokes every active session', async () => {
+    const tokenUpdate = vi.fn().mockResolvedValue({ count: 1 });
+    const userUpdate = vi.fn().mockResolvedValue({});
+    const sessionUpdate = vi.fn().mockResolvedValue({ count: 2 });
+    const transactionClient = {
+      emailChangeToken: {
+        findUnique: vi.fn().mockResolvedValue({
+          id: 'change-1',
+          userId: 'user-1',
+          newEmail: 'new@geedyx.test',
+          usedAt: null,
+          expiresAt: new Date(Date.now() + 60_000),
+          user: { companyId: 'company-1', status: 'ACTIVE' },
+        }),
+        updateMany: tokenUpdate,
+      },
+      user: { update: userUpdate },
+      session: { updateMany: sessionUpdate },
+    };
+    const service = new AuthService(
+      {
+        $transaction: vi.fn(
+          (callback: (client: typeof transactionClient) => Promise<unknown>) =>
+            callback(transactionClient),
+        ),
+      } as unknown as PrismaService,
+      new ConfigService(),
+      auditStub() as never,
+    );
+
+    await service.confirmEmailChange('change-token', auditContext);
+
+    expect(tokenUpdate).toHaveBeenCalledWith({
+      where: {
+        id: 'change-1',
+        usedAt: null,
+        expiresAt: { gt: expect.any(Date) },
+      },
+      data: { usedAt: expect.any(Date) },
+    });
+    expect(userUpdate).toHaveBeenCalledWith({
+      where: { id: 'user-1' },
+      data: { email: 'new@geedyx.test' },
+    });
     expect(sessionUpdate).toHaveBeenCalledWith({
       where: { userId: 'user-1', revokedAt: null },
       data: { revokedAt: expect.any(Date) },

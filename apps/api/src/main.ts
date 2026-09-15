@@ -6,7 +6,6 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import type { Response } from 'express';
 import { AppModule } from './app.module.js';
-import { configureStaticAssets } from './static-assets.js';
 import { ApiExceptionFilter } from './http/api-exception.filter.js';
 import type { RequestWithId } from './http/request-context.middleware.js';
 
@@ -27,8 +26,6 @@ async function bootstrap() {
   });
 
   app.use(cookieParser());
-  configureStaticAssets(app);
-
   // Behind a reverse proxy the throttler needs the real client IP; otherwise
   // rate limits are keyed on the proxy and effectively shared by every visitor.
   if (config.get<boolean>('TRUST_PROXY', false)) {
