@@ -1,0 +1,28 @@
+{
+  "name": "@geedyx/database",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate": "prisma generate --schema prisma/schema.prisma",
+    "migrate": "prisma migrate dev --schema prisma/schema.prisma",
+    "migrate:deploy": "prisma migrate deploy --schema prisma/schema.prisma",
+    "status": "prisma migrate status --schema prisma/schema.prisma",
+    "seed": "tsx scripts/seed.ts",
+    "reset": "tsx scripts/reset.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "7.10.0",
+    "@prisma/client": "7.10.0",
+    "dotenv": "^17.2.2",
+    "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "prisma": "7.10.0",
+    "@types/pg": "^8.15.5",
+    "@types/node": "^24.1.0",
+    "tsx": "^4.19.3",
+    "typescript": "5.9.3"
+  }
+}

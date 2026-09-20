@@ -1,0 +1,31 @@
+{
+  "name": "@geedyx/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@geedyx/contracts": "workspace:*",
+    "lucide-react": "^1.43.0",
+    "next": "16.3.4",
+    "next-themes": "^0.4.6",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.14",
+    "@types/node": "^24.1.0",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "eslint": "^9.38.0",
+    "eslint-config-next": "16.3.4",
+    "prettier": "^3.6.2",
+    "tailwindcss": "^4.1.14",
+    "typescript": "5.9.3"
+  }
+}

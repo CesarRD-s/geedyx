@@ -1,0 +1,140 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum InstallationStatus {
+  PENDING
+  COMPLETED
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+  LOCKED
+}
+
+enum AuditOutcome {
+  SUCCESS
+  FAILURE
+}
+
+model Installation {
+  id          String             @id @default(cuid())
+  key         String             @unique @default("default")
+  status      InstallationStatus @default(PENDING)
+  startedAt   DateTime           @default(now())
+  completedAt DateTime?
+  companyId   String?            @unique
+  ownerId     String?            @unique
+  company     Company?           @relation(fields: [companyId], references: [id])
+  owner       User?              @relation("InstallationOwner", fields: [ownerId], references: [id])
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+}
+
+model Company {
+  id           String        @id @default(cuid())
+  name         String
+  locale       String        @default("es")
+  timeZone     String?
+  currency     String?
+  dateFormat   String        @default("DD/MM/YYYY")
+  timeFormat   String        @default("24")
+  installation Installation?
+  users        User[]
+  roles        Role[]
+  auditEvents  AuditEvent[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model User {
+  id                  String        @id @default(cuid())
+  companyId           String
+  displayName         String
+  email               String        @unique
+  passwordHash        String
+  status              UserStatus    @default(ACTIVE)
+  company             Company       @relation(fields: [companyId], references: [id])
+  roles               UserRole[]
+  ownedInstallation   Installation? @relation("InstallationOwner")
+  auditEvents         AuditEvent[]  @relation("AuditActor")
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+}
+
+model Role {
+  id          String           @id @default(cuid())
+  companyId   String
+  code        String
+  name        String
+  isSystem    Boolean          @default(false)
+  company     Company          @relation(fields: [companyId], references: [id])
+  users       UserRole[]
+  permissions RolePermission[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([companyId, code])
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  code        String           @unique
+  description String?
+  roles       RolePermission[]
+}
+
+model UserRole {
+  userId String
+  roleId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission  Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+model AuditEvent {
+  id         String        @id @default(cuid())
+  companyId  String?
+  actorUserId String?
+  module     String
+  action     String
+  outcome    AuditOutcome
+  entityType String?
+  entityId   String?
+  requestId  String?
+  metadata   Json?
+  occurredAt DateTime      @default(now())
+  company    Company?      @relation(fields: [companyId], references: [id])
+  actor      User?         @relation("AuditActor", fields: [actorUserId], references: [id])
+
+  @@index([companyId, occurredAt])
+  @@index([module, action, occurredAt])
+}
+
+model IdempotencyRecord {
+  id             String   @id @default(cuid())
+  operation      String
+  key            String
+  requestHash    String
+  responseStatus Int
+  responseBody   Json
+  createdAt      DateTime @default(now())
+  expiresAt      DateTime?
+
+  @@unique([operation, key])
+}

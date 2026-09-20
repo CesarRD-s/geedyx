@@ -1,0 +1,97 @@
+@import 'tailwindcss';
+
+:root {
+  --background: #fafafa;
+  --surface: #ffffff;
+  --surface-subtle: #f4f4f5;
+  --foreground: #18181b;
+  --secondary: #52525b;
+  --muted: #71717a;
+  --border: #e4e4e7;
+  --border-strong: #d4d4d8;
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-active: #1e40af;
+  --accent-foreground: #ffffff;
+  --accent-muted: #eff6ff;
+  --success: #16a34a;
+  --success-strong: #15803d;
+  --warning: #f59e0b;
+  --danger: #dc2626;
+  --info: #2563eb;
+  --overlay: rgb(15 23 42 / 0.5);
+  --input: #ffffff;
+}
+
+html.dark {
+  --background: #0f1115;
+  --surface: #17191f;
+  --surface-subtle: #202329;
+  --foreground: #f4f4f5;
+  --secondary: #d4d4d8;
+  --muted: #a1a1aa;
+  --border: #2b2d32;
+  --border-strong: #454850;
+  --accent: #3b82f6;
+  --accent-hover: #2563eb;
+  --accent-active: #1d4ed8;
+  --accent-muted: rgb(59 130 246 / 0.14);
+  --success: #22c55e;
+  --success-strong: #4ade80;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #60a5fa;
+  --overlay: rgb(0 0 0 / 0.62);
+  --input: #141d2e;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-subtle: var(--surface-subtle);
+  --color-foreground: var(--foreground);
+  --color-secondary: var(--secondary);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-active: var(--accent-active);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-muted: var(--accent-muted);
+  --color-success: var(--success);
+  --color-success-strong: var(--success-strong);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+  --font-sans: 'Source Sans 3', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, monospace;
+}
+
+* {
+  border-color: var(--border);
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+html {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

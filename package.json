@@ -1,0 +1,31 @@
+{
+  "name": "geedyx",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.19.0",
+  "engines": {
+    "node": ">=24.16.0",
+    "pnpm": ">=11.19.0"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter @geedyx/api --filter @geedyx/web dev",
+    "dev:api": "pnpm --filter @geedyx/api dev",
+    "dev:web": "pnpm --filter @geedyx/web dev",
+    "build": "pnpm --filter @geedyx/contracts build && pnpm --filter @geedyx/database generate && pnpm --filter @geedyx/api build && pnpm --filter @geedyx/web build",
+    "lint": "pnpm -r --if-present lint",
+    "typecheck": "pnpm --filter @geedyx/contracts build && pnpm -r --if-present typecheck",
+    "test": "pnpm -r --if-present test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "validate": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "db:generate": "pnpm --filter @geedyx/database generate",
+    "db:migrate": "pnpm --filter @geedyx/database migrate",
+    "db:migrate:deploy": "pnpm --filter @geedyx/database migrate:deploy",
+    "db:status": "pnpm --filter @geedyx/database status",
+    "db:seed": "pnpm --filter @geedyx/database seed",
+    "db:reset": "pnpm --filter @geedyx/database reset"
+  },
+  "devDependencies": {
+    "prettier": "^3.6.2"
+  }
+}
