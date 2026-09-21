@@ -18,3 +18,17 @@ pnpm validate
 ```
 
 Si una validación depende de PostgreSQL, documentar la evidencia y la dependencia pendiente en `docs/VALIDATION-BASE.md` o en el estado del módulo correspondiente.
+
+## Estrategia de pruebas
+
+- Escribir pruebas orientadas a comportamiento y riesgo, no una prueba para cada línea o función trivial.
+- Cubrir siempre los casos exitosos principales, validaciones, errores esperados y efectos persistidos cuando apliquen.
+- Priorizar reglas de negocio, persistencia, endpoints críticos, autenticación, permisos, auditoría, transacciones e idempotencia.
+- Evitar probar detalles internos de implementación que no formen parte del contrato del módulo.
+- Preferir una combinación proporcional de pruebas unitarias, integración y end-to-end según el riesgo del módulo.
+
+## Control de commits
+
+- No crear commits automáticamente.
+- Dejar los cambios validados en el árbol de trabajo hasta recibir una instrucción explícita para hacer commit.
+- No ejecutar `git push` sin una instrucción explícita y un remoto confirmado.

@@ -11,6 +11,7 @@
     "dev": "pnpm --parallel --filter @geedyx/api --filter @geedyx/web dev",
     "dev:api": "pnpm --filter @geedyx/api dev",
     "dev:web": "pnpm --filter @geedyx/web dev",
+    "api:smoke": "pnpm --filter @geedyx/api smoke:database",
     "build": "pnpm --filter @geedyx/contracts build && pnpm --filter @geedyx/database generate && pnpm --filter @geedyx/api build && pnpm --filter @geedyx/web build",
     "lint": "pnpm -r --if-present lint",
     "typecheck": "pnpm --filter @geedyx/contracts build && pnpm -r --if-present typecheck",

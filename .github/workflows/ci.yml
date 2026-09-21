@@ -62,3 +62,15 @@ jobs:
 
       - name: Validate repository
         run: pnpm validate
+
+      - name: Start API
+        run: |
+          nohup pnpm --filter @geedyx/api start > api.log 2>&1 &
+          echo $! > api.pid
+
+      - name: Validate API and database connection
+        run: pnpm api:smoke
+
+      - name: Show API log
+        if: always()
+        run: cat api.log || true

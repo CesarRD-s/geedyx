@@ -53,6 +53,7 @@ URLs locales:
 | `pnpm dev:api`           | Solo NestJS.                                        |
 | `pnpm build`             | Contratos, Prisma, API y Web.                       |
 | `pnpm validate`          | Formato, lint, tipos, pruebas y build.              |
+| `pnpm api:smoke`         | Smoke test API + PostgreSQL con una base limpia.    |
 | `pnpm db:migrate`        | Migración de desarrollo.                            |
 | `pnpm db:migrate:deploy` | Migraciones en un entorno desplegado.               |
 | `pnpm db:status`         | Estado de migraciones.                              |

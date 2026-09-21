@@ -21,10 +21,40 @@ Resultado verificado:
 - Prettier: correcto.
 - ESLint API y Web: correcto.
 - TypeScript en contratos, database, API y Web: correcto.
-- Vitest: 1 archivo, 2 pruebas, 2 correctas.
+- Vitest: 2 archivos, 5 pruebas, 5 correctas.
 - Prisma Client: generado correctamente.
 - NestJS: compilado correctamente.
 - Next.js: compilado correctamente con Turbopack.
+
+## Smoke test de API con base de datos
+
+El smoke test automatizado se ejecuta con:
+
+```text
+pnpm api:smoke
+```
+
+Con la API levantada y una base limpia, valida:
+
+- Conexión real API → PostgreSQL mediante `GET /health/ready`.
+- Estado inicial `PENDING` mediante `GET /api/v1/setup/status`.
+- Error esperado `422` para un owner inválido.
+- Creación real del Owner y transición a `COMPLETED`.
+- Repetición idempotente de la misma operación.
+- Error esperado `409` al reutilizar la clave con datos diferentes.
+- Estado final `COMPLETED`.
+
+El workflow de CI levanta PostgreSQL, aplica migraciones, ejecuta el seed,
+compila la API y ejecuta este smoke test automáticamente.
+
+Resultado verificado localmente:
+
+- Contenedor `geedyx-postgres-1`: `healthy`.
+- `pnpm db:migrate:deploy`: migración inicial aplicada correctamente.
+- `pnpm db:seed`: instalación inicial y permisos creados correctamente.
+- `pnpm db:status`: esquema actualizado.
+- API compilada: inició correctamente en el puerto `4000`.
+- `pnpm api:smoke`: conexión API → PostgreSQL y escenarios esperados correctos.
 
 ## Smoke test de API sin base de datos
 
@@ -36,13 +66,19 @@ La API compilada se levantó sin PostgreSQL para verificar la separación entre 
 
 Esto confirma que la caída de PostgreSQL no impide saber si el proceso está vivo y que el detalle técnico no se expone al cliente.
 
-## Pendiente de infraestructura local
+## Estado de infraestructura local
 
-El entorno de trabajo no tiene Docker ni PostgreSQL instalados. Por eso todavía no se ejecutaron:
+Docker Desktop está instalado y activo. PostgreSQL se está ejecutando mediante
+`docker compose` en el contenedor `geedyx-postgres-1`.
+
+Los comandos ejecutados fueron:
 
 ```text
-pnpm db:migrate
+docker compose up -d postgres
+pnpm db:migrate:deploy
 pnpm db:seed
+pnpm api:smoke
 ```
 
-En una máquina con PostgreSQL disponible, el siguiente paso es aplicar la migración inicial y validar el flujo completo de `PENDING`, creación del Owner, `COMPLETED`, auditoría e idempotencia mediante pruebas de integración.
+La API temporal se detuvo después de la prueba. El contenedor PostgreSQL quedó
+activo para continuar el desarrollo local.
