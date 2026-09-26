@@ -26,6 +26,45 @@ Resultado verificado:
 - NestJS: compilado correctamente.
 - Next.js: compilado correctamente con Turbopack.
 
+## Preparación del entorno
+
+La preparación también valida las condiciones que no corresponde simular en la
+interfaz:
+
+- `pnpm install --frozen-lockfile` confirma que las dependencias coinciden con
+  `pnpm-lock.yaml`;
+- `ConfigModule` valida las variables de entorno antes de iniciar la API;
+- `pnpm db:generate`, `pnpm db:migrate:deploy` y `pnpm db:seed` confirman que
+  Prisma, el esquema y los datos iniciales pueden prepararse;
+- `pnpm validate` confirma formato, lint, tipos, pruebas y compilaciones;
+- CI repite esta secuencia en un entorno limpio con PostgreSQL.
+
+Si falta una dependencia, una variable inválida o falla un script de
+preparación, el proceso de arranque o CI falla. La pantalla `/setup` no muestra
+un check ficticio para esos casos: muestra únicamente estados respaldados por
+la API.
+
+## Diagnóstico durante el desarrollo
+
+La API utiliza los logs de NestJS para registrar únicamente datos operativos
+seguros:
+
+- `health.ready.failed`: la comprobación de PostgreSQL falló;
+- `setup.status.failed`: no se pudo consultar el estado de instalación;
+- `setup.status.incomplete`: falta la fila `Installation` o el catálogo de
+  permisos;
+- `setup.status.checked`: estado encontrado, cantidad de permisos y `ready`;
+- `setup.owner.failed`: ocurrió un error inesperado al crear el Owner.
+
+Cada registro incluye el `requestId`, por lo que puede relacionarse con la
+respuesta que recibió la Web. En desarrollo, la Web también registra en la
+consola del navegador si la API no responde o si devuelve un error HTTP,
+incluyendo ruta, estado, código y `requestId`.
+
+No se registran contraseñas, cookies, payloads sensibles ni cadenas de
+conexión. Si aparece `permissionCatalog: "missing"` o
+`installationRecord: "missing"`, debe ejecutarse `pnpm db:seed`.
+
 ## Smoke test de API con base de datos
 
 El smoke test automatizado se ejecuta con:

@@ -60,17 +60,21 @@ interacción, no a la identidad.
 | Tailwind CSS | `4` | Layout, responsive, estados, spacing y utilities. |
 | `@tailwindcss/postcss` | `^4` | Integración de Tailwind con PostCSS. |
 | `lucide-react` | `^1.43.0` | Iconografía completa de la interfaz. |
+| `clsx` | `^2.1.1` | Composición de clases Tailwind mediante `cn()`. |
 | `next-themes` | `^0.4.6` | Light, Dark, System y persistencia del tema. |
+| `@tanstack/react-query` | `^5.103.1` | Cache, revalidación y estado remoto. |
+| `react-hook-form` | `^7.88.0` | Estado y eventos de formularios. |
+| `zod` | `^4.6.5` | Validación declarativa de formularios. |
+| `@hookform/resolvers` | `^5.9.1` | Integración de Zod con React Hook Form. |
+| `date-fns` | `^4.4.0` | Formateo y operaciones de fechas. |
 | ESLint | `9` | Reglas de calidad del código. |
 | `eslint-config-next` | `16.3.4` | Reglas específicas de Next.js. |
 
 ### Dependencias que no deben agregarse sin una razón concreta
 
 No se utiliza un UI kit genérico, una librería de animación ni otra familia de
-iconos. React Hook Form + Zod son opciones para formularios futuros que tengan
-validación compleja. TanStack Query es una opción futura para cache e
-invalidación coordinada. Ninguna de las dos opciones forma parte de las
-dependencias activas por defecto.
+iconos. TanStack Table y una librería UI permanecen diferidas hasta que un
+módulo demuestre que las necesita.
 
 ## 4. Arquitectura visual del frontend
 
@@ -85,6 +89,34 @@ La UI se compone de cuatro niveles:
 
 Las primitives son la única fuente permitida para los controles recurrentes.
 Una pantalla nueva debe componerlas, no crear estilos paralelos.
+
+### Organización de componentes
+
+Los componentes de `apps/web/src/components` se separan por responsabilidad:
+
+```text
+components/
+├── brand/
+├── forms/
+├── providers/
+└── theme/
+```
+
+Las clases Tailwind se componen con `src/lib/cn.ts` y `clsx`. Cada `className`
+debe usar un arreglo vertical con grupos legibles por responsabilidad visual,
+por ejemplo layout, superficie, espaciado, tipografía, estados e interacción:
+
+```tsx
+className={cn([
+  'flex items-center justify-center',
+  'rounded-md border border-border',
+  'bg-surface text-foreground',
+  'px-4 py-2',
+])}
+```
+
+No se separa cada utilidad Tailwind en una línea individual ni se mantienen
+cadenas extensas horizontales.
 
 ## 5. Paleta y tokens semánticos
 
@@ -113,7 +145,7 @@ Tailwind. Los componentes consumen el nombre semántico, no un color raw.
 | Variable | Utility | Light | Dark | Uso |
 | --- | --- | --- | --- | --- |
 | `--border` | `border-border` | `#e4e4e7` | `#2b2d32` | Filas, divisores y límites sutiles. |
-| `--border-strong` | `border-border-strong` | `#d4d4d8` | `#454850` | Inputs, outlines y marcos destacados. |
+| `--border-strong` | `border-border-strong` | `#d4d4d8` | `#454850` | Outlines y marcos destacados. |
 
 ### Accent configurable
 
@@ -185,19 +217,24 @@ cuando aporte información, un icono semántico.
 | Variable | Utility o uso | Light | Dark |
 | --- | --- | --- | --- |
 | `--overlay` | `bg-overlay`, backdrop | `rgba(15, 23, 42, .5)` | `rgb(0 0 0 / .62)` |
-| `--input` | `bg-input` | `#ffffff` | `#141d2e` |
+| `--input` | `bg-input` | `#ffffff` | `#121419` |
+| `--input-option` | `select option` | `#ffffff` | `#17191f` |
+| `--input-focus-ring` | `focus:ring-input-focus-ring` | `rgb(37 99 235 / .75)` | `rgb(96 165 250 / .75)` |
+| `--input-border` | `border-input-border`, borde visible de campos | `#c4c4cc` | `#4d5563` |
 | `--selection` | selección nativa | `#dbeafe` | `rgb(59 130 246 / .35)` |
 | `--shadow-panel` | `shadow-panel`, elementos flotantes | `0 10px 25px -5px rgb(15 23 42 / .15), 0 4px 8px -4px rgb(15 23 42 / .1)` | `0 10px 25px -5px rgb(2 6 23 / .5), 0 4px 8px -4px rgb(2 6 23 / .4)` |
 
 ## 6. Temas
 
-La UI ofrece Light, Dark y System.
+La UI usa System como valor predeterminado y respeta la preferencia del sistema
+operativo. Después, el control visible alterna únicamente entre Light y Dark.
 
 - `next-themes` usa `attribute="class"`, `defaultTheme="system"` y
   `enableSystem`.
 - El tema se aplica mediante `.dark` en `<html>`.
 - `html` usa `color-scheme: light` y `html.dark` usa `color-scheme: dark`.
-- El cambio de tema usa `ThemeToggle`, un botón de icono discreto.
+- El cambio de tema usa `ThemeToggle`, un botón de icono discreto que alterna
+  entre Light y Dark sin recorrer System.
 - Se utiliza un guard de montaje para evitar diferencias entre servidor y
   cliente.
 - `<html>` usa `suppressHydrationWarning`.
@@ -209,9 +246,9 @@ La UI ofrece Light, Dark y System.
 ### Familias
 
 - **Source Sans 3**: familia principal de interfaz, variable, pesos 300, 400,
-  500, 600 y 700.
+  500, 600 y 700. Se carga mediante `next/font/google`.
 - **Geist Mono**: únicamente para SKU, slug, IDs y valores que necesiten
-  alineación tabular.
+  alineación tabular. Se carga mediante `next/font/google`.
 
 Source Sans 3 se expone como `--font-source` y `--font-sans`. Geist Mono se
 expone como `--font-geist-mono` y `--font-mono`.
@@ -272,7 +309,8 @@ caso. No usar `rounded-3xl`, `rounded-[20px]` ni radius arbitrario.
 ### Bordes y sombras
 
 - `border-border`: filas, divisores y límites sutiles.
-- `border-border-strong`: inputs, outlines, focus-worthy edges y drop zones.
+- `border-input-border`: borde visible de inputs y controles de texto.
+- `border-border-strong`: outlines, focus-worthy edges y drop zones.
 - No bordear todos los elementos; primero usar superficie y spacing.
 - `shadow-panel` solo para dialogs, dropdowns, popovers, drawers, menús
   flotantes y tarjeta de login.
@@ -354,7 +392,9 @@ Reglas:
 - Base normal: `grid-cols-1 md:grid-cols-2 xl:grid-cols-3`.
 - Campos largos o dependientes pueden ocupar todo el ancho.
 - Separación estándar: `space-y-4`.
-- Focus: `border-accent` y `ring-accent/25`.
+- Focus de inputs: conserva el borde normal de 1 px y agrega un ring externo de
+  2 px en accent, sin cambiar el color del borde.
+- Otros controles pueden usar un ring discreto cuando no tengan un borde propio.
 - Error inmediatamente debajo del campo.
 - Requisitos comunicados por label o helper, no solo por rojo o asterisco.
 - Disabled: fondo muted, texto muted y `cursor-not-allowed`.

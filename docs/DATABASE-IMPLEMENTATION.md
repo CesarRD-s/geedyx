@@ -38,12 +38,20 @@ pnpm db:seed
 
 `SHADOW_DATABASE_URL` se reserva para `prisma migrate dev` y las operaciones de desarrollo que necesitan una base shadow. No se utiliza como base funcional.
 
-## Pendiente para cerrar la validación de base de datos
+## Estado de validación
 
-El entorno actual no tiene PostgreSQL ni Docker. La migración fue generada y el schema fue validado offline, pero falta ejecutarla contra una instancia real y cubrir con pruebas e2e:
+PostgreSQL 17 se valida localmente mediante Docker Desktop y el contenedor
+`geedyx-postgres-1`. La base queda preparada con:
 
-1. Seed idempotente de instalación y permisos.
-2. Creación concurrente del Owner.
-3. Reintento con `Idempotency-Key` igual y con payload diferente.
-4. Rollback completo ante error transaccional.
-5. Lectura de `health/ready` con PostgreSQL disponible.
+- migraciones aplicadas mediante `pnpm db:migrate:deploy`;
+- seed idempotente de la instalación y permisos;
+- Prisma Client generado;
+- esquema actualizado según `pnpm db:status`;
+- conexión API → PostgreSQL confirmada por `GET /health/ready`;
+- lectura real de `Installation` confirmada por `GET /api/v1/setup/status`.
+
+La validación ampliada todavía debe cubrir como escenarios específicos:
+
+1. Creación concurrente del Owner.
+2. Reintento con `Idempotency-Key` igual y con payload diferente.
+3. Rollback completo ante error transaccional.
