@@ -39,3 +39,26 @@ export type OwnerCreated = {
   };
   installationStatus: 'COMPLETED';
 };
+
+export type AuthUser = {
+  id: string;
+  displayName: string;
+  email: string;
+  status: 'ACTIVE' | 'DISABLED' | 'LOCKED';
+  passwordChangeRequired: boolean;
+  roles: string[];
+  permissions: string[];
+};
+
+export type AuthSession = {
+  user: AuthUser;
+  expiresAt: string;
+};
+
+export type CsrfToken = {
+  token: string;
+};
+
+export type LogoutResult = {
+  loggedOut: true;
+};

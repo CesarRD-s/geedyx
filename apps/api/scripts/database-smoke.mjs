@@ -5,6 +5,7 @@ const smokeId = randomUUID();
 const ownerEmail = `ci-owner-${smokeId}@example.com`;
 const ownerPassword = `CiOnly-${smokeId}!A1`;
 const idempotencyKey = `ci-smoke-${smokeId}`;
+const cookies = new Map();
 
 function sleep(milliseconds) {
   return new Promise((resolve) => {
@@ -13,10 +14,30 @@ function sleep(milliseconds) {
 }
 
 async function request(path, options = {}) {
+  const headers = {
+    ...(options.headers ?? {}),
+  };
+  if (cookies.size > 0) {
+    headers.Cookie = [...cookies.entries()]
+      .map(([name, value]) => `${name}=${value}`)
+      .join('; ');
+  }
+
   const response = await fetch(`${apiUrl}${path}`, {
     ...options,
+    headers,
     signal: AbortSignal.timeout(5_000),
   });
+  for (const setCookie of response.headers.getSetCookie()) {
+    const [pair] = setCookie.split(';', 1);
+    const separator = pair.indexOf('=');
+    if (separator < 0) continue;
+
+    const name = pair.slice(0, separator);
+    const value = pair.slice(separator + 1);
+    if (!value) cookies.delete(name);
+    else cookies.set(name, value);
+  }
   const rawBody = await response.text();
 
   return {
@@ -147,6 +168,68 @@ async function run() {
     completedStatus.body?.data?.installationStatus === 'COMPLETED',
     'Completed installation status must be COMPLETED.',
   );
+
+  const csrf = await request('/api/v1/auth/csrf');
+  assertStatus(csrf, 200, 'CSRF token creation');
+  const csrfToken = csrf.body?.data?.token;
+  assertCondition(
+    typeof csrfToken === 'string' && csrfToken.length >= 32,
+    'CSRF token must be returned to the client.',
+  );
+
+  const missingCsrf = await request('/api/v1/auth/login', {
+    body: JSON.stringify({ email: ownerEmail, password: ownerPassword }),
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    method: 'POST',
+  });
+  assertStatus(missingCsrf, 403, 'Login without CSRF');
+  assertCondition(
+    missingCsrf.body?.code === 'CSRF_INVALID',
+    'Login without CSRF must return CSRF_INVALID.',
+  );
+
+  const login = await request('/api/v1/auth/login', {
+    body: JSON.stringify({ email: ownerEmail, password: ownerPassword }),
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': csrfToken,
+    },
+    method: 'POST',
+  });
+  assertStatus(login, 200, 'Owner login');
+  assertCondition(
+    login.body?.data?.user?.email === ownerEmail,
+    'Owner login must return the authenticated user.',
+  );
+
+  const currentSession = await request('/api/v1/auth/me');
+  assertStatus(currentSession, 200, 'Current session');
+  assertCondition(
+    currentSession.body?.data?.user?.email === ownerEmail,
+    'Current session must resolve the logged-in owner.',
+  );
+
+  const missingLogoutCsrf = await request('/api/v1/auth/logout', {
+    method: 'POST',
+  });
+  assertStatus(missingLogoutCsrf, 403, 'Logout without CSRF');
+
+  const logout = await request('/api/v1/auth/logout', {
+    headers: {
+      'X-CSRF-Token': csrfToken,
+    },
+    method: 'POST',
+  });
+  assertStatus(logout, 200, 'Owner logout');
+  assertCondition(
+    logout.body?.data?.loggedOut === true,
+    'Owner logout must revoke the current session.',
+  );
+
+  const sessionAfterLogout = await request('/api/v1/auth/me');
+  assertStatus(sessionAfterLogout, 401, 'Session after logout');
 
   console.log('Database and API smoke test passed.');
 }

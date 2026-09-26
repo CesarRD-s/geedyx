@@ -2,11 +2,16 @@ import type { Response } from 'express';
 import { describe, expect, it, vi } from 'vitest';
 import { HealthController } from './health.controller';
 import type { PrismaService } from '../prisma/prisma.service';
+import type { RequestWithId } from '../http/request-id.middleware';
 
 function createResponse() {
   return {
     status: vi.fn().mockReturnThis(),
   } as unknown as Response;
+}
+
+function createRequest(): RequestWithId {
+  return { requestId: 'request-health-test' } as RequestWithId;
 }
 
 describe('HealthController', () => {
@@ -29,7 +34,7 @@ describe('HealthController', () => {
     const controller = new HealthController(prisma);
     const response = createResponse();
 
-    await expect(controller.ready(response)).resolves.toEqual({
+    await expect(controller.ready(createRequest(), response)).resolves.toEqual({
       status: 'ok',
       dependencies: {
         database: 'up',
@@ -45,7 +50,7 @@ describe('HealthController', () => {
     const controller = new HealthController(prisma);
     const response = createResponse();
 
-    await expect(controller.ready(response)).resolves.toEqual({
+    await expect(controller.ready(createRequest(), response)).resolves.toEqual({
       status: 'not_ready',
       dependencies: {
         database: 'down',

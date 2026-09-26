@@ -1,65 +1,134 @@
-import { ArrowRight, CheckCircle2, Database, Server } from 'lucide-react';
-import { BrandLogo } from '../components/brand-logo';
+'use client';
 
-const checks = [
-  {
-    label: 'Web administrativa',
-    detail: 'Next.js App Router',
-    icon: Server,
-  },
-  {
-    label: 'API versionada',
-    detail: '/api/v1 y Problem Details',
-    icon: ArrowRight,
-  },
-  {
-    label: 'Base de datos',
-    detail: 'PostgreSQL + Prisma',
-    icon: Database,
-  },
-];
+import { useQuery } from '@tanstack/react-query';
+import type { AuthSession, SetupStatus } from '@geedyx/contracts';
+import { LoaderCircle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { BrandLogo } from '../components/brand/brand-logo';
+import { ThemeToggle } from '../components/theme/theme-toggle';
+import { ApiClientError, getCurrentSession, getSetupStatus } from '../lib/api-client';
+import { cn } from '../lib/cn';
 
-export default function HomePage() {
+const setupQueryKey = ['setup', 'status'];
+const sessionQueryKey = ['auth', 'session'];
+
+function EntryShell({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <main className="min-h-dvh bg-background px-4 py-6 text-foreground sm:px-6">
-      <div className="mx-auto flex min-h-[calc(100dvh-3rem)] max-w-4xl flex-col justify-center gap-8">
-        <header className="space-y-3">
+    <main
+      className={cn([
+        'min-h-dvh bg-background text-foreground',
+        'px-4 py-6',
+        'sm:px-6',
+      ])}
+    >
+      <div
+        className={cn([
+          'mx-auto flex max-w-md flex-col justify-center',
+          'min-h-[calc(100dvh-3rem)]',
+        ])}
+      >
+        <div className={cn(['mb-6 flex items-center justify-between gap-4'])}>
           <BrandLogo />
-          <p className="text-sm font-medium text-accent">Base técnica inicial</p>
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Geedyx</h1>
-          <p className="max-w-2xl text-base text-secondary">
-            Sistema ERP modular para una operación sencilla. Esta pantalla confirma que
-            la Web está conectada al monorepo preparado para avanzar módulo por módulo.
-          </p>
-        </header>
-
-        <section
-          className="grid gap-3 sm:grid-cols-3"
-          aria-label="Componentes preparados"
-        >
-          {checks.map(({ label, detail, icon: Icon }) => (
-            <article
-              key={label}
-              className="rounded-lg border border-border bg-surface p-4"
-            >
-              <div className="flex items-center gap-3">
-                <span className="grid h-9 w-9 place-items-center rounded-full bg-accent-muted text-accent">
-                  <Icon aria-hidden="true" className="h-4 w-4" />
-                </span>
-                <div>
-                  <h2 className="text-sm font-medium">{label}</h2>
-                  <p className="mt-1 text-xs text-muted">{detail}</p>
-                </div>
-              </div>
-            </article>
-          ))}
-        </section>
-
-        <div className="flex items-center gap-2 rounded-md border border-success/30 bg-success/10 px-4 py-3 text-sm text-success-strong">
-          <CheckCircle2 aria-hidden="true" className="h-4 w-4 shrink-0" />
-          <span>Monorepo inicial listo para la primera validación funcional.</span>
+          <ThemeToggle />
         </div>
+        {children}
       </div>
     </main>
+  );
+}
+
+function EntryMessage({
+  action,
+  children,
+}: Readonly<{
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}>) {
+  return (
+    <section
+      className={cn([
+        'rounded-xl border border-border bg-surface',
+        'p-5 shadow-sm sm:p-6',
+      ])}
+    >
+      <p className={cn(['text-lg font-medium tracking-tight'])}>{children}</p>
+      {action ? <div className={cn(['mt-6'])}>{action}</div> : null}
+    </section>
+  );
+}
+
+export default function HomePage() {
+  const router = useRouter();
+  const setupQuery = useQuery<SetupStatus, ApiClientError>({
+    queryFn: getSetupStatus,
+    queryKey: setupQueryKey,
+  });
+  const sessionQuery = useQuery<AuthSession, ApiClientError>({
+    enabled: setupQuery.data?.installationStatus === 'COMPLETED',
+    queryFn: getCurrentSession,
+    queryKey: sessionQueryKey,
+  });
+
+  useEffect(() => {
+    if (setupQuery.data?.installationStatus === 'PENDING') {
+      router.replace('/setup');
+      return;
+    }
+
+    if (sessionQuery.data) {
+      router.replace('/app');
+      return;
+    }
+
+    if (sessionQuery.error?.status === 401) {
+      router.replace('/login');
+    }
+  }, [router, sessionQuery.data, sessionQuery.error, setupQuery.data]);
+
+  const checkingSession =
+    setupQuery.data?.installationStatus === 'COMPLETED' && sessionQuery.isPending;
+
+  if (setupQuery.isPending || checkingSession) {
+    return (
+      <EntryShell>
+        <EntryMessage>
+          <span className={cn(['flex items-center gap-3'])}>
+            <LoaderCircle aria-hidden="true" className={cn(['h-5 w-5 animate-spin'])} />
+            Preparando Geedyx…
+          </span>
+        </EntryMessage>
+      </EntryShell>
+    );
+  }
+
+  const retry =
+    setupQuery.data?.installationStatus === 'COMPLETED'
+      ? sessionQuery.refetch
+      : setupQuery.refetch;
+
+  return (
+    <EntryShell>
+      <EntryMessage
+        action={
+          <button
+            className={cn([
+              'inline-flex items-center justify-center rounded-md',
+              'border border-border-strong px-4 py-2',
+              'text-sm font-medium',
+              'transition hover:bg-surface-subtle',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30',
+            ])}
+            onClick={() => retry()}
+            type="button"
+          >
+            Intentar de nuevo
+          </button>
+        }
+      >
+        No pudimos abrir Geedyx. Inténtalo de nuevo cuando la aplicación esté
+        disponible.
+      </EntryMessage>
+    </EntryShell>
   );
 }

@@ -18,8 +18,8 @@ export class SetupController {
   constructor(private readonly setupService: SetupService) {}
 
   @Get('status')
-  getStatus() {
-    return this.setupService.getStatus();
+  getStatus(@Req() request: RequestWithId & Request) {
+    return this.setupService.getStatus(request.requestId);
   }
 
   @Post('owner')

@@ -1,31 +1,91 @@
 import {
   ConflictException,
   Injectable,
+  Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import * as argon2 from 'argon2';
 import { createHash } from 'node:crypto';
 import { Prisma } from '@prisma/client';
 import type { OwnerCreated, SetupStatus } from '@geedyx/contracts';
 import { PrismaService } from '../prisma/prisma.service';
+import { hashPassword } from '../auth/password';
+import { getErrorDiagnostics } from '../http/error-diagnostics';
 import type { CreateOwnerDto } from './dto/create-owner.dto';
 
 const SETUP_OPERATION = 'setup.owner.create';
 
 @Injectable()
 export class SetupService {
+  private readonly logger = new Logger(SetupService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
-  async getStatus(): Promise<SetupStatus> {
+  async getStatus(requestId?: string): Promise<SetupStatus> {
     try {
-      const installation = await this.prisma.installation.findUnique({
-        where: { key: 'default' },
-      });
+      const [installation, permissionCount] = await Promise.all([
+        this.prisma.installation.findUnique({
+          where: { key: 'default' },
+          select: {
+            ownerId: true,
+            status: true,
+          },
+        }),
+        this.prisma.permission.count(),
+      ]);
+      const installationStatus = installation?.status ?? 'PENDING';
+      const installationRecordExists = Boolean(installation);
+      const permissionCatalogReady = permissionCount > 0;
+      const ready =
+        installationRecordExists &&
+        permissionCatalogReady &&
+        installationStatus === 'PENDING' &&
+        !installation?.ownerId;
+
+      if (installation?.status === 'PENDING' && installation.ownerId) {
+        this.logger.warn(
+          JSON.stringify({
+            event: 'setup.status.inconsistent',
+            reason: 'pending_installation_has_owner',
+            requestId: requestId ?? 'unknown',
+          }),
+        );
+      }
+
+      if (!installationRecordExists || !permissionCatalogReady) {
+        this.logger.warn(
+          JSON.stringify({
+            event: 'setup.status.incomplete',
+            installationRecord: installationRecordExists ? 'present' : 'missing',
+            permissionCatalog: permissionCatalogReady ? 'ready' : 'missing',
+            requestId: requestId ?? 'unknown',
+          }),
+        );
+      }
+
+      this.logger.log(
+        JSON.stringify({
+          event: 'setup.status.checked',
+          installationRecord: installationRecordExists ? 'present' : 'missing',
+          installationStatus,
+          permissionCount,
+          ready,
+          requestId: requestId ?? 'unknown',
+        }),
+      );
+
       return {
-        installationStatus: installation?.status ?? 'PENDING',
-        ready: true,
+        installationStatus,
+        ready,
       };
-    } catch {
+    } catch (error) {
+      this.logger.error(
+        JSON.stringify({
+          event: 'setup.status.failed',
+          reason: 'database_unavailable',
+          requestId: requestId ?? 'unknown',
+          ...getErrorDiagnostics(error),
+        }),
+      );
       throw new ServiceUnavailableException({
         code: 'DATABASE_UNAVAILABLE',
         detail: 'No se puede consultar el estado de preparación de Geedyx.',
@@ -50,14 +110,7 @@ export class SetupService {
     const requestHash = createHash('sha256')
       .update(JSON.stringify({ displayName, email, password: dto.password }))
       .digest('hex');
-    const passwordHash = await argon2.hash(dto.password, {
-      type: argon2.argon2id,
-      version: 0x13,
-      memoryCost: 19 * 1024,
-      timeCost: 2,
-      parallelism: 1,
-      hashLength: 32,
-    });
+    const passwordHash = await hashPassword(dto.password);
 
     try {
       return await this.prisma.$transaction(
@@ -121,14 +174,19 @@ export class SetupService {
             },
           });
 
-          if (permissions.length > 0) {
-            await tx.rolePermission.createMany({
-              data: permissions.map((permission) => ({
-                roleId: role.id,
-                permissionId: permission.id,
-              })),
+          if (permissions.length === 0) {
+            throw new ServiceUnavailableException({
+              code: 'PERMISSIONS_NOT_INITIALIZED',
+              detail: 'La preparación inicial de Geedyx no está completa.',
             });
           }
+
+          await tx.rolePermission.createMany({
+            data: permissions.map((permission) => ({
+              roleId: role.id,
+              permissionId: permission.id,
+            })),
+          });
 
           await tx.installation.update({
             where: { id: installation.id },
@@ -198,6 +256,13 @@ export class SetupService {
           detail: 'El correo ya está registrado.',
         });
       }
+      this.logger.error(
+        JSON.stringify({
+          event: 'setup.owner.failed',
+          requestId: requestId ?? 'unknown',
+          ...getErrorDiagnostics(error),
+        }),
+      );
       throw error;
     }
   }

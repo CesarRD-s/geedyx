@@ -18,6 +18,7 @@ export const environmentSchema = z.object({
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
   COOKIE_SECURE: booleanFromEnv.default(false),
   SESSION_COOKIE_NAME: z.string().min(1).default('geedyx_session'),
+  CSRF_COOKIE_NAME: z.string().min(1).default('geedyx_csrf'),
 });
 
 export type AppEnvironment = z.infer<typeof environmentSchema>;

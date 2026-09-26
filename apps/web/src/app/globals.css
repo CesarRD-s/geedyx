@@ -1,5 +1,7 @@
 @import 'tailwindcss';
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #fafafa;
   --surface: #ffffff;
@@ -9,6 +11,7 @@
   --muted: #71717a;
   --border: #e4e4e7;
   --border-strong: #d4d4d8;
+  --input-border: #c4c4cc;
   --accent: #2563eb;
   --accent-hover: #1d4ed8;
   --accent-active: #1e40af;
@@ -21,6 +24,11 @@
   --info: #2563eb;
   --overlay: rgb(15 23 42 / 0.5);
   --input: #ffffff;
+  --input-option: #ffffff;
+  --input-focus-ring: rgb(37 99 235 / 0.75);
+  --font-source: var(--font-source-loaded), ui-sans-serif, system-ui, sans-serif;
+  --font-geist-mono:
+    var(--font-geist-mono-loaded), ui-monospace, SFMono-Regular, monospace;
 }
 
 html.dark {
@@ -32,6 +40,7 @@ html.dark {
   --muted: #a1a1aa;
   --border: #2b2d32;
   --border-strong: #454850;
+  --input-border: #4d5563;
   --accent: #3b82f6;
   --accent-hover: #2563eb;
   --accent-active: #1d4ed8;
@@ -42,7 +51,9 @@ html.dark {
   --danger: #ef4444;
   --info: #60a5fa;
   --overlay: rgb(0 0 0 / 0.62);
-  --input: #141d2e;
+  --input: #121419;
+  --input-option: #17191f;
+  --input-focus-ring: rgb(96 165 250 / 0.75);
 }
 
 @theme inline {
@@ -54,6 +65,10 @@ html.dark {
   --color-muted: var(--muted);
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
+  --color-input-border: var(--input-border);
+  --color-input: var(--input);
+  --color-input-option: var(--input-option);
+  --color-input-focus-ring: var(--input-focus-ring);
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
   --color-accent-active: var(--accent-active);
@@ -64,12 +79,24 @@ html.dark {
   --color-warning: var(--warning);
   --color-danger: var(--danger);
   --color-info: var(--info);
-  --font-sans: 'Source Sans 3', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, monospace;
+  --font-sans: var(--font-source);
+  --font-mono: var(--font-geist-mono);
 }
 
-* {
-  border-color: var(--border);
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  select {
+    background-color: var(--input);
+    color: var(--foreground);
+  }
+
+  select option {
+    background-color: var(--input-option);
+    color: var(--foreground);
+  }
 }
 
 body {
