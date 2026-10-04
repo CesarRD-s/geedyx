@@ -77,6 +77,13 @@ El sistema utilizará un único flujo de creación y primer acceso:
 
 La contraseña temporal debe tener expiración, no debe almacenarse en texto plano y no debe aparecer en registros de auditoría. Si se pierde o expira, un Owner/Admin autorizado podrá generar otra contraseña temporal.
 
+La primera rebanada de administración expone `GET /users` para consultar las
+cuentas de la empresa y `POST /users` para crear una cuenta. Ambas rutas
+requieren una sesión válida y los permisos `users.read` o `users.manage` según
+la operación. `POST /users` genera la contraseña temporal, la devuelve una sola
+vez en la respuesta y deja `password_change_required = true`; la Web la muestra
+al administrador junto con su vencimiento, sin guardarla en la auditoría.
+
 ### Sesiones y dispositivos
 
 Cada sesión debe registrar usuario, identificador revocable, creación, última actividad, expiración absoluta, dispositivo/navegador, origen y estado.
@@ -96,6 +103,14 @@ Reglas iniciales:
 - Después de la validación, la interfaz muestra un flujo restringido de administración de sesiones activas y permite revocar una o varias, incluida la opción de cerrar todas las demás.
 - La nueva sesión solo se crea después de liberar un espacio; no se revoca automáticamente la sesión más antigua ni otra sesión activa.
 - Las cookies deben utilizar HTTPS y atributos de seguridad como `HttpOnly`, `Secure` y `SameSite`.
+
+La lectura de `GET /auth/me` valida la sesión sin extender su expiración por
+inactividad. Las operaciones reales del usuario pueden actualizar la actividad
+válida. Cuando el login alcanza el límite de cinco sesiones, la API responde
+con una autorización temporal para administrar las sesiones activas; la Web
+permite revocar una sesión mediante `POST /auth/sessions/revoke` y después
+reintentar el login. Esa autorización no sustituye a la cookie de sesión ni
+permite consultar sesiones de otra cuenta.
 
 La primera versión no incluirá la opción **Recordarme**. Todas las sesiones estarán sujetas a las mismas reglas de inactividad, expiración absoluta y revocación.
 
@@ -157,6 +172,10 @@ Menú del usuario
 La administración de usuarios, roles, permisos y auditoría debe estar en una sección administrativa para Owner/Admin, separada de `Mi perfil`.
 
 Durante el primer acceso con una contraseña temporal, el usuario solo podrá completar el cambio obligatorio de contraseña. No tendrá acceso al dashboard ni a los módulos normales hasta finalizarlo.
+
+El cambio obligatorio se realiza mediante `POST /auth/password` con protección
+CSRF. Al completarse, la contraseña temporal deja de funcionar, se elimina el
+requisito de cambio y se revocan las demás sesiones activas del usuario.
 
 ### Roles y permisos
 

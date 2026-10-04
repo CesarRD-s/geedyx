@@ -11,6 +11,7 @@ Incluye:
 - `User`, `Role`, `Permission`, `UserRole` y `RolePermission` para el inicio de RBAC.
 - `AuditEvent` como registro funcional append-only a nivel de aplicación.
 - `IdempotencyRecord` para comandos que requieren protección contra reintentos.
+- Vencimiento de contraseñas temporales mediante `User.passwordExpiresAt`.
 
 ## Reglas aplicadas
 

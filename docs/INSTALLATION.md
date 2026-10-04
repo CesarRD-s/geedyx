@@ -82,6 +82,17 @@ Cuando la operación termina correctamente:
 
 La instalación no inicia automáticamente una sesión del Owner.
 
+Durante el envío, el formulario muestra que la cuenta se está creando. Al
+confirmarse la operación, la interfaz muestra una transición breve hacia
+`/login`; no repite las verificaciones de preparación. Una tarjeta de
+confirmación separada del formulario de login muestra el nombre y correo de la
+cuenta creada, indica que se debe iniciar sesión con ese correo y la contraseña
+recién definida, y deja el correo completado en el
+formulario. Esta confirmación se muestra una sola vez durante la navegación de
+setup a login. El estado de instalación en caché debe actualizarse a
+`COMPLETED` antes de navegar para evitar que `/login` reutilice un estado
+`PENDING` anterior y redirija de nuevo a `/setup`.
+
 ## 4. Interrupciones y reintentos
 
 El frontend puede volver visualmente al inicio si la operación falla, pero el servidor siempre es la fuente de verdad.
@@ -118,6 +129,12 @@ Las rutas de interfaz se separan de la aplicación autenticada:
 ```
 
 Mientras la instalación esté pendiente, `/login` debe redirigir a `/setup`. Cuando la instalación esté completada, `/setup` debe redirigir a `/login`.
+
+Al abrir `/setup`, la Web consulta primero el estado de instalación. Solo si
+está `PENDING` muestra la secuencia de verificaciones iniciales. Si está
+`COMPLETED`, muestra una carga breve mientras abre `/login`. En el acceso normal,
+la Web muestra una carga simple; ante un fallo de consulta muestra «No pudimos
+cargar Geedyx» y permite reintentar. Los detalles técnicos quedan en los logs.
 
 La API utiliza el prefijo global versionado `/api/v1` y no añade un namespace de producto redundante como `gdx`:
 

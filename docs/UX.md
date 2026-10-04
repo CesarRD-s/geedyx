@@ -75,7 +75,20 @@ Cada diálogo debe:
 No se utilizarán diálogos para mostrar confirmaciones informativas que no
 requieren una decisión. No se apilarán varios diálogos.
 
-## 5. Toasts
+## 5. Formularios accionados
+
+Las pantallas de configuración y administración muestran primero un resumen del
+estado actual. Los formularios de alta y edición se abren mediante una acción
+explícita como `Editar configuración`, `Nuevo producto`, `Crear usuario` o
+`Asignar roles`; no deben aparecer activos dentro del contenido principal.
+
+Estos formularios pueden usar un modal amplio cuando la tarea se mantiene en el
+contexto de la pantalla. El modal debe conservar el borrador si ocurre un error,
+mostrar el error junto al formulario y cerrar solo después de confirmar la
+persistencia. En móvil los campos pasan a una columna, sin perder el footer de
+acciones.
+
+## 6. Toasts
 
 Los toasts son mensajes breves y no bloqueantes para comunicar resultados
 simples, por ejemplo:
@@ -98,7 +111,7 @@ Reglas iniciales:
 La primera versión no tendrá un centro persistente de notificaciones, ni
 notificaciones push, correo o canales externos.
 
-## 6. Alertas y banners
+## 7. Alertas y banners
 
 Las alertas se utilizarán para condiciones que siguen vigentes y requieren
 atención contextual. Algunos ejemplos son:
@@ -117,7 +130,7 @@ Una alerta debe explicar:
 Las alertas no deben utilizarse como sustituto de los errores de campo ni
 convertir cada indicador operativo, como stock bajo, en una interrupción.
 
-## 7. Mensajes inline y estados de pantalla
+## 8. Mensajes inline y estados de pantalla
 
 Los errores de validación se mostrarán junto al campo o sección afectada. El
 formulario debe conservar los valores válidos y señalar claramente qué debe
@@ -136,7 +149,7 @@ Los estados de carga, vacío, error recuperable, no autorizado, deshabilitado y
 confirmación destructiva deben ser distinguibles. Un error de permisos no debe
 presentarse como si fuera un fallo técnico.
 
-## 8. Aplicación a Geedyx
+## 9. Aplicación a Geedyx
 
 Algunos ejemplos de la primera versión:
 
@@ -151,7 +164,7 @@ Algunos ejemplos de la primera versión:
 - Un problema de salud del sistema se muestra como alerta persistente con un
   mensaje seguro y una referencia útil para soporte.
 
-## 9. Selector de vistas para datos
+## 10. Selector de vistas para datos
 
 El selector de vistas cambia únicamente la forma de presentar la información.
 No modifica los datos, filtros, permisos, acciones ni reglas del módulo.
@@ -193,7 +206,7 @@ Reglas del selector:
 Regla general: **tarjetas para explorar, listas para consultar y tablas para
 operar**.
 
-## 10. Sidebar y navegación lateral
+## 11. Sidebar y navegación lateral
 
 La consola utilizará una navegación lateral con dos estados principales:
 
@@ -213,10 +226,17 @@ expandida. La navegación no dependerá únicamente del hover: la expansión
 fijada debe poder activarse con teclado y permanecer abierta hasta que el
 usuario la cierre.
 
+Cuando la vista está fijada y expandida, la sidebar ocupa su ancho dentro del
+layout y el contenido principal se ajusta a ese espacio. Cuando está compacta,
+la expansión por hover o focus funciona como una capa temporal sobre el
+contenido y no lo reorganiza.
+
 Reglas de navegación:
 
 - El módulo padre activo y la opción hija activa deben identificarse de forma
   persistente.
+- El estado activo y el hover conservan una superficie neutra; el accent se
+  reserva para el icono y el texto de navegación.
 - El grupo que contiene la ruta actual debe permanecer expandido.
 - Los grupos padres podrán contraerse o expandirse sin perder la ruta actual.
 - En la vista compacta, cada icono debe tener una etiqueta accesible; el
@@ -241,7 +261,7 @@ La preferencia de estado compacto o expandido y la apertura de grupos puede
 conservarse inicialmente de forma local por usuario y dispositivo. No forma
 parte de la configuración global del sistema.
 
-## 11. Movimiento y efectos
+## 12. Movimiento y efectos
 
 La interfaz no utilizará animaciones decorativas. Sí podrá utilizar efectos
 funcionales y breves para comunicar:
@@ -255,7 +275,7 @@ Los efectos no deben retrasar la acción ni ocultar información. La interfaz
 debe respetar `prefers-reduced-motion` y reducir estos efectos cuando el
 usuario lo solicite.
 
-## 12. Alcance inicial y futuras extensiones
+## 13. Alcance inicial y futuras extensiones
 
 El primer lanzamiento incluye diálogos, toasts, alertas contextuales, mensajes
 inline y estados de pantalla. Quedan para futuras versiones un centro de

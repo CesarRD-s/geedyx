@@ -50,6 +50,11 @@ La moneda es global y no puede cambiarse por usuario. Inicialmente, el formato
 global de fecha y hora se utiliza para todo el sistema; no se contemplan
 preferencias individuales para esos formatos.
 
+Las pantallas de configuración y preferencias son funcionales: cada cambio
+aceptado debe persistirse mediante el API, actualizar la configuración efectiva
+de la sesión y verse reflejado en las pantallas que consumen el idioma o la zona
+horaria. Una vista provisional del menú no satisface este contrato.
+
 ## 5. Estado inicial de configuración
 
 La creación del Owner completa la instalación, pero no implica que la

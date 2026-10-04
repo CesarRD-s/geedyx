@@ -82,8 +82,8 @@ La UI se compone de cuatro niveles:
 
 1. **Tokens**: colores, tipografía, spacing, radius, sombras y motion.
 2. **Primitives**: botones, campos, dialogs, badges, estados y controles.
-3. **Patrones**: shell, page header, toolbar, tablas, formularios y dialogs de
-   confirmación.
+3. **Patrones**: shell, page header, toolbar, tablas, formularios y modales de
+   confirmación o edición.
 4. **Pantallas**: login, setup, workspace, productos, categorías, usuarios,
    auditoría, compañía, perfil, preferencias y seguridad.
 
@@ -158,7 +158,7 @@ indicadores. El valor predeterminado es azul.
 | `--accent-hover` | `hover:bg-accent-hover` | `#1d4ed8` | `#2563eb` | Hover de acción primary. |
 | `--accent-active` | `active:bg-accent-active` | `#1e40af` | `#1d4ed8` | Acción presionada. |
 | `--accent-foreground` | `text-accent-foreground` | `#ffffff` | `#ffffff` | Texto sobre accent. |
-| `--accent-muted` | `bg-accent-muted` | `#eff6ff` | `rgb(59 130 246 / .14)` | Selección y navegación activa. |
+| `--accent-muted` | `bg-accent-muted` | `#eff6ff` | `rgb(59 130 246 / .14)` | Avatares, selecciones e indicadores con tintura accent. |
 
 ### Familias accent disponibles
 
@@ -303,8 +303,11 @@ la escala existente resuelve el problema.
 | `--radius-lg` | `8px` | Dialogs y paneles agrupados grandes. |
 | `--radius-full` | `9999px` | Pills, badges, dots, avatars y botones circulares. |
 
-Utilities permitidas: `rounded-md`, `rounded-lg` y `rounded-full` según el
-caso. No usar `rounded-3xl`, `rounded-[20px]` ni radius arbitrario.
+Utilities permitidas: `rounded-md`, `rounded-lg`, `rounded-xl` y
+`rounded-full` según el caso. Los botones y controles de acción usan
+`rounded-full`; los inputs y selects usan `rounded-xl`, y los paneles de
+formulario usan `rounded-lg`. No usar `rounded-3xl`, `rounded-[20px]` ni radius
+arbitrario.
 
 ### Bordes y sombras
 
@@ -341,7 +344,7 @@ consistentes, y tone danger para acciones destructivas.
 | --- | --- |
 | `Button` | `primary`, `secondary`, `ghost`, `danger`; tamaños `sm` y `md`; loading. |
 | `IconButton` | Botón icon-only con label, tooltip y tone. |
-| `Dialog` | Modal con focus trap, scroll interno y footer. |
+| `Modal` | Modal con scroll interno, footer, cierre accesible y bloqueo de scroll del documento. |
 | `Input` | Campo de texto estándar. |
 | `Select` | Selector estándar. |
 | `Textarea` | Campo multilínea. |
@@ -371,7 +374,7 @@ consistentes, y tone danger para acciones destructivas.
 Tamaños:
 
 - `sm`: `px-3 py-1.5`, uso administrativo denso.
-- `md`: `px-4 py-2`, login, setup y submits destacados.
+- `md`: `px-3 py-2`, login, setup y submits destacados.
 
 Reglas:
 
@@ -380,6 +383,8 @@ Reglas:
 - Danger no se usa para llamar la atención.
 - Los links que parecen botones usan apariencia secondary.
 - Un submit async usa `loading`, queda disabled y comunica `loadingLabel`.
+- Las acciones disponibles usan `cursor-pointer`; los controles disabled usan
+  `cursor-not-allowed`.
 - No anunciar éxito hasta confirmar persistencia.
 - Las acciones destructivas requieren confirmación explícita.
 
@@ -405,24 +410,32 @@ Estados obligatorios: idle, pending, success y failure. Pending preserva los
 valores y bloquea la acción. Success refresca datos y muestra feedback breve.
 Failure conserva el draft y asocia el error al campo cuando corresponde.
 
-## 13. Dialogs y overlays
+## 13. Modals y overlays
 
-`Dialog` es el único modal del sistema.
+`Modal` es el único modal del sistema. Se usa tanto para confirmaciones como
+para formularios de alta y edición que deben conservar el contexto de su
+pantalla.
 
 - Wrapper fijo con `z-40`.
 - Backdrop `absolute inset-0 bg-overlay` detrás del panel.
 - Panel `relative z-10` sobre el backdrop.
-- Tamaños: `sm max-w-md`, `md max-w-lg`, `lg max-w-2xl`.
+- Tamaños: `md max-w-md`, `lg max-w-4xl`, `xl max-w-6xl`.
 - Centrado en desktop.
 - Alto máximo: `max-h-[calc(100dvh-2rem)]`.
 - Header y footer fijos; solo el contenido hace scroll.
 - Body scroll bloqueado mientras está abierto.
 - Cierre por Escape, click en backdrop y botón X visible.
-- Focus inicial en el objetivo indicado o en cerrar.
-- Tab atrapado en el panel y focus devuelto al trigger al cerrar.
+- El foco inicial debe dirigirse al objetivo indicado o al cierre.
+- El foco debe permanecer en el panel y volver al trigger al cerrar.
 - `role="dialog"`, `aria-modal="true"` y label basado en el título.
 - Footer con cancelar secondary y confirmar primary.
-- En móvil ocupa el ancho disponible y respeta el viewport.
+- En móvil ocupa el ancho disponible y respeta el viewport; su contenido pasa a
+  una columna y solo el cuerpo hace scroll.
+
+Los formularios de configuración, catálogo, usuarios y roles deben abrirse por
+una acción visible desde el `PageHeader` o la toolbar. El contenido principal
+debe mostrar el resumen, el estado y las acciones disponibles sin repetir todos
+los campos de edición.
 
 Un dialog destructivo muestra el nombre del objeto, la consecuencia y acciones
 explícitas. No se apilan dialogs. La reautenticación conserva el draft de la
@@ -432,9 +445,16 @@ acción sensible.
 
 - Sidebar compacta en desktop.
 - Drawer de navegación en móvil.
-- Header con usuario, tema y reloj regional.
+- Sidebar fijada con ancho propio dentro del layout; sidebar compacta expandida
+  temporalmente sobre el contenido.
+- Header operativo con usuario, tema, reloj regional y acciones de sesión.
+- El título y el detalle de la ruta pertenecen al contenido de la pantalla y no
+  se repiten en el header global.
 - Área principal flexible con `p-4 sm:p-6`.
-- Navegación activa con indicador de 2 px y fondo `accent-muted`.
+- Navegación activa con indicador de 2 px, fondo `surface-subtle` y texto e
+  icono `accent`.
+- Scrollbars delgadas con fallback `scrollbar-width` y estilos WebKit cuando el
+  navegador los admite.
 - Toolbars como bandas tonales compactas.
 - Tablas con header tonal sutil.
 - Acciones de fila compactas.
@@ -453,12 +473,25 @@ controles de agenda.
 - SKU, slug, IDs y valores alineables pueden usar Geist Mono.
 - Valores monetarios usan `tabular-nums`.
 - Toolbar compacta con búsqueda, filtros y acciones.
-- Paginación con acciones secondary.
+- Toda tabla con datos debe estar paginada; no se muestran listados extensos en
+  una sola carga.
+- La paginación debe mostrar página actual, total de resultados, anterior y
+  siguiente, y permitir elegir cuántos elementos se muestran por página.
+- El selector inicial de cantidad debe ofrecer valores pequeños y previsibles,
+  como `10`, `25`, `50` y `100`, según el módulo y el volumen esperado.
+- El cambio de cantidad reinicia la página cuando la página actual deja de ser
+  válida y conserva los filtros activos.
+- Paginación con acciones secondary y estados disabled explícitos.
 - Estado de filtro, orden y página siempre visible.
 - `EmptyState` cuando no hay resultados.
 - `ErrorState` para errores recuperables.
 - `Skeleton` conserva la estructura durante loading.
 - Lista responsive cuando las columnas no caben con legibilidad.
+- Cuando la cantidad de columnas supera el ancho disponible, la tabla se
+  envuelve en un contenedor con scroll horizontal propio; nunca se comprime el
+  texto hasta perder legibilidad ni se rompe el layout de la página.
+- El scroll horizontal debe conservar encabezados, acciones y nombres de
+  columnas accesibles con teclado y touch.
 
 ## 16. Estados de contenido
 
@@ -576,6 +609,11 @@ persistencia. Solo puede persistir localmente preferencias de presentación:
 - tema;
 - accent;
 - preferencias visuales equivalentes.
+
+Los controles de ajustes y preferencias deben tener efecto funcional. Actualizar
+una opción debe persistirse mediante el API, reflejarse en la sesión o la
+configuración efectiva y modificar las pantallas que consumen ese valor. Una
+pantalla reservada en el menú no cuenta como implementación funcional.
 
 Nunca guardar en localStorage credenciales, tokens, permisos, datos de negocio
 ni una sesión alternativa. La autenticación usa cookies HttpOnly y sesión del
