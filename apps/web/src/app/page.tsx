@@ -88,8 +88,12 @@ export default function HomePage() {
 
   const checkingSession =
     setupQuery.data?.installationStatus === 'COMPLETED' && sessionQuery.isPending;
+  const redirecting =
+    setupQuery.data?.installationStatus === 'PENDING' ||
+    sessionQuery.error?.status === 401 ||
+    Boolean(sessionQuery.data);
 
-  if (setupQuery.isPending || checkingSession) {
+  if (setupQuery.isPending || checkingSession || redirecting) {
     return (
       <EntryShell>
         <EntryMessage>
@@ -113,8 +117,8 @@ export default function HomePage() {
         action={
           <button
             className={cn([
-              'inline-flex items-center justify-center rounded-md',
-              'border border-border-strong px-4 py-2',
+              'inline-flex items-center justify-center rounded-full',
+              'border border-border-strong px-3 py-1.5',
               'text-sm font-medium',
               'transition hover:bg-surface-subtle',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30',

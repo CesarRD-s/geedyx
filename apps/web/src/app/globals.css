@@ -79,6 +79,7 @@ html.dark {
   --color-warning: var(--warning);
   --color-danger: var(--danger);
   --color-info: var(--info);
+  --color-overlay: var(--overlay);
   --font-sans: var(--font-source);
   --font-mono: var(--font-geist-mono);
 }
@@ -86,6 +87,29 @@ html.dark {
 @layer base {
   * {
     border-color: var(--border);
+    scrollbar-color: var(--border-strong) transparent;
+    scrollbar-width: thin;
+  }
+
+  *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border: 1px solid transparent;
+    border-radius: 9999px;
+    background-clip: padding-box;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: var(--muted);
+    background-clip: padding-box;
   }
 
   select {
@@ -96,6 +120,17 @@ html.dark {
   select option {
     background-color: var(--input-option);
     color: var(--foreground);
+  }
+
+  button:not(:disabled):not([aria-disabled='true']),
+  a[href],
+  [role='button']:not([aria-disabled='true']) {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [aria-disabled='true'] {
+    cursor: not-allowed;
   }
 }
 

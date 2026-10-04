@@ -5,6 +5,10 @@ import { AuthModule } from './auth/auth.module';
 import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { SetupModule } from './setup/setup.module';
+import { UsersModule } from './users/users.module';
+import { ConfigurationModule } from './configuration/configuration.module';
+import { ProductsModule } from './products/products.module';
+import { AuditModule } from './audit/audit.module';
 
 @Module({
   imports: [
@@ -17,6 +21,10 @@ import { SetupModule } from './setup/setup.module';
     AuthModule,
     HealthModule,
     SetupModule,
+    UsersModule,
+    ConfigurationModule,
+    ProductsModule,
+    AuditModule,
   ],
 })
 export class AppModule {}

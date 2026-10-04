@@ -13,10 +13,14 @@ export class SessionGuard implements CanActivate {
     const response = context.switchToHttp().getResponse<Response>();
     const cookieName = this.authService.getSessionCookieName();
     const token = parseCookies(request.headers.cookie)[cookieName];
-    const session = await this.authService.resolveSession(token);
+    const session = await this.authService.resolveSession(token, {
+      touchActivity: request.method !== 'GET',
+    });
 
     request.auth = session;
-    this.authService.setSessionCookie(response, token as string, session.expiresAt);
+    if (request.method !== 'GET') {
+      this.authService.setSessionCookie(response, token as string, session.expiresAt);
+    }
     return true;
   }
 }

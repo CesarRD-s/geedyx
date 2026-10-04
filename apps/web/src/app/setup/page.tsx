@@ -1,6 +1,6 @@
 'use client';
 
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { SetupStatus } from '@geedyx/contracts';
 import { LoaderCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -22,7 +22,8 @@ import { cn } from '../../lib/cn';
 
 type SetupCheckKey = 'server' | 'database' | 'installation';
 type SetupCheckState = 'waiting' | 'checking' | 'success' | 'error';
-type SetupPhase = 'welcome' | 'checking' | 'ready' | 'form' | 'error';
+type SetupPhase =
+  'welcome' | 'checking' | 'ready' | 'form' | 'error' | 'load-error' | 'finishing';
 
 type SetupCheck = {
   checkingDetail: string;
@@ -159,6 +160,7 @@ function SetupCard({ children }: Readonly<{ children: ReactNode }>) {
 
 export default function SetupPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const idempotencyKey = useRef('');
   const [validationRun, setValidationRun] = useState(0);
   const [phase, setPhase] = useState<SetupPhase>('welcome');
@@ -179,10 +181,21 @@ export default function SetupPage() {
         error instanceof ApiClientError &&
         error.problem?.code === 'INSTALLATION_COMPLETED'
       ) {
+        queryClient.setQueryData<SetupStatus>(['setup', 'status'], {
+          installationStatus: 'COMPLETED',
+          ready: false,
+        });
+        setPhase('finishing');
         router.replace('/login');
       }
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
+      queryClient.setQueryData<SetupStatus>(['setup', 'status'], {
+        installationStatus: 'COMPLETED',
+        ready: false,
+      });
+      queryClient.setQueryData(['setup', 'createdOwner'], result.owner);
+      setPhase('finishing');
       router.replace('/login');
     },
   });
@@ -204,9 +217,31 @@ export default function SetupPage() {
     };
 
     const validateSetup = async () => {
-      setPhase('checking');
       setValidationError('');
       setSetupStatus(null);
+
+      let status: SetupStatus;
+
+      try {
+        status = await getSetupStatus();
+      } catch {
+        if (!cancelled) {
+          setPhase('load-error');
+        }
+        return;
+      }
+
+      if (cancelled) {
+        return;
+      }
+
+      if (status.installationStatus === 'COMPLETED') {
+        setPhase('finishing');
+        router.replace('/login');
+        return;
+      }
+
+      setPhase('checking');
 
       try {
         updateCheck('server', 'checking');
@@ -233,13 +268,6 @@ export default function SetupPage() {
         activeCheck = 'installation';
         updateCheck(activeCheck, 'checking');
         await wait(checkStartDelay);
-        const status = await getSetupStatus();
-
-        if (status.installationStatus === 'COMPLETED') {
-          router.replace('/login');
-          return;
-        }
-
         if (!status.ready) {
           throw new Error('La instalación todavía no está lista para continuar.');
         }
@@ -268,13 +296,10 @@ export default function SetupPage() {
       }
     };
 
-    const timer = window.setTimeout(() => {
-      void validateSetup();
-    }, 900);
+    void validateSetup();
 
     return () => {
       cancelled = true;
-      window.clearTimeout(timer);
     };
   }, [router, validationRun]);
 
@@ -306,6 +331,60 @@ export default function SetupPage() {
       ? 'No pudimos completar la preparación. Inténtalo de nuevo cuando Geedyx esté disponible.'
       : ownerMutation.error.message
     : '';
+
+  if (phase === 'finishing') {
+    return (
+      <SetupShell>
+        <SetupCard>
+          <div className={cn(['space-y-3'])}>
+            <h1 className={cn(['text-2xl font-semibold tracking-tight'])}>
+              Abriendo el acceso
+            </h1>
+            <p
+              aria-live="polite"
+              className={cn(['flex items-center gap-2 text-sm text-secondary'])}
+            >
+              <LoaderCircle
+                aria-hidden="true"
+                className={cn(['h-4 w-4 animate-spin'])}
+              />
+              <span>Ya puedes iniciar sesión en Geedyx.</span>
+            </p>
+          </div>
+        </SetupCard>
+      </SetupShell>
+    );
+  }
+
+  if (phase === 'load-error') {
+    return (
+      <SetupShell>
+        <SetupCard>
+          <div className={cn(['space-y-3'])}>
+            <h1 className={cn(['text-2xl font-semibold tracking-tight'])}>
+              No pudimos cargar Geedyx
+            </h1>
+            <p className={cn(['text-sm text-secondary'])}>
+              Inténtalo de nuevo cuando la aplicación esté disponible.
+            </p>
+            <button
+              className={cn([
+                'inline-flex items-center justify-center rounded-full',
+                'border border-border-strong px-3 py-1.5',
+                'text-sm font-medium',
+                'transition hover:bg-surface-subtle',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30',
+              ])}
+              onClick={retryValidation}
+              type="button"
+            >
+              Reintentar
+            </button>
+          </div>
+        </SetupCard>
+      </SetupShell>
+    );
+  }
 
   if (phase === 'welcome') {
     return (
@@ -354,8 +433,8 @@ export default function SetupPage() {
               action={
                 <button
                   className={cn([
-                    'inline-flex items-center justify-center rounded-md',
-                    'border border-border-strong px-4 py-2',
+                    'inline-flex items-center justify-center rounded-full',
+                    'border border-border-strong px-3 py-1.5',
                     'text-sm font-medium',
                     'transition hover:bg-surface-subtle',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30',

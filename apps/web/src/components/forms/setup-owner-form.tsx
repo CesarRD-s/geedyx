@@ -1,6 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
+import { LoaderCircle } from 'lucide-react';
 import { type SubmitHandler, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { cn } from '../../lib/cn';
@@ -60,7 +61,12 @@ export function SetupOwnerForm({
   });
 
   return (
-    <form className={cn(['space-y-4'])} noValidate onSubmit={handleSubmit(onSubmit)}>
+    <form
+      aria-busy={isSubmitting}
+      className={cn(['space-y-4'])}
+      noValidate
+      onSubmit={handleSubmit(onSubmit)}
+    >
       <div className={cn(['space-y-1.5'])}>
         <label className={cn(['text-sm font-medium'])} htmlFor="displayName">
           Nombre visible
@@ -150,10 +156,16 @@ export function SetupOwnerForm({
         </p>
       ) : null}
 
+      {isSubmitting ? (
+        <p aria-live="polite" className={cn(['text-sm text-secondary'])}>
+          Estamos creando tu cuenta. Te llevaremos al acceso al terminar.
+        </p>
+      ) : null}
+
       <button
         className={cn([
-          'inline-flex w-full items-center justify-center rounded-md',
-          'bg-accent px-4 py-2.5',
+          'inline-flex w-full items-center justify-center rounded-full',
+          'bg-accent px-3 py-2',
           'text-sm font-medium text-accent-foreground',
           'transition hover:bg-accent-hover',
           'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/30',
@@ -162,6 +174,12 @@ export function SetupOwnerForm({
         disabled={isSubmitting}
         type="submit"
       >
+        {isSubmitting ? (
+          <LoaderCircle
+            aria-hidden="true"
+            className={cn(['mr-2 h-4 w-4 animate-spin'])}
+          />
+        ) : null}
         {isSubmitting ? 'Creando cuenta…' : 'Crear cuenta'}
       </button>
     </form>

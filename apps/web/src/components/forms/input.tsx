@@ -6,7 +6,7 @@ type InputProps = InputHTMLAttributes<HTMLInputElement> & {
 };
 
 const baseStyles = [
-  'w-full rounded-md',
+  'w-full rounded-xl',
   'px-3 py-2.5',
   'text-sm text-foreground caret-foreground',
   'bg-input',

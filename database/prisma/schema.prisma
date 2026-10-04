@@ -22,6 +22,22 @@ enum AuditOutcome {
   FAILURE
 }
 
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum ProductVisibility {
+  INTERNAL
+  PUBLIC
+}
+
+enum VariantStatus {
+  ACTIVE
+  ARCHIVED
+}
+
 model Installation {
   id          String             @id @default(cuid())
   key         String             @unique @default("default")
@@ -39,6 +55,8 @@ model Installation {
 model Company {
   id           String        @id @default(cuid())
   name         String
+  country      String?
+  logoUrl      String?
   locale       String        @default("es")
   timeZone     String?
   currency     String?
@@ -47,6 +65,8 @@ model Company {
   installation Installation?
   users        User[]
   roles        Role[]
+  categories   Category[]
+  products     Product[]
   auditEvents  AuditEvent[]
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
@@ -59,13 +79,17 @@ model User {
   email                 String        @unique
   passwordHash          String
   passwordChangeRequired Boolean      @default(false)
+  passwordExpiresAt     DateTime?
   status                UserStatus    @default(ACTIVE)
   failedLoginAttempts   Int           @default(0)
   lockedUntil           DateTime?
   lockReason            String?
+  language              String?
+  timeZone              String?
   company               Company       @relation(fields: [companyId], references: [id])
   roles                 UserRole[]
   sessions              Session[]
+  sessionChallenges     SessionManagementChallenge[]
   ownedInstallation     Installation? @relation("InstallationOwner")
   auditEvents           AuditEvent[]  @relation("AuditActor")
   createdAt             DateTime      @default(now())
@@ -88,6 +112,17 @@ model Session {
 
   @@index([userId, revokedAt])
   @@index([expiresAt, absoluteExpiresAt])
+}
+
+model SessionManagementChallenge {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
 }
 
 model Role {
@@ -128,6 +163,59 @@ model RolePermission {
   permission  Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
   @@id([roleId, permissionId])
+}
+
+model Category {
+  id          String     @id @default(cuid())
+  companyId   String
+  parentId    String?
+  name        String
+  sortOrder   Int        @default(0)
+  archivedAt  DateTime?
+  company     Company    @relation(fields: [companyId], references: [id])
+  parent      Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryTree")
+  products    Product[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@unique([companyId, name])
+  @@index([companyId, archivedAt])
+}
+
+model Product {
+  id              String            @id @default(cuid())
+  companyId       String
+  categoryId      String?
+  title           String
+  shortDescription String?
+  description     String?
+  brand           String?
+  model           String?
+  status          ProductStatus     @default(DRAFT)
+  visibility      ProductVisibility @default(INTERNAL)
+  company         Company           @relation(fields: [companyId], references: [id])
+  category        Category?         @relation(fields: [categoryId], references: [id])
+  variants        ProductVariant[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([companyId, status])
+  @@index([companyId, categoryId])
+}
+
+model ProductVariant {
+  id          String        @id @default(cuid())
+  productId   String
+  sku         String        @unique
+  barcode     String?       @unique
+  priceCents  Int
+  status      VariantStatus @default(ACTIVE)
+  product     Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([productId, status])
 }
 
 model AuditEvent {

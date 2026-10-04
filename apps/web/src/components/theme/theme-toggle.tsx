@@ -33,7 +33,7 @@ export function ThemeToggle() {
       aria-label={`Tema actual: ${themeLabels[currentTheme]}. Cambiar a ${themeLabels[nextTheme]}`}
       className={cn([
         'grid h-9 w-9 place-items-center',
-        'rounded-md border border-border-strong',
+        'rounded-full border border-border-strong',
         'text-secondary transition',
         'hover:bg-surface-subtle hover:text-foreground',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30',

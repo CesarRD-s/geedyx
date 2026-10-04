@@ -6,20 +6,30 @@ const booleanFromEnv = z.preprocess((value) => {
   return value;
 }, z.boolean());
 
-export const environmentSchema = z.object({
-  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-  API_HOST: z.string().min(1).default('0.0.0.0'),
-  API_PORT: z.coerce.number().int().min(1).max(65535).default(4000),
-  DATABASE_URL: z
-    .string()
-    .min(1)
-    .default('postgresql://geedyx:geedyx@localhost:5432/geedyx?schema=public'),
-  WEB_ORIGIN: z.string().url().default('http://localhost:3000'),
-  LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
-  COOKIE_SECURE: booleanFromEnv.default(false),
-  SESSION_COOKIE_NAME: z.string().min(1).default('geedyx_session'),
-  CSRF_COOKIE_NAME: z.string().min(1).default('geedyx_csrf'),
-});
+export const environmentSchema = z
+  .object({
+    NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+    API_HOST: z.string().min(1).default('0.0.0.0'),
+    API_PORT: z.coerce.number().int().min(1).max(65535).default(4000),
+    DATABASE_URL: z
+      .string()
+      .min(1)
+      .default('postgresql://geedyx:geedyx@localhost:5432/geedyx?schema=public'),
+    WEB_ORIGIN: z.string().url().default('http://localhost:3000'),
+    LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
+    COOKIE_SECURE: booleanFromEnv.default(false),
+    SESSION_COOKIE_NAME: z.string().min(1).default('geedyx_session'),
+    CSRF_COOKIE_NAME: z.string().min(1).default('geedyx_csrf'),
+  })
+  .superRefine((environment, context) => {
+    if (environment.NODE_ENV === 'production' && !environment.COOKIE_SECURE) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'COOKIE_SECURE debe estar activo en producción.',
+        path: ['COOKIE_SECURE'],
+      });
+    }
+  });
 
 export type AppEnvironment = z.infer<typeof environmentSchema>;
 

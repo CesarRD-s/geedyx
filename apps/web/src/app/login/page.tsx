@@ -1,17 +1,27 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useQuery } from '@tanstack/react-query';
-import { LogIn } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { LoaderCircle, LogIn } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { type SubmitHandler, useForm } from 'react-hook-form';
 import { z } from 'zod';
-import type { SetupStatus } from '@geedyx/contracts';
+import type {
+  OwnerCreated,
+  SessionManagementDetails,
+  SetupStatus,
+} from '@geedyx/contracts';
 import { BrandLogo } from '../../components/brand/brand-logo';
 import { Input } from '../../components/forms/input';
 import { ThemeToggle } from '../../components/theme/theme-toggle';
-import { ApiClientError, getSetupStatus, login } from '../../lib/api-client';
+import {
+  ApiClientError,
+  getSessionManagementDetails,
+  getSetupStatus,
+  login,
+  revokeSession,
+} from '../../lib/api-client';
 import { cn } from '../../lib/cn';
 
 const loginSchema = z.object({
@@ -23,7 +33,27 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const [createdOwner] = useState(() =>
+    queryClient.getQueryData<OwnerCreated['owner']>(['setup', 'createdOwner']),
+  );
   const [errorMessage, setErrorMessage] = useState('');
+  const [sessionManagement, setSessionManagement] =
+    useState<SessionManagementDetails | null>(null);
+  const revokeSessionMutation = useMutation({
+    mutationFn: ({ sessionId, token }: { sessionId: string; token: string }) =>
+      revokeSession(sessionId, token),
+    onSuccess: (_, variables) => {
+      setSessionManagement((current) =>
+        current
+          ? {
+              ...current,
+              sessions: current.sessions.filter(({ id }) => id !== variables.sessionId),
+            }
+          : current,
+      );
+    },
+  });
   const setupQuery = useQuery<SetupStatus, ApiClientError>({
     queryFn: getSetupStatus,
     queryKey: ['setup', 'status'],
@@ -35,7 +65,7 @@ export default function LoginPage() {
     register,
   } = useForm<LoginFormValues>({
     defaultValues: {
-      email: '',
+      email: createdOwner?.email ?? '',
       password: '',
     },
     resolver: zodResolver(loginSchema),
@@ -43,11 +73,21 @@ export default function LoginPage() {
 
   const onSubmit: SubmitHandler<LoginFormValues> = async (values) => {
     setErrorMessage('');
+    revokeSessionMutation.reset();
 
     try {
       await login(values.email, values.password);
       router.replace('/app');
     } catch (error) {
+      if (error instanceof ApiClientError && error.status === 409) {
+        const details = getSessionManagementDetails(error);
+        if (details) {
+          setSessionManagement(details);
+          return;
+        }
+      }
+
+      setSessionManagement(null);
       if (error instanceof ApiClientError && error.status === 401) {
         setErrorMessage('El correo o la contraseña no son válidos.');
       } else {
@@ -64,6 +104,12 @@ export default function LoginPage() {
     }
   }, [router, setupQuery.data?.installationStatus]);
 
+  useEffect(() => {
+    if (createdOwner) {
+      queryClient.removeQueries({ queryKey: ['setup', 'createdOwner'] });
+    }
+  }, [createdOwner, queryClient]);
+
   if (setupQuery.isPending || setupQuery.data?.installationStatus === 'PENDING') {
     return (
       <main
@@ -72,7 +118,10 @@ export default function LoginPage() {
           'bg-background px-4 text-foreground',
         ])}
       >
-        <p className={cn(['text-sm text-secondary'])}>Preparando Geedyx…</p>
+        <p className={cn(['flex items-center gap-2 text-sm text-secondary'])}>
+          <LoaderCircle aria-hidden="true" className={cn(['h-4 w-4 animate-spin'])} />
+          Cargando Geedyx…
+        </p>
       </main>
     );
   }
@@ -87,13 +136,13 @@ export default function LoginPage() {
       >
         <div className={cn(['space-y-3 px-4 text-center'])}>
           <p className={cn(['text-sm text-danger'])}>
-            No pudimos preparar Geedyx. Inténtalo de nuevo cuando la aplicación esté
+            No pudimos cargar Geedyx. Inténtalo de nuevo cuando la aplicación esté
             disponible.
           </p>
           <button
             className={cn([
-              'inline-flex items-center justify-center rounded-md',
-              'border border-border-strong px-4 py-2',
+              'inline-flex items-center justify-center rounded-full',
+              'border border-border-strong px-3 py-1.5',
               'text-sm font-medium',
               'transition hover:bg-surface-subtle',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30',
@@ -126,6 +175,93 @@ export default function LoginPage() {
           <BrandLogo />
           <ThemeToggle />
         </div>
+
+        {createdOwner ? (
+          <aside
+            aria-live="polite"
+            className={cn([
+              'mb-4 space-y-1 rounded-xl border border-success/30',
+              'bg-success/10 p-5 text-sm shadow-sm',
+            ])}
+            role="status"
+          >
+            <p className={cn(['font-semibold text-success-strong'])}>Cuenta creada</p>
+            <p className={cn(['text-secondary'])}>
+              La cuenta de {createdOwner.displayName} se creó correctamente. Inicia
+              sesión con{' '}
+              <strong className={cn(['break-all'])}>{createdOwner.email}</strong> y la
+              contraseña que acabas de definir.
+            </p>
+          </aside>
+        ) : null}
+
+        {sessionManagement ? (
+          <aside
+            aria-live="polite"
+            className={cn([
+              'mb-4 space-y-4 rounded-xl border border-border',
+              'bg-surface-subtle p-5 text-sm shadow-sm',
+            ])}
+          >
+            <div className={cn(['space-y-1'])}>
+              <p className={cn(['font-semibold'])}>Sesiones activas</p>
+              <p className={cn(['text-secondary'])}>
+                Tu cuenta ya tiene cinco sesiones activas. Revoca una para abrir esta
+                sesión.
+              </p>
+            </div>
+            <div className={cn(['space-y-2'])}>
+              {sessionManagement.sessions.map((session) => (
+                <div
+                  className={cn([
+                    'flex items-start justify-between gap-3 rounded-md',
+                    'border border-border bg-surface p-3',
+                  ])}
+                  key={session.id}
+                >
+                  <div className={cn(['min-w-0 space-y-1'])}>
+                    <p className={cn(['truncate font-medium'])}>
+                      {session.userAgent ?? 'Dispositivo no identificado'}
+                    </p>
+                    <p className={cn(['text-xs text-muted'])}>
+                      Última actividad:{' '}
+                      {new Date(session.lastActivityAt).toLocaleString('es-HN')}
+                    </p>
+                  </div>
+                  <button
+                    className={cn([
+                      'shrink-0 rounded-full border border-border-strong',
+                      'px-3 py-1.5 text-xs font-medium',
+                      'transition hover:bg-surface-subtle',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30',
+                      'disabled:cursor-not-allowed disabled:opacity-60',
+                    ])}
+                    disabled={revokeSessionMutation.isPending}
+                    onClick={() =>
+                      revokeSessionMutation.mutate({
+                        sessionId: session.id,
+                        token: sessionManagement.token,
+                      })
+                    }
+                    type="button"
+                  >
+                    Revocar
+                  </button>
+                </div>
+              ))}
+            </div>
+            {sessionManagement.sessions.length === 0 ? (
+              <p className={cn(['text-sm text-success-strong'])}>
+                Sesión liberada. Puedes intentar iniciar sesión de nuevo.
+              </p>
+            ) : null}
+            {revokeSessionMutation.error ? (
+              <p className={cn(['text-sm text-danger'])} role="alert">
+                No pudimos revocar esa sesión. Inténtalo de nuevo.
+              </p>
+            ) : null}
+          </aside>
+        ) : null}
 
         <section
           className={cn([
@@ -196,8 +332,8 @@ export default function LoginPage() {
 
             <button
               className={cn([
-                'inline-flex w-full items-center justify-center gap-2 rounded-md',
-                'bg-accent px-4 py-2.5',
+                'inline-flex w-full items-center justify-center gap-2 rounded-full',
+                'bg-accent px-3 py-2',
                 'text-sm font-medium text-accent-foreground',
                 'transition hover:bg-accent-hover',
                 'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/30',

@@ -3,6 +3,7 @@ import { Geist_Mono, Source_Sans_3 } from 'next/font/google';
 import geedyxFavicon from '../assets/geedyx-favicon.png';
 import { QueryProvider } from '../components/providers/query-provider';
 import { ThemeProvider } from '../components/providers/theme-provider';
+import { ToastProvider } from '../components/feedback/feedback';
 import { cn } from '../lib/cn';
 import './globals.css';
 
@@ -45,7 +46,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <QueryProvider>{children}</QueryProvider>
+          <ToastProvider>
+            <QueryProvider>{children}</QueryProvider>
+          </ToastProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -7,12 +7,14 @@ import {
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import type { RequestWithId } from './request-id.middleware';
+import type { SessionManagementDetails } from '@geedyx/contracts';
 
 type ExceptionPayload = {
   code?: string;
   detail?: string;
   errors?: Array<{ field?: string; code: string; message: string }>;
   message?: string | string[];
+  sessionManagement?: SessionManagementDetails;
 };
 
 @Catch()
@@ -45,6 +47,9 @@ export class ProblemDetailsFilter implements ExceptionFilter {
         code,
         requestId,
         ...(payload.errors ? { errors: payload.errors } : {}),
+        ...(payload.sessionManagement
+          ? { sessionManagement: payload.sessionManagement }
+          : {}),
       });
   }
 

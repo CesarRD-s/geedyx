@@ -22,18 +22,17 @@ export class SetupService {
 
   async getStatus(requestId?: string): Promise<SetupStatus> {
     try {
-      const [installation, permissionCount] = await Promise.all([
-        this.prisma.installation.findUnique({
-          where: { key: 'default' },
-          select: {
-            ownerId: true,
-            status: true,
-          },
-        }),
-        this.prisma.permission.count(),
-      ]);
+      const installation = await this.prisma.installation.findUnique({
+        where: { key: 'default' },
+        select: {
+          ownerId: true,
+          status: true,
+        },
+      });
       const installationStatus = installation?.status ?? 'PENDING';
       const installationRecordExists = Boolean(installation);
+      const permissionCount =
+        installationStatus === 'PENDING' ? await this.prisma.permission.count() : 0;
       const permissionCatalogReady = permissionCount > 0;
       const ready =
         installationRecordExists &&
@@ -51,7 +50,10 @@ export class SetupService {
         );
       }
 
-      if (!installationRecordExists || !permissionCatalogReady) {
+      if (
+        installationStatus === 'PENDING' &&
+        (!installationRecordExists || !permissionCatalogReady)
+      ) {
         this.logger.warn(
           JSON.stringify({
             event: 'setup.status.incomplete',
@@ -67,7 +69,7 @@ export class SetupService {
           event: 'setup.status.checked',
           installationRecord: installationRecordExists ? 'present' : 'missing',
           installationStatus,
-          permissionCount,
+          ...(installationStatus === 'PENDING' ? { permissionCount } : {}),
           ready,
           requestId: requestId ?? 'unknown',
         }),
@@ -153,24 +155,10 @@ export class SetupService {
           const owner = await tx.user.create({
             data: { companyId: company.id, displayName, email, passwordHash },
           });
-          const role = await tx.role.create({
-            data: {
-              companyId: company.id,
-              code: 'OWNER',
-              name: 'Owner',
-              isSystem: true,
-            },
-          });
-          await tx.userRole.create({
-            data: {
-              userId: owner.id,
-              roleId: role.id,
-            },
-          });
-
           const permissions = await tx.permission.findMany({
             select: {
               id: true,
+              code: true,
             },
           });
 
@@ -181,12 +169,62 @@ export class SetupService {
             });
           }
 
-          await tx.rolePermission.createMany({
-            data: permissions.map((permission) => ({
-              roleId: role.id,
-              permissionId: permission.id,
-            })),
-          });
+          const permissionCodes = new Map(
+            permissions.map((permission) => [permission.code, permission.id]),
+          );
+          const roleDefinitions = [
+            {
+              code: 'OWNER',
+              name: 'Owner',
+              permissionCodes: permissions.map((permission) => permission.code),
+            },
+            {
+              code: 'ADMIN',
+              name: 'Admin',
+              permissionCodes: permissions
+                .map((permission) => permission.code)
+                .filter((code) => code !== 'system_health.read'),
+            },
+            {
+              code: 'USER',
+              name: 'Usuario',
+              permissionCodes: [
+                'dashboard.read',
+                'products.read',
+                'inventory.read',
+                'customers.read',
+                'suppliers.read',
+                'sales.read',
+                'payments.read',
+                'reports.read',
+              ],
+            },
+          ];
+          for (const definition of roleDefinitions) {
+            const role = await tx.role.create({
+              data: {
+                companyId: company.id,
+                code: definition.code,
+                name: definition.name,
+                isSystem: true,
+              },
+            });
+            const rolePermissions = definition.permissionCodes.flatMap((code) => {
+              const permissionId = permissionCodes.get(code);
+              return permissionId ? [{ roleId: role.id, permissionId }] : [];
+            });
+            if (rolePermissions.length > 0) {
+              await tx.rolePermission.createMany({ data: rolePermissions });
+            }
+            if (definition.code === 'OWNER') {
+              await tx.userRole.create({
+                data: {
+                  userId: owner.id,
+                  roleId: role.id,
+                },
+              });
+            }
+          }
 
           await tx.installation.update({
             where: { id: installation.id },
