@@ -134,6 +134,16 @@ html.dark {
   }
 }
 
+@layer utilities {
+  .scrollbar-hidden {
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hidden::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 body {
   margin: 0;
   background: var(--background);

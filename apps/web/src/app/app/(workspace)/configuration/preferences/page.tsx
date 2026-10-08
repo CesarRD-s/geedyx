@@ -130,10 +130,9 @@ export default function PreferencesPage() {
             type="button"
           >
             <Pencil aria-hidden="true" className={cn(['h-4 w-4'])} />
-            Editar preferencias
+            Editar
           </button>
         }
-        description="Define cómo quieres ver el idioma y las fechas en tu espacio de trabajo."
         eyebrow="Configuración"
         title="Preferencias"
       />
@@ -189,12 +188,11 @@ export default function PreferencesPage() {
         </div>
       </section>
 
-      <FeedbackAlert title="Preferencias personales">
-        Los campos vacíos vuelven a usar la configuración general de la empresa.
+      <FeedbackAlert>
+        Los campos vacíos heredan la configuración de la empresa.
       </FeedbackAlert>
 
       <Modal
-        description="Estas opciones afectan tu sesión y la forma en que se muestran las fechas."
         footer={
           <>
             <button

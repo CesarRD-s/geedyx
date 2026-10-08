@@ -1,6 +1,7 @@
 'use client';
 
 import type { AuthSession } from '@geedyx/contracts';
+import { PERMISSION_CATALOG } from '@geedyx/contracts';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -29,6 +30,16 @@ export default function DashboardPage() {
     queryFn: getConfiguration,
     queryKey: ['configuration'],
   });
+  const availableModules = [
+    ...new Set(
+      PERMISSION_CATALOG.filter(
+        (permission) =>
+          permission.available &&
+          permission.visible &&
+          sessionQuery.data?.user.permissions.includes(permission.code),
+      ).map((permission) => permission.moduleLabel),
+    ),
+  ];
 
   if (!sessionQuery.data) {
     return null;
@@ -38,11 +49,7 @@ export default function DashboardPage() {
 
   return (
     <div className={cn(['space-y-6'])}>
-      <PageHeader
-        description="Resumen de la operación y accesos rápidos."
-        eyebrow="Panel operativo"
-        title={`Bienvenido, ${session.user.displayName}`}
-      />
+      <PageHeader title={`Bienvenido, ${session.user.displayName}`} />
 
       {configurationQuery.data && !configurationQuery.data.isComplete ? (
         <FeedbackAlert title="Configuración pendiente" tone="warning">
@@ -89,18 +96,20 @@ export default function DashboardPage() {
       >
         <article className={cn(['rounded-lg border border-border bg-surface', 'p-5'])}>
           <p className={cn(['text-xs font-medium uppercase tracking-wide text-muted'])}>
-            Rol
+            Perfiles de acceso
           </p>
           <p className={cn(['mt-2 text-sm font-semibold'])}>
-            {session.user.roles.join(', ') || 'Sin rol asignado'}
+            {session.user.roleNames.join(', ') || 'Sin acceso asignado'}
           </p>
         </article>
         <article className={cn(['rounded-lg border border-border bg-surface', 'p-5'])}>
           <p className={cn(['text-xs font-medium uppercase tracking-wide text-muted'])}>
-            Permisos
+            Áreas disponibles
           </p>
           <p className={cn(['mt-2 text-sm font-semibold'])}>
-            {session.user.permissions.length}
+            {availableModules.length > 0
+              ? availableModules.join(', ')
+              : 'Sin áreas disponibles'}
           </p>
         </article>
         <article className={cn(['rounded-lg border border-border bg-surface', 'p-5'])}>

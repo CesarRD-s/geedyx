@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { LoaderCircle, PackagePlus, Plus } from 'lucide-react';
+import { LoaderCircle, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { type Resolver, type SubmitHandler, useForm } from 'react-hook-form';
@@ -68,7 +68,7 @@ export default function ProductsPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [formError, setFormError] = useState('');
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
+  const [pageSize, setPageSize] = useState(10);
   const sessionQuery = useQuery<AuthSession, ApiClientError>({
     queryFn: getCurrentSession,
     queryKey: sessionQueryKey,
@@ -174,7 +174,7 @@ export default function ProductsPage() {
             </button>
           ) : null
         }
-        description="Administra el catálogo comercial y sus identificadores internos."
+        description="Consulta precios, categorías y códigos de cada producto."
         eyebrow="Catálogo"
         title="Productos"
       />
@@ -184,15 +184,9 @@ export default function ProductsPage() {
           'space-y-4 rounded-2xl border border-border bg-surface p-5 shadow-sm',
         ])}
       >
-        <div className={cn(['flex items-start justify-between gap-4'])}>
-          <div className={cn(['space-y-1'])}>
-            <h2 className={cn(['text-lg font-semibold'])}>Catálogo registrado</h2>
-            <p className={cn(['text-sm text-secondary'])}>
-              Los productos nuevos comienzan como borradores.
-            </p>
-          </div>
-          <PackagePlus aria-hidden="true" className={cn(['h-5 w-5 text-muted'])} />
-        </div>
+        <p className={cn(['text-sm text-secondary'])}>
+          Los productos nuevos comienzan como borradores.
+        </p>
 
         {productsQuery.isPending ? (
           <p className={cn(['text-sm text-secondary'])}>Cargando productos…</p>

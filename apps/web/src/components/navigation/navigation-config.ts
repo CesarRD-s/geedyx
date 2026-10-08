@@ -1,19 +1,27 @@
 import {
+  ArrowLeftRight,
   BarChart3,
+  Building2,
   Boxes,
   ClipboardList,
+  Contact,
+  CreditCard,
+  KeyRound,
   LayoutDashboard,
   Package,
+  Receipt,
   Settings,
   Shield,
   ShoppingCart,
   Store,
+  Tags,
   Users,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export type NavigationItem = {
   href: string;
+  icon: LucideIcon;
   label: string;
   permission?: string;
 };
@@ -21,16 +29,15 @@ export type NavigationItem = {
 export type NavigationModule = {
   key: string;
   label: string;
-  icon: LucideIcon;
   items: NavigationItem[];
 };
 
 export const appNavigation: NavigationModule[] = [
   {
-    icon: LayoutDashboard,
     items: [
       {
         href: '/app/dashboard',
+        icon: LayoutDashboard,
         label: 'Panel operativo',
         permission: 'dashboard.read',
       },
@@ -39,20 +46,22 @@ export const appNavigation: NavigationModule[] = [
     label: 'Panel operativo',
   },
   {
-    icon: ShoppingCart,
     items: [
       {
         href: '/app/sales',
+        icon: ShoppingCart,
         label: 'Ventas',
         permission: 'sales.read',
       },
       {
         href: '/app/sales/receipts',
+        icon: Receipt,
         label: 'Comprobantes',
         permission: 'sales.read',
       },
       {
         href: '/app/sales/payments',
+        icon: CreditCard,
         label: 'Pagos',
         permission: 'payments.read',
       },
@@ -61,15 +70,16 @@ export const appNavigation: NavigationModule[] = [
     label: 'Ventas',
   },
   {
-    icon: Package,
     items: [
       {
         href: '/app/products',
+        icon: Package,
         label: 'Productos',
         permission: 'products.read',
       },
       {
         href: '/app/products/categories',
+        icon: Tags,
         label: 'Categorías',
         permission: 'products.read',
       },
@@ -78,15 +88,16 @@ export const appNavigation: NavigationModule[] = [
     label: 'Catálogo',
   },
   {
-    icon: Boxes,
     items: [
       {
         href: '/app/inventory',
+        icon: Boxes,
         label: 'Existencias',
         permission: 'inventory.read',
       },
       {
         href: '/app/inventory/movements',
+        icon: ArrowLeftRight,
         label: 'Movimientos',
         permission: 'inventory.read',
       },
@@ -95,15 +106,16 @@ export const appNavigation: NavigationModule[] = [
     label: 'Inventario',
   },
   {
-    icon: Store,
     items: [
       {
         href: '/app/customers',
+        icon: Contact,
         label: 'Clientes',
         permission: 'customers.read',
       },
       {
         href: '/app/suppliers',
+        icon: Store,
         label: 'Proveedores',
         permission: 'suppliers.read',
       },
@@ -112,10 +124,10 @@ export const appNavigation: NavigationModule[] = [
     label: 'Clientes y proveedores',
   },
   {
-    icon: BarChart3,
     items: [
       {
         href: '/app/reports',
+        icon: BarChart3,
         label: 'Reportes operativos',
         permission: 'reports.read',
       },
@@ -124,10 +136,10 @@ export const appNavigation: NavigationModule[] = [
     label: 'Reportes',
   },
   {
-    icon: Users,
     items: [
       {
         href: '/app/users',
+        icon: Users,
         label: 'Usuarios',
         permission: 'users.read',
       },
@@ -136,15 +148,16 @@ export const appNavigation: NavigationModule[] = [
     label: 'Usuarios',
   },
   {
-    icon: Shield,
     items: [
       {
         href: '/app/users/roles',
-        label: 'Roles y permisos',
+        icon: KeyRound,
+        label: 'Perfiles de acceso',
         permission: 'roles.manage',
       },
       {
         href: '/app/security/sessions',
+        icon: Shield,
         label: 'Sesiones',
         permission: 'sessions.read',
       },
@@ -153,10 +166,10 @@ export const appNavigation: NavigationModule[] = [
     label: 'Seguridad',
   },
   {
-    icon: ClipboardList,
     items: [
       {
         href: '/app/audit',
+        icon: ClipboardList,
         label: 'Registro de auditoría',
         permission: 'audit.read',
       },
@@ -165,15 +178,16 @@ export const appNavigation: NavigationModule[] = [
     label: 'Auditoría',
   },
   {
-    icon: Settings,
     items: [
       {
         href: '/app/configuration/company',
+        icon: Building2,
         label: 'Empresa',
         permission: 'configuration.read',
       },
       {
         href: '/app/configuration/preferences',
+        icon: Settings,
         label: 'Preferencias',
         permission: 'configuration.read',
       },
@@ -195,7 +209,21 @@ export function getVisibleNavigation(permissions: string[]): NavigationModule[] 
 }
 
 export function isNavigationItemActive(pathname: string, href: string): boolean {
-  return pathname === href || pathname.startsWith(`${href}/`);
+  const matchesPath = (candidate: string) =>
+    pathname === candidate || pathname.startsWith(`${candidate}/`);
+
+  if (!matchesPath(href)) {
+    return false;
+  }
+
+  const hasMoreSpecificMatch = appNavigation.some((navigationModule) =>
+    navigationModule.items.some(
+      (item) =>
+        item.href !== href && item.href.length > href.length && matchesPath(item.href),
+    ),
+  );
+
+  return !hasMoreSpecificMatch;
 }
 
 export function getNavigationTitle(pathname: string): string {

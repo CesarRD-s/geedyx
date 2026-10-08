@@ -127,6 +127,7 @@ export function useToast(): ToastContextValue {
 type ConfirmDialogProps = {
   cancelLabel?: string;
   confirmLabel?: string;
+  children?: React.ReactNode;
   description: string;
   onCancel: () => void;
   onConfirm: () => void;
@@ -285,6 +286,7 @@ export function Modal({
 export function ConfirmDialog({
   cancelLabel = 'Cancelar',
   confirmLabel = 'Confirmar',
+  children,
   description,
   onCancel,
   onConfirm,
@@ -325,6 +327,8 @@ export function ConfirmDialog({
       open={open}
       size="md"
       title={title}
-    />
+    >
+      {children}
+    </Modal>
   );
 }

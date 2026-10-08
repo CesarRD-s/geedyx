@@ -1,13 +1,7 @@
 'use client';
 
 import type { AuthSession } from '@geedyx/contracts';
-import {
-  ChevronDown,
-  ChevronRight,
-  PanelLeftClose,
-  PanelLeftOpen,
-  X,
-} from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -18,7 +12,6 @@ import { getVisibleNavigation, isNavigationItemActive } from './navigation-confi
 import { cn } from '../../lib/cn';
 
 const pinnedStorageKey = 'geedyx.navigation.pinned';
-const groupsStorageKey = 'geedyx.navigation.groups';
 
 type AppNavigationProps = {
   session: AuthSession;
@@ -26,18 +19,6 @@ type AppNavigationProps = {
   onCloseMobile: () => void;
   onPinnedChange: (pinned: boolean) => void;
 };
-
-function readStoredGroups(): string[] {
-  try {
-    const value = window.localStorage.getItem(groupsStorageKey);
-    const groups = value ? JSON.parse(value) : [];
-    return Array.isArray(groups)
-      ? groups.filter((group) => typeof group === 'string')
-      : [];
-  } catch {
-    return [];
-  }
-}
 
 export function AppNavigation({
   mobileOpen,
@@ -52,7 +33,6 @@ export function AppNavigation({
   );
   const [hovered, setHovered] = useState(false);
   const [pinned, setPinned] = useState(false);
-  const [openGroups, setOpenGroups] = useState<string[]>([]);
   const navigationRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -60,25 +40,10 @@ export function AppNavigation({
       const storedPinned = window.localStorage.getItem(pinnedStorageKey) === 'true';
       setPinned(storedPinned);
       onPinnedChange(storedPinned);
-      setOpenGroups(readStoredGroups());
     }, 0);
 
     return () => window.clearTimeout(timer);
   }, [onPinnedChange]);
-
-  useEffect(() => {
-    const activeModule = visibleNavigation.find((module) =>
-      module.items.some((item) => isNavigationItemActive(pathname, item.href)),
-    );
-
-    if (activeModule && !openGroups.includes(activeModule.key)) {
-      const frame = window.requestAnimationFrame(() => {
-        setOpenGroups((groups) => [...groups, activeModule.key]);
-      });
-
-      return () => window.cancelAnimationFrame(frame);
-    }
-  }, [openGroups, pathname, visibleNavigation]);
 
   useEffect(() => {
     if (!mobileOpen) {
@@ -135,16 +100,6 @@ export function AppNavigation({
     setPinned(nextPinned);
     onPinnedChange(nextPinned);
     window.localStorage.setItem(pinnedStorageKey, String(nextPinned));
-  };
-
-  const toggleGroup = (key: string) => {
-    setOpenGroups((groups) => {
-      const nextGroups = groups.includes(key)
-        ? groups.filter((group) => group !== key)
-        : [...groups, key];
-      window.localStorage.setItem(groupsStorageKey, JSON.stringify(nextGroups));
-      return nextGroups;
-    });
   };
 
   return (
@@ -243,132 +198,85 @@ export function AppNavigation({
 
         <nav
           className={cn([
-            'min-h-0 flex-1 overflow-y-auto px-2 py-4',
-            expanded ? 'space-y-1' : 'space-y-2',
+            'min-h-0 flex-1 overflow-y-auto px-2 py-4 space-y-1',
+            expanded ? '' : 'scrollbar-hidden',
           ])}
         >
           {visibleNavigation.map((module) => {
-            const ModuleIcon = module.icon;
-            const active = module.items.some((item) =>
-              isNavigationItemActive(pathname, item.href),
-            );
-            const isDirect = module.items.length === 1;
-            const groupOpen = openGroups.includes(module.key);
-
-            if (isDirect) {
-              const item = module.items[0];
-              return (
-                <Link
-                  aria-current={active ? 'page' : undefined}
-                  aria-label={module.label}
-                  className={cn([
-                    'flex items-center rounded-full text-sm transition',
-                    expanded ? 'gap-3 px-3 py-2' : 'justify-center p-3',
-                    active
-                      ? 'bg-surface-subtle font-medium text-accent'
-                      : 'text-secondary hover:bg-surface-subtle hover:text-accent',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30',
-                  ])}
-                  href={item.href}
-                  key={module.key}
-                  onClick={onCloseMobile}
-                  title={expanded ? undefined : module.label}
-                >
-                  <ModuleIcon aria-hidden="true" className={cn(['h-4 w-4 shrink-0'])} />
-                  {expanded ? (
-                    <span className={cn(['truncate'])}>{item.label}</span>
-                  ) : null}
-                </Link>
-              );
-            }
-
             return (
-              <div key={module.key} className={cn(['space-y-1'])}>
-                <button
-                  aria-expanded={expanded ? groupOpen : undefined}
-                  aria-label={module.label}
-                  className={cn([
-                    'flex w-full items-center rounded-full text-left text-sm transition',
-                    expanded ? 'gap-3 px-3 py-2' : 'justify-center p-3',
-                    active
-                      ? 'bg-surface-subtle font-medium text-accent'
-                      : 'text-secondary hover:bg-surface-subtle hover:text-accent',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30',
-                  ])}
-                  onClick={() => {
-                    if (!expanded) {
-                      setHovered(true);
-                      return;
-                    }
-                    toggleGroup(module.key);
-                  }}
-                  onFocus={() => {
-                    setHovered(true);
-                    if (!expanded && !openGroups.includes(module.key)) {
-                      setOpenGroups((groups) => {
-                        const nextGroups = [...groups, module.key];
-                        window.localStorage.setItem(
-                          groupsStorageKey,
-                          JSON.stringify(nextGroups),
-                        );
-                        return nextGroups;
-                      });
-                    }
-                  }}
-                  title={expanded ? undefined : module.label}
-                  type="button"
-                >
-                  <ModuleIcon aria-hidden="true" className={cn(['h-4 w-4 shrink-0'])} />
+              <section
+                aria-label={module.label}
+                className={cn(['space-y-1'])}
+                key={module.key}
+              >
+                <div className={cn(['flex h-8 items-center px-3'])}>
                   {expanded ? (
-                    <span className={cn(['min-w-0 flex-1 truncate'])}>
+                    <span
+                      className={cn([
+                        'text-xs font-semibold uppercase tracking-wide text-muted',
+                      ])}
+                    >
                       {module.label}
                     </span>
-                  ) : null}
-                  {expanded ? (
-                    groupOpen ? (
-                      <ChevronDown aria-hidden="true" className={cn(['h-4 w-4'])} />
-                    ) : (
-                      <ChevronRight aria-hidden="true" className={cn(['h-4 w-4'])} />
-                    )
-                  ) : null}
-                </button>
-                {expanded && groupOpen ? (
-                  <div className={cn(['ml-4 space-y-1 border-l border-border pl-3'])}>
-                    {module.items.map((item) => {
-                      const itemActive = isNavigationItemActive(pathname, item.href);
-                      return (
-                        <Link
-                          aria-current={itemActive ? 'page' : undefined}
-                          className={cn([
-                            'block rounded-full px-3 py-2 text-sm transition',
-                            itemActive
-                              ? 'bg-surface-subtle font-medium text-accent'
-                              : 'text-secondary hover:bg-surface-subtle hover:text-accent',
-                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30',
-                          ])}
-                          href={item.href}
-                          key={item.href}
-                          onClick={onCloseMobile}
-                        >
-                          {item.label}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                ) : null}
-              </div>
+                  ) : (
+                    <span
+                      aria-hidden="true"
+                      className={cn(['h-px w-full bg-border'])}
+                    />
+                  )}
+                </div>
+                <div className={cn(['space-y-1'])}>
+                  {module.items.map((item) => {
+                    const itemActive = isNavigationItemActive(pathname, item.href);
+                    const ItemIcon = item.icon;
+
+                    return (
+                      <Link
+                        aria-current={itemActive ? 'page' : undefined}
+                        aria-label={
+                          expanded ? undefined : `${module.label}: ${item.label}`
+                        }
+                        className={cn([
+                          'flex h-10 items-center rounded-full px-3 text-sm transition',
+                          expanded ? 'gap-3' : 'justify-center',
+                          itemActive
+                            ? 'bg-surface-subtle font-medium text-accent'
+                            : 'text-secondary hover:bg-surface-subtle hover:text-accent',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30',
+                        ])}
+                        href={item.href}
+                        key={item.href}
+                        onClick={onCloseMobile}
+                        title={expanded ? undefined : `${module.label}: ${item.label}`}
+                      >
+                        <ItemIcon
+                          aria-hidden="true"
+                          className={cn(['h-4 w-4 shrink-0'])}
+                        />
+                        {expanded ? (
+                          <span className={cn(['truncate'])}>{item.label}</span>
+                        ) : null}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </section>
             );
           })}
         </nav>
 
-        {expanded ? (
-          <div className={cn(['shrink-0 border-t border-border px-4 py-3'])}>
-            <p className={cn(['text-xs text-muted'])}>Espacio de trabajo</p>
-            <p className={cn(['mt-1 truncate text-xs font-medium'])}>
-              {session.user.email}
-            </p>
-          </div>
-        ) : null}
+        <div className={cn(['shrink-0 border-t border-border px-4 py-3'])}>
+          {expanded ? (
+            <>
+              <p className={cn(['text-xs text-muted'])}>Espacio de trabajo</p>
+              <p className={cn(['mt-1 truncate text-xs font-medium'])}>
+                {session.user.email}
+              </p>
+            </>
+          ) : (
+            <div aria-hidden="true" className={cn(['h-9'])} />
+          )}
+        </div>
       </aside>
     </>
   );

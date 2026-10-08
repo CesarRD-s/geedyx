@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { FolderPlus, LoaderCircle, Plus } from 'lucide-react';
+import { LoaderCircle, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { type SubmitHandler, useForm } from 'react-hook-form';
@@ -13,6 +13,11 @@ import {
   Modal,
   useToast,
 } from '../../../../../components/feedback/feedback';
+import {
+  DataTableFrame,
+  dataTableHeaderCellClassName,
+  dataTableHeaderRowClassName,
+} from '../../../../../components/data/data-table-frame';
 import { PaginationControls } from '../../../../../components/data/pagination-controls';
 import { Input } from '../../../../../components/forms/input';
 import { PageHeader } from '../../../../../components/layout/page-header';
@@ -41,7 +46,7 @@ export default function CategoriesPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [formError, setFormError] = useState('');
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
+  const [pageSize, setPageSize] = useState(10);
   const sessionQuery = useQuery<AuthSession, ApiClientError>({
     queryFn: getCurrentSession,
     queryKey: sessionQueryKey,
@@ -56,6 +61,11 @@ export default function CategoriesPage() {
     enabled: canRead,
     queryFn: () => getCategories({ page, pageSize }),
     queryKey: [...categoriesQueryKey, page, pageSize],
+  });
+  const categoryOptionsQuery = useQuery<CategoriesResponse, ApiClientError>({
+    enabled: canRead,
+    queryFn: () => getCategories({ page: 1, pageSize: 100 }),
+    queryKey: [...categoriesQueryKey, 'options'],
   });
   const createMutation = useMutation({
     mutationFn: createCategory,
@@ -143,52 +153,16 @@ export default function CategoriesPage() {
             </button>
           ) : null
         }
-        description="Organiza los productos con una taxonomía simple y jerárquica."
+        description="Ordena el catálogo por categorías principales y subcategorías."
         eyebrow="Catálogo"
         title="Categorías"
       />
-      <section
-        className={cn([
-          'space-y-4 rounded-2xl border border-border bg-surface p-5 shadow-sm',
-        ])}
-      >
-        <div className={cn(['flex items-start justify-between gap-4'])}>
-          <div>
-            <h2 className={cn(['text-lg font-semibold'])}>Categorías registradas</h2>
-            <p className={cn(['mt-1 text-sm text-secondary'])}>
-              Puedes crear niveles padre e hijo.
-            </p>
-          </div>
-          <FolderPlus aria-hidden="true" className={cn(['h-5 w-5 text-muted'])} />
-        </div>
-        {categoriesQuery.data.categories.length === 0 ? (
-          <FeedbackAlert>No hay categorías registradas.</FeedbackAlert>
-        ) : (
-          <>
-            <div className={cn(['space-y-2'])}>
-              {categoriesQuery.data.categories.map((category) => (
-                <article
-                  className={cn([
-                    'flex items-center justify-between rounded-xl border border-border bg-surface-subtle p-4',
-                  ])}
-                  key={category.id}
-                >
-                  <div>
-                    <h3 className={cn(['font-medium'])}>{category.name}</h3>
-                    <p className={cn(['mt-1 text-xs text-muted'])}>
-                      {category.parentId ? 'Subcategoría' : 'Categoría principal'}
-                    </p>
-                  </div>
-                  <span
-                    className={cn([
-                      'rounded-full bg-accent-muted px-2 py-1 text-xs text-accent',
-                    ])}
-                  >
-                    {category.archivedAt ? 'Archivada' : 'Activa'}
-                  </span>
-                </article>
-              ))}
-            </div>
+      {categoriesQuery.data.categories.length === 0 ? (
+        <FeedbackAlert>No hay categorías registradas.</FeedbackAlert>
+      ) : (
+        <DataTableFrame
+          ariaLabel="Categorías de productos"
+          footer={
             <PaginationControls
               onPageChange={setPage}
               onPageSizeChange={(nextPageSize) => {
@@ -197,12 +171,63 @@ export default function CategoriesPage() {
               }}
               pagination={categoriesQuery.data.pagination}
             />
-          </>
-        )}
-      </section>
+          }
+          tableClassName="min-w-[640px]"
+        >
+          <thead className={dataTableHeaderRowClassName}>
+            <tr>
+              <th
+                className={cn([dataTableHeaderCellClassName, 'min-w-72'])}
+                scope="col"
+              >
+                Categoría
+              </th>
+              <th
+                className={cn([dataTableHeaderCellClassName, 'min-w-52'])}
+                scope="col"
+              >
+                Tipo
+              </th>
+              <th
+                className={cn([dataTableHeaderCellClassName, 'min-w-36'])}
+                scope="col"
+              >
+                Estado
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {categoriesQuery.data.categories.map((category) => (
+              <tr
+                className={cn(['border-t border-border align-middle'])}
+                key={category.id}
+              >
+                <td className={cn(['px-5 py-4 align-middle font-medium'])}>
+                  {category.name}
+                </td>
+                <td className={cn(['px-5 py-4 align-middle text-secondary'])}>
+                  {category.parentId ? 'Subcategoría' : 'Categoría principal'}
+                </td>
+                <td className={cn(['px-5 py-4 align-middle'])}>
+                  <span
+                    className={cn([
+                      'inline-flex rounded-full px-2.5 py-1 text-xs font-medium',
+                      category.archivedAt
+                        ? 'bg-surface-subtle text-secondary'
+                        : 'bg-success/10 text-success-strong',
+                    ])}
+                  >
+                    {category.archivedAt ? 'Archivada' : 'Activa'}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </DataTableFrame>
+      )}
 
       <Modal
-        description="Usa nombres claros y reutilizables para organizar el catálogo."
+        description="La categoría padre es opcional; déjala vacía para crear una principal."
         footer={
           <>
             <button
@@ -266,7 +291,7 @@ export default function CategoriesPage() {
               {...register('parentId')}
             >
               <option value="">Sin categoría padre</option>
-              {categoriesQuery.data.categories
+              {categoryOptionsQuery.data?.categories
                 .filter((category) => !category.archivedAt)
                 .map((category) => (
                   <option key={category.id} value={category.id}>

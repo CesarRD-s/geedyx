@@ -19,7 +19,7 @@ export function PaginationControls({
     pagination.total === 0 ? 0 : (pagination.page - 1) * pagination.pageSize + 1;
   const rangeEnd = Math.min(pagination.page * pagination.pageSize, pagination.total);
   const buttonStyles = cn([
-    'inline-flex items-center gap-1 rounded-full border border-border-strong px-3 py-1.5',
+    'inline-flex items-center gap-1 rounded-full border border-border-strong px-2 py-1.5',
     'text-xs font-medium transition hover:bg-surface-subtle',
     'disabled:cursor-not-allowed disabled:opacity-50',
   ]);
@@ -27,13 +27,19 @@ export function PaginationControls({
   return (
     <div
       className={cn([
-        'flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4',
+        'flex flex-col items-start gap-3 border-t border-border pt-4',
+        'sm:flex-row sm:items-center sm:justify-between',
       ])}
     >
       <p className={cn(['text-xs text-muted'])}>
         {rangeStart}–{rangeEnd} de {pagination.total}
       </p>
-      <div className={cn(['flex flex-wrap items-center gap-2'])}>
+      <div
+        className={cn([
+          'flex w-full flex-wrap items-center gap-2',
+          'sm:w-auto sm:flex-nowrap',
+        ])}
+      >
         <label className={cn(['flex items-center gap-2 text-xs text-secondary'])}>
           Por página
           <select
@@ -52,29 +58,33 @@ export function PaginationControls({
             ))}
           </select>
         </label>
-        <button
-          aria-label="Página anterior"
-          className={buttonStyles}
-          disabled={pagination.page <= 1}
-          onClick={() => onPageChange(pagination.page - 1)}
-          type="button"
-        >
-          <ChevronLeft aria-hidden="true" className={cn(['h-3.5 w-3.5'])} />
-          Anterior
-        </button>
-        <span className={cn(['text-xs font-medium text-secondary'])}>
-          {pagination.page} / {pagination.pageCount}
-        </span>
-        <button
-          aria-label="Página siguiente"
-          className={buttonStyles}
-          disabled={pagination.page >= pagination.pageCount}
-          onClick={() => onPageChange(pagination.page + 1)}
-          type="button"
-        >
-          Siguiente
-          <ChevronRight aria-hidden="true" className={cn(['h-3.5 w-3.5'])} />
-        </button>
+        <div className={cn(['ml-auto flex shrink-0 items-center gap-2'])}>
+          <button
+            aria-label="Página anterior"
+            className={buttonStyles}
+            disabled={pagination.page <= 1}
+            onClick={() => onPageChange(pagination.page - 1)}
+            type="button"
+          >
+            <ChevronLeft aria-hidden="true" className={cn(['h-3.5 w-3.5'])} />
+            Anterior
+          </button>
+          <span
+            className={cn(['whitespace-nowrap text-xs font-medium text-secondary'])}
+          >
+            {pagination.page} / {pagination.pageCount}
+          </span>
+          <button
+            aria-label="Página siguiente"
+            className={buttonStyles}
+            disabled={pagination.page >= pagination.pageCount}
+            onClick={() => onPageChange(pagination.page + 1)}
+            type="button"
+          >
+            Siguiente
+            <ChevronRight aria-hidden="true" className={cn(['h-3.5 w-3.5'])} />
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -11,7 +11,7 @@ const routeLabels: Record<string, string> = {
   products: 'Productos',
   receipts: 'Comprobantes',
   reports: 'Reportes operativos',
-  roles: 'Roles y permisos',
+  roles: 'Perfiles de acceso',
   sales: 'Ventas',
   sessions: 'Sesiones',
   suppliers: 'Proveedores',
@@ -30,19 +30,9 @@ export default async function PlaceholderPage({ params }: PlaceholderPageProps) 
   return (
     <div className={cn(['space-y-6'])}>
       <PageHeader
-        description="La navegación y la responsabilidad de este módulo ya están reservadas para su implementación funcional."
-        eyebrow="Estructura del espacio de trabajo"
+        description="Esta sección todavía no está disponible."
         title={currentLabel}
       />
-      <section
-        className={cn([
-          'rounded-lg border border-border bg-surface p-6',
-          'text-sm text-secondary',
-        ])}
-      >
-        Este módulo está preparado en el menú y se habilitará cuando cerremos su flujo
-        funcional, permisos y datos.
-      </section>
     </div>
   );
 }

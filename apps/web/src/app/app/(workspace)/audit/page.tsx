@@ -7,6 +7,11 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import type { AuditResponse, AuthSession } from '@geedyx/contracts';
 import { FeedbackAlert } from '../../../../components/feedback/feedback';
+import {
+  DataTableFrame,
+  dataTableHeaderCellClassName,
+  dataTableHeaderRowClassName,
+} from '../../../../components/data/data-table-frame';
 import { PaginationControls } from '../../../../components/data/pagination-controls';
 import { Input } from '../../../../components/forms/input';
 import { PageHeader } from '../../../../components/layout/page-header';
@@ -25,7 +30,7 @@ export default function AuditPage() {
   const [outcome, setOutcome] = useState<'' | 'SUCCESS' | 'FAILURE'>('');
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
+  const [pageSize, setPageSize] = useState(10);
   const sessionQuery = useQuery<AuthSession, ApiClientError>({
     queryFn: getCurrentSession,
     queryKey: sessionQueryKey,
@@ -68,11 +73,7 @@ export default function AuditPage() {
 
   return (
     <div className={cn(['space-y-6'])}>
-      <PageHeader
-        description="Consulta las acciones relevantes registradas en Geedyx."
-        eyebrow="Auditoría"
-        title="Registro de auditoría"
-      />
+      <PageHeader eyebrow="Seguridad" title="Auditoría" />
       <section
         className={cn([
           'grid gap-4 rounded-xl border border-border bg-surface p-5 shadow-sm md:grid-cols-3',
@@ -93,7 +94,7 @@ export default function AuditPage() {
         </div>
         <div>
           <label className={cn(['text-sm font-medium'])} htmlFor="audit-query">
-            Entidad o requestId
+            Buscar
           </label>
           <Input
             id="audit-query"
@@ -101,6 +102,7 @@ export default function AuditPage() {
               setPage(1);
               setQuery(event.target.value);
             }}
+            placeholder="Persona, acción o detalle"
             value={query}
           />
         </div>
@@ -126,55 +128,9 @@ export default function AuditPage() {
       {auditQuery.data.events.length === 0 ? (
         <FeedbackAlert>No hay eventos con esos filtros.</FeedbackAlert>
       ) : (
-        <section
-          className={cn([
-            'overflow-x-auto rounded-xl border border-border bg-surface shadow-sm',
-          ])}
-        >
-          <table className={cn(['w-full min-w-[720px] text-left text-sm'])}>
-            <thead
-              className={cn([
-                'bg-surface-subtle text-xs uppercase tracking-wide text-muted',
-              ])}
-            >
-              <tr>
-                <th className={cn(['px-5 py-3 font-medium'])}>Fecha</th>
-                <th className={cn(['px-5 py-3 font-medium'])}>Módulo</th>
-                <th className={cn(['px-5 py-3 font-medium'])}>Acción</th>
-                <th className={cn(['px-5 py-3 font-medium'])}>Actor</th>
-                <th className={cn(['px-5 py-3 font-medium'])}>Resultado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {auditQuery.data.events.map((event) => (
-                <tr className={cn(['border-t border-border'])} key={event.id}>
-                  <td className={cn(['px-5 py-3 text-secondary'])}>
-                    {format(new Date(event.occurredAt), 'dd/MM/yyyy HH:mm', {
-                      locale: es,
-                    })}
-                  </td>
-                  <td className={cn(['px-5 py-3'])}>{event.module}</td>
-                  <td className={cn(['px-5 py-3 font-medium'])}>{event.action}</td>
-                  <td className={cn(['px-5 py-3 text-secondary'])}>
-                    {event.actorDisplayName ?? 'Sistema'}
-                  </td>
-                  <td className={cn(['px-5 py-3'])}>
-                    <span
-                      className={cn([
-                        'rounded-full px-2.5 py-1 text-xs font-medium',
-                        event.outcome === 'SUCCESS'
-                          ? 'bg-success/10 text-success-strong'
-                          : 'bg-danger/10 text-danger',
-                      ])}
-                    >
-                      {event.outcome === 'SUCCESS' ? 'Exitoso' : 'Fallido'}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <div className={cn(['p-5 pt-0'])}>
+        <DataTableFrame
+          ariaLabel="Registro de auditoría"
+          footer={
             <PaginationControls
               onPageChange={setPage}
               onPageSizeChange={(nextPageSize) => {
@@ -183,8 +139,57 @@ export default function AuditPage() {
               }}
               pagination={auditQuery.data.pagination}
             />
-          </div>
-        </section>
+          }
+          tableClassName="min-w-[720px]"
+        >
+          <thead className={dataTableHeaderRowClassName}>
+            <tr>
+              <th className={dataTableHeaderCellClassName} scope="col">
+                Fecha
+              </th>
+              <th className={dataTableHeaderCellClassName} scope="col">
+                Módulo
+              </th>
+              <th className={dataTableHeaderCellClassName} scope="col">
+                Acción
+              </th>
+              <th className={dataTableHeaderCellClassName} scope="col">
+                Actor
+              </th>
+              <th className={dataTableHeaderCellClassName} scope="col">
+                Resultado
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {auditQuery.data.events.map((event) => (
+              <tr className={cn(['border-t border-border'])} key={event.id}>
+                <td className={cn(['px-5 py-3 text-secondary'])}>
+                  {format(new Date(event.occurredAt), 'dd/MM/yyyy HH:mm', {
+                    locale: es,
+                  })}
+                </td>
+                <td className={cn(['px-5 py-3'])}>{event.module}</td>
+                <td className={cn(['px-5 py-3 font-medium'])}>{event.action}</td>
+                <td className={cn(['px-5 py-3 text-secondary'])}>
+                  {event.actorDisplayName ?? 'Sistema'}
+                </td>
+                <td className={cn(['px-5 py-3'])}>
+                  <span
+                    className={cn([
+                      'rounded-full px-2.5 py-1 text-xs font-medium',
+                      event.outcome === 'SUCCESS'
+                        ? 'bg-success/10 text-success-strong'
+                        : 'bg-danger/10 text-danger',
+                    ])}
+                  >
+                    {event.outcome === 'SUCCESS' ? 'Exitoso' : 'Fallido'}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </DataTableFrame>
       )}
     </div>
   );

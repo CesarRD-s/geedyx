@@ -164,47 +164,57 @@ Algunos ejemplos de la primera versión:
 - Un problema de salud del sistema se muestra como alerta persistente con un
   mensaje seguro y una referencia útil para soporte.
 
-## 10. Selector de vistas para datos
+## 10. Patrones de presentación de datos
 
-El selector de vistas cambia únicamente la forma de presentar la información.
-No modifica los datos, filtros, permisos, acciones ni reglas del módulo.
+Cada pantalla debe elegir su patrón según el tipo de información y la tarea.
+Los patrones actuales de Geedyx son acordeones, tablas y listas de filas
+simples. No se deben combinar contenedores para crear cards dentro de otras
+cards ni cambiar de patrón solo por el tamaño del viewport.
 
-Las vistas disponibles son:
+### Acordeón
 
-- **Tabla o lista compacta:** para consultar muchos registros y operar con
-  rapidez.
-- **Lista detallada:** para mostrar información secundaria sin perder la
-  densidad de una lista.
-- **Tarjetas:** para explorar registros visuales o con imágenes.
+Usar acordeones cuando cada elemento agrupe detalles que el usuario puede
+consultar u ocultar sin salir de la pantalla, como los perfiles de acceso.
 
-El alcance inicial por módulo será:
+- Mantener una sola columna de filas, sin cards anidadas.
+- Colocar el chevron al inicio y las acciones disponibles al final de la fila.
+- Alinear el encabezado de la sección con las filas y mantener una jerarquía
+  visual discreta.
+- El contenido expandido conserva los detalles existentes y no altera la
+  simetría de las demás filas.
 
-| Área | Vistas iniciales |
-| --- | --- |
-| Productos y catálogo | Tabla o lista compacta, lista detallada y tarjetas |
-| Inventario | Tabla o lista compacta y lista detallada; tarjetas solo como apoyo |
-| Clientes y proveedores | Tabla o lista compacta y lista detallada; tarjetas opcionales |
-| Ventas y pedidos | Tabla o lista compacta y lista detallada; tarjetas para pendientes o recientes cuando aporte valor |
-| Auditoría | Tabla o lista compacta |
-| Dashboard | Tarjetas como composición fija, sin selector genérico |
-| Reportes | Presentación definida por cada reporte, sin selector genérico |
-| Configuración | Formularios y secciones, sin selector |
+### Tabla
 
-Reglas del selector:
+Usar tablas cuando los registros comparten campos comparables o se necesite
+consultarlos, ordenarlos, filtrarlos y operarlos como conjunto. Usuarios,
+auditoría y categorías son ejemplos actuales.
 
-- La vista predeterminada dependerá de la tarea: tabla para operar y tarjetas
-  para explorar productos.
-- La búsqueda, los filtros, el orden, los permisos y las acciones deben
-  conservarse al cambiar de vista.
-- La preferencia puede guardarse inicialmente en el navegador por módulo y
-  ruta; no es una configuración global del sistema.
-- El control debe ser accesible, indicar la vista activa y funcionar con
-  teclado.
-- En pantallas pequeñas puede priorizarse automáticamente una vista legible,
-  sin ocultar información esencial.
+- Usar encabezado tonal con jerarquía menor que los valores de cada fila.
+- Mantener divisores de borde a borde, espaciado simétrico y contenido
+  alineado verticalmente al centro.
+- Agrupar las acciones de fila al final cuando existan y ofrecerlas en un menú
+  de tres puntos con iconos reales y texto.
+- En pantallas pequeñas, conservar la tabla y permitir scroll horizontal en su
+  contenedor; no convertirla automáticamente en tarjetas o filas distintas.
+- Mantener el resumen y la paginación fuera del área de scroll horizontal para
+  que sigan accesibles al desplazar la tabla.
+- Usar el mismo patrón para pantallas nuevas con datos tabulares.
 
-Regla general: **tarjetas para explorar, listas para consultar y tablas para
-operar**.
+### Lista de filas simples
+
+Usar filas simples cuando los elementos sean unidades independientes y no
+necesiten columnas comparables, como las sesiones activas.
+
+- Mantener una fila clara por elemento, con los datos y controles alineados.
+- Evitar presentar cada elemento como una card si una lista plana comunica
+  mejor la relación entre ellos.
+- Conservar el mismo patrón al adaptar la pantalla a móvil y tablet.
+
+### Excepción de Productos
+
+Productos tendrá una presentación especializada que se definirá más adelante.
+No aplicar automáticamente a esa pantalla las decisiones futuras para tablas
+genéricas, tarjetas o selectores de vista hasta que se acuerde su diseño.
 
 ## 11. Sidebar y navegación lateral
 

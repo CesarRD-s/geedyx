@@ -183,24 +183,19 @@ export default function CompanyConfigurationPage() {
               type="button"
             >
               <Pencil aria-hidden="true" className={cn(['h-4 w-4'])} />
-              Editar configuración
+              Editar
             </button>
           ) : null
         }
-        description="Administra la identidad, regionalización y formatos que usa toda la consola."
         eyebrow="Configuración"
         title="Empresa"
       />
 
       {!configuration.isComplete ? (
-        <FeedbackAlert title="Configuración pendiente" tone="warning">
+        <FeedbackAlert tone="warning">
           Completa los campos obligatorios para activar todos los formatos del sistema.
         </FeedbackAlert>
-      ) : (
-        <FeedbackAlert title="Configuración lista" tone="success">
-          La identidad y los formatos globales están disponibles para el equipo.
-        </FeedbackAlert>
-      )}
+      ) : null}
 
       <section
         className={cn([
@@ -292,16 +287,14 @@ export default function CompanyConfigurationPage() {
             className={cn(['mt-0.5 h-5 w-5 text-accent'])}
           />
           <div className={cn(['space-y-1'])}>
-            <h2 className={cn(['font-medium'])}>Configuración centralizada</h2>
             <p className={cn(['text-sm text-secondary'])}>
-              Estos valores se aplicarán a las nuevas operaciones y documentos.
+              Estos valores se aplican a las nuevas operaciones y documentos.
             </p>
           </div>
         </div>
       </section>
 
       <Modal
-        description="Actualiza la identidad y los formatos predeterminados de tu empresa."
         footer={
           <>
             <button

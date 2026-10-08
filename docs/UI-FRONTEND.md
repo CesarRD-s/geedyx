@@ -458,7 +458,10 @@ acción sensible.
 - Toolbars como bandas tonales compactas.
 - Tablas con header tonal sutil.
 - Acciones de fila compactas.
-- Cambio a lista móvil cuando una tabla pierde legibilidad.
+- El patrón de presentación responde al contenido: acordeón, tabla o lista de
+  filas simples.
+- Las tablas conservan su estructura en móvil y usan scroll horizontal cuando
+  el ancho no alcanza; no se convierten automáticamente en tarjetas.
 
 El header regional muestra fecha y hora con precisión de minuto. En móvil
 muestra solo la hora. No muestra segundos, ciudad, abreviatura de zona ni
@@ -486,12 +489,25 @@ controles de agenda.
 - `EmptyState` cuando no hay resultados.
 - `ErrorState` para errores recuperables.
 - `Skeleton` conserva la estructura durante loading.
-- Lista responsive cuando las columnas no caben con legibilidad.
 - Cuando la cantidad de columnas supera el ancho disponible, la tabla se
   envuelve en un contenedor con scroll horizontal propio; nunca se comprime el
   texto hasta perder legibilidad ni se rompe el layout de la página.
 - El scroll horizontal debe conservar encabezados, acciones y nombres de
   columnas accesibles con teclado y touch.
+- El resumen y la paginación se mantienen fuera del contenedor de scroll
+  horizontal.
+- Las filas mantienen divisores de borde a borde, espaciado simétrico y
+  alineación vertical centrada.
+- Las acciones, cuando existan, quedan al final de la fila dentro del menú
+  reutilizable de tres puntos.
+- Usar el componente compartido `DataTableFrame` para tablas convencionales y
+  `PaginationControls` para sus controles de paginación.
+
+Las filas simples se usan para elementos independientes sin columnas
+comparables, como las sesiones activas. Los acordeones se usan para elementos
+agrupados con detalles expandibles, como los perfiles de acceso. En ambos casos
+se mantiene una sola jerarquía de superficie, sin cards anidadas. Productos es
+una excepción cuyo patrón se definirá por separado.
 
 ## 16. Estados de contenido
 
@@ -566,29 +582,45 @@ reduce las transiciones y animaciones a un mínimo y nunca debe sobrescribirse.
 
 ### Productos y categorías
 
-- Page header con acción principal.
-- Toolbar con búsqueda y filtros.
-- Tabla responsive.
-- Ordenamiento y paginación visibles.
-- Dialogs para crear, editar y eliminar.
-- Badges para estados.
-- Skeleton, empty y error states.
+- Categorías usa el patrón de tabla compartido, con el header tonal, divisores
+  completos y scroll horizontal en pantallas estrechas.
+- Productos queda fuera de esta definición y tendrá una presentación especial
+  acordada por separado.
+- Mantener los estados de carga, vacío y error propios de cada pantalla.
 
 ### Usuarios
 
 - Búsqueda y filtro de estado.
-- Tabla o lista responsive.
+- Tabla con scroll horizontal en pantallas estrechas; no se transforma en
+  tarjetas.
 - Badges success y danger con texto.
 - Dialog de crear y editar.
 - Roles mediante checkboxes etiquetados.
 - Acciones visibles solo cuando el usuario puede realizarlas.
+- Las acciones por cuenta se agrupan en un menú al final de cada fila.
+
+### Perfiles de acceso
+
+- Presentar los perfiles en una lista de acordeones de una sola columna.
+- Mostrar primero Propietario, Administrador y Usuario; después, los perfiles de
+  la empresa ordenados por nombre.
+- Usar un icono de flecha para expandir y contraer la descripción y las acciones
+  permitidas.
+- Mantener las acciones de perfiles personalizados en el menú al final de la fila.
 
 ### Auditoría
 
 - Filtros compactos.
-- Lista densa de eventos.
+- Tabla de eventos con encabezado tonal, divisores completos y scroll horizontal
+  en pantallas estrechas.
 - Outcome visible mediante texto y tono semántico.
 - Timestamps formateados con contexto regional.
+
+### Sesiones
+
+- Presentar cada sesión como una fila simple e independiente.
+- Alinear los datos y controles al centro de la fila.
+- Evitar cards anidadas y conservar una lista de filas en pantallas estrechas.
 
 ### Perfil, preferencias, seguridad y compañía
 
@@ -624,6 +656,10 @@ servidor.
 - TypeScript estricto.
 - No usar `any`.
 - Usar primitives existentes antes de crear una nueva.
+- Usar iconos SVG de Lucide; no sustituirlos por caracteres como flechas o puntos.
+- En filas con acciones, usar un botón de menú con icono de tres puntos y
+  `aria-label`. Cada opción combina icono y texto. El menú se abre hacia abajo
+  cuando cabe y hacia arriba cuando el espacio inferior es insuficiente.
 - Usar tokens semánticos, nunca hex o paletas raw en JSX o CSS de componentes.
 - Mantener el código vertical, legible y consistente.
 - Los textos deben ser claros, neutrales y precisos.
