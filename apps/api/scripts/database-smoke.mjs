@@ -234,6 +234,23 @@ async function run() {
     'Reading the current session must not extend its idle expiration.',
   );
 
+  const ownerSelfPasswordReset = await request(
+    `/api/v1/users/${currentSession.body.data.user.id}/temporary-password`,
+    {
+      body: JSON.stringify({ reason: 'Owner recovery test' }),
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrfToken,
+      },
+      method: 'POST',
+    },
+  );
+  assertStatus(ownerSelfPasswordReset, 409, 'Owner self-reset');
+  assertCondition(
+    ownerSelfPasswordReset.body?.code === 'SELF_TEMPORARY_PASSWORD_NOT_ALLOWED',
+    'An Owner must use the normal password change flow for their own account.',
+  );
+
   const usersBefore = await request('/api/v1/users');
   assertStatus(usersBefore, 200, 'User list');
   assertCondition(
@@ -249,12 +266,115 @@ async function run() {
     ),
     'Installation must create the three system roles.',
   );
+  assertCondition(
+    roles.body?.data?.permissions?.some(
+      (permission) => permission.code === 'products.manage' && permission.assignable,
+    ),
+    'The role catalog must expose assignable product actions.',
+  );
+  assertCondition(
+    !roles.body?.data?.permissions?.some((permission) =>
+      permission.code.startsWith('sales.'),
+    ),
+    'Unavailable sales actions must stay out of the role editor.',
+  );
+
+  const customRoleName = `CI Catalog Profile ${smokeId}`;
+  const customRole = await request('/api/v1/users/roles', {
+    body: JSON.stringify({
+      description: 'Smoke profile for catalog access',
+      name: customRoleName,
+      permissionCodes: ['products.read', 'products.manage'],
+    }),
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': csrfToken,
+    },
+    method: 'POST',
+  });
+  assertStatus(customRole, 201, 'Custom access profile creation');
+  assertCondition(
+    customRole.body?.data?.name === customRoleName &&
+      customRole.body?.data?.permissions?.includes('products.manage'),
+    'A custom profile must persist its name and selected product actions.',
+  );
+
+  const duplicateRole = await request('/api/v1/users/roles', {
+    body: JSON.stringify({
+      description: 'Duplicate profile name',
+      name: customRoleName.toLowerCase(),
+      permissionCodes: ['products.read'],
+    }),
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': csrfToken,
+    },
+    method: 'POST',
+  });
+  assertStatus(duplicateRole, 409, 'Case-insensitive duplicate profile name');
+  assertCondition(
+    duplicateRole.body?.code === 'ROLE_NAME_ALREADY_EXISTS',
+    'Profile names must be unique regardless of letter casing.',
+  );
+
+  const updatedRoleName = `${customRoleName} Updated`;
+  const updatedRole = await request(`/api/v1/users/roles/${customRole.body.data.id}`, {
+    body: JSON.stringify({
+      description: 'Updated smoke profile for catalog access',
+      name: updatedRoleName,
+      permissionCodes: ['products.read', 'products.manage'],
+    }),
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': csrfToken,
+    },
+    method: 'PATCH',
+  });
+  assertStatus(updatedRole, 200, 'Custom access profile update');
+  assertCondition(
+    updatedRole.body?.data?.name === updatedRoleName &&
+      updatedRole.body?.data?.description ===
+        'Updated smoke profile for catalog access',
+    'A custom profile must persist its updated name and description.',
+  );
+
+  const invalidCustomRole = await request('/api/v1/users/roles', {
+    body: JSON.stringify({
+      description: 'This profile must not be created',
+      name: `CI Escalation ${smokeId}`,
+      permissionCodes: ['roles.manage'],
+    }),
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': csrfToken,
+    },
+    method: 'POST',
+  });
+  assertStatus(invalidCustomRole, 400, 'Role-management escalation rejection');
+  assertCondition(
+    invalidCustomRole.body?.code === 'PERMISSION_NOT_AVAILABLE',
+    'A custom profile must not grant role-management access.',
+  );
 
   const configurationBefore = await request('/api/v1/configuration');
   assertStatus(configurationBefore, 200, 'Configuration read');
   assertCondition(
     configurationBefore.body?.data?.isComplete === false,
     'A new company must start with pending configuration.',
+  );
+
+  const invalidTimeZone = await request('/api/v1/configuration', {
+    body: JSON.stringify({ timeZone: 'Not/A-Timezone' }),
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': csrfToken,
+    },
+    method: 'PATCH',
+  });
+  assertStatus(invalidTimeZone, 400, 'Invalid global timezone');
+  assertCondition(
+    invalidTimeZone.body?.code === 'INVALID_TIME_ZONE',
+    'Invalid global timezone must be rejected before persistence.',
   );
 
   const configurationUpdate = await request('/api/v1/configuration', {
@@ -318,6 +438,7 @@ async function run() {
     body: JSON.stringify({
       displayName: 'Managed User',
       email: managedUserEmail,
+      roleCodes: [customRole.body.data.code, 'USER'],
     }),
     headers: {
       'Content-Type': 'application/json',
@@ -331,8 +452,49 @@ async function run() {
       createUser.body?.data?.user?.passwordChangeRequired === true &&
       typeof createUser.body?.data?.temporaryPassword === 'string' &&
       createUser.body.data.temporaryPassword.length >= 8 &&
-      typeof createUser.body?.data?.temporaryPasswordExpiresAt === 'string',
+      typeof createUser.body?.data?.temporaryPasswordExpiresAt === 'string' &&
+      createUser.body?.data?.user?.roleNames?.includes(updatedRoleName) &&
+      createUser.body?.data?.user?.roleNames?.includes('Usuario de consulta'),
     'Managed user creation must return a temporary password once.',
+  );
+
+  const combinedUserCookies = new Map();
+  const combinedUserCsrf = await request('/api/v1/auth/csrf', {}, combinedUserCookies);
+  const combinedRoleLogin = await request(
+    '/api/v1/auth/login',
+    {
+      body: JSON.stringify({
+        email: managedUserEmail,
+        password: createUser.body.data.temporaryPassword,
+      }),
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': combinedUserCsrf.body?.data?.token,
+      },
+      method: 'POST',
+    },
+    combinedUserCookies,
+  );
+  assertStatus(combinedRoleLogin, 200, 'Combined profile login');
+  assertCondition(
+    combinedRoleLogin.body?.data?.user?.permissions?.includes('dashboard.read') &&
+      combinedRoleLogin.body?.data?.user?.permissions?.includes('products.manage'),
+    'A user must receive the combined permissions from every assigned profile.',
+  );
+
+  const deleteAssignedRole = await request(
+    `/api/v1/users/roles/${customRole.body.data.id}`,
+    {
+      headers: {
+        'X-CSRF-Token': csrfToken,
+      },
+      method: 'DELETE',
+    },
+  );
+  assertStatus(deleteAssignedRole, 409, 'Assigned profile deletion rejection');
+  assertCondition(
+    deleteAssignedRole.body?.code === 'ROLE_IN_USE',
+    'A profile assigned to an account must not be deleted.',
   );
 
   const assignedRole = await request(
@@ -353,6 +515,21 @@ async function run() {
   assertCondition(
     assignedRole.body?.data?.user?.roles?.includes('USER'),
     'Managed user role assignment must persist the USER role.',
+  );
+
+  const deleteUnusedRole = await request(
+    `/api/v1/users/roles/${customRole.body.data.id}`,
+    {
+      headers: {
+        'X-CSRF-Token': csrfToken,
+      },
+      method: 'DELETE',
+    },
+  );
+  assertStatus(deleteUnusedRole, 200, 'Unassigned custom profile deletion');
+  assertCondition(
+    deleteUnusedRole.body?.data?.deleted === true,
+    'A custom profile can be deleted after it is removed from every account.',
   );
 
   const disabledUser = await request(
@@ -412,6 +589,7 @@ async function run() {
     body: JSON.stringify({
       displayName: 'Managed User Duplicate',
       email: managedUserEmail,
+      roleCodes: ['USER'],
     }),
     headers: {
       'Content-Type': 'application/json',
@@ -447,12 +625,29 @@ async function run() {
     temporaryLogin.body?.data?.user?.passwordChangeRequired === true,
     'Temporary password login must require a password change.',
   );
+  assertCondition(
+    !['inventory.read', 'sales.read', 'reports.read'].some((permission) =>
+      temporaryLogin.body?.data?.user?.permissions?.includes(permission),
+    ),
+    'The base User profile must not grant actions from future modules.',
+  );
 
   const restrictedUserList = await request('/api/v1/users', {}, managedUserCookies);
   assertStatus(restrictedUserList, 403, 'Managed user permission check');
   assertCondition(
-    restrictedUserList.body?.code === 'FORBIDDEN',
-    'A managed user without users.read must be denied.',
+    restrictedUserList.body?.code === 'PASSWORD_CHANGE_REQUIRED',
+    'A managed user must change the temporary password before accessing API routes.',
+  );
+
+  const restrictedPreferences = await request(
+    '/api/v1/auth/preferences',
+    {},
+    managedUserCookies,
+  );
+  assertStatus(restrictedPreferences, 403, 'Pending password preference access');
+  assertCondition(
+    restrictedPreferences.body?.code === 'PASSWORD_CHANGE_REQUIRED',
+    'A pending password change must block authenticated read routes.',
   );
 
   const permanentPassword = `Managed-${smokeId}!A1`;
@@ -482,6 +677,208 @@ async function run() {
   assertCondition(
     managedUserSession.body?.data?.user?.passwordChangeRequired === false,
     'Managed user session must leave restricted mode after password change.',
+  );
+
+  const secondUserPage = await request('/api/v1/users?page=2&pageSize=1');
+  assertStatus(secondUserPage, 200, 'Second paginated user page');
+  assertCondition(
+    secondUserPage.body?.data?.users?.length === 1 &&
+      secondUserPage.body?.data?.pagination?.page === 2 &&
+      secondUserPage.body?.data?.pagination?.pageSize === 1,
+    'The user list must honor page and pageSize parameters.',
+  );
+
+  const createReauthenticationOwner = await request('/api/v1/users', {
+    body: JSON.stringify({
+      displayName: 'Reauthentication Owner',
+      email: `reauth-owner-${smokeId}@example.com`,
+      roleCodes: ['USER'],
+    }),
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': csrfToken,
+    },
+    method: 'POST',
+  });
+  assertStatus(createReauthenticationOwner, 201, 'Reauthentication Owner creation');
+  const reauthenticationOwnerId = createReauthenticationOwner.body.data.user.id;
+
+  const assignSecondOwner = await request(
+    `/api/v1/users/${reauthenticationOwnerId}/roles`,
+    {
+      body: JSON.stringify({
+        currentPassword: ownerPassword,
+        reason: 'Smoke Owner role assignment',
+        roleCodes: ['OWNER'],
+      }),
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrfToken,
+      },
+      method: 'PATCH',
+    },
+  );
+  assertStatus(assignSecondOwner, 200, 'Reauthenticated Owner role assignment');
+
+  const ownerPasswordResetWithoutReauthentication = await request(
+    `/api/v1/users/${reauthenticationOwnerId}/temporary-password`,
+    {
+      body: JSON.stringify({ reason: 'Smoke missing Owner reauthentication' }),
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrfToken,
+      },
+      method: 'POST',
+    },
+  );
+  assertStatus(
+    ownerPasswordResetWithoutReauthentication,
+    400,
+    'Owner password reset without reauthentication',
+  );
+  assertCondition(
+    ownerPasswordResetWithoutReauthentication.body?.code ===
+      'REAUTHENTICATION_REQUIRED',
+    'Owner password reset must require the actor current password.',
+  );
+
+  const ownerPasswordResetWithInvalidReauthentication = await request(
+    `/api/v1/users/${reauthenticationOwnerId}/temporary-password`,
+    {
+      body: JSON.stringify({
+        currentPassword: 'incorrect-current-password',
+        reason: 'Smoke invalid Owner reauthentication',
+      }),
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrfToken,
+      },
+      method: 'POST',
+    },
+  );
+  assertStatus(
+    ownerPasswordResetWithInvalidReauthentication,
+    401,
+    'Owner password reset with invalid reauthentication',
+  );
+  assertCondition(
+    ownerPasswordResetWithInvalidReauthentication.body?.code ===
+      'REAUTHENTICATION_FAILED',
+    'An invalid current password must not authorize an Owner password reset.',
+  );
+
+  const ownerPasswordResetWithReauthentication = await request(
+    `/api/v1/users/${reauthenticationOwnerId}/temporary-password`,
+    {
+      body: JSON.stringify({
+        currentPassword: ownerPassword,
+        reason: 'Smoke valid Owner reauthentication',
+      }),
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrfToken,
+      },
+      method: 'POST',
+    },
+  );
+  assertStatus(
+    ownerPasswordResetWithReauthentication,
+    201,
+    'Owner password reset with reauthentication',
+  );
+  assertCondition(
+    ownerPasswordResetWithReauthentication.body?.data?.user?.passwordChangeRequired ===
+      true,
+    'A reauthenticated Owner password reset must require a password change.',
+  );
+
+  const adminEmail = `managed-admin-${smokeId}@example.com`;
+  const createAdmin = await request('/api/v1/users', {
+    body: JSON.stringify({
+      displayName: 'Managed Admin',
+      email: adminEmail,
+      roleCodes: ['USER'],
+    }),
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': csrfToken,
+    },
+    method: 'POST',
+  });
+  assertStatus(createAdmin, 201, 'Managed Admin creation');
+
+  const assignAdminRole = await request(
+    `/api/v1/users/${createAdmin.body.data.user.id}/roles`,
+    {
+      body: JSON.stringify({
+        reason: 'Smoke Admin role assignment',
+        roleCodes: ['ADMIN'],
+      }),
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrfToken,
+      },
+      method: 'PATCH',
+    },
+  );
+  assertStatus(assignAdminRole, 200, 'Managed Admin role assignment');
+
+  const adminCookies = new Map();
+  const adminCsrf = await request('/api/v1/auth/csrf', {}, adminCookies);
+  const adminTemporaryLogin = await request(
+    '/api/v1/auth/login',
+    {
+      body: JSON.stringify({
+        email: adminEmail,
+        password: createAdmin.body.data.temporaryPassword,
+      }),
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': adminCsrf.body?.data?.token,
+      },
+      method: 'POST',
+    },
+    adminCookies,
+  );
+  assertStatus(adminTemporaryLogin, 200, 'Managed Admin temporary login');
+
+  const adminPermanentPassword = `Admin-${smokeId}!A1`;
+  const adminPasswordChange = await request(
+    '/api/v1/auth/password',
+    {
+      body: JSON.stringify({
+        currentPassword: createAdmin.body.data.temporaryPassword,
+        newPassword: adminPermanentPassword,
+      }),
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': adminCsrf.body?.data?.token,
+      },
+      method: 'POST',
+    },
+    adminCookies,
+  );
+  assertStatus(adminPasswordChange, 200, 'Managed Admin password change');
+
+  const adminOwnerPasswordReset = await request(
+    `/api/v1/users/${currentSession.body.data.user.id}/temporary-password`,
+    {
+      body: JSON.stringify({
+        currentPassword: adminPermanentPassword,
+        reason: 'Admin Owner reset attempt',
+      }),
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': adminCsrf.body?.data?.token,
+      },
+      method: 'POST',
+    },
+    adminCookies,
+  );
+  assertStatus(adminOwnerPasswordReset, 403, 'Admin Owner password reset denial');
+  assertCondition(
+    adminOwnerPasswordReset.body?.code === 'OWNER_ROLE_REQUIRES_OWNER',
+    'An Admin must not reset an Owner password even after reauthentication.',
   );
 
   const managedSessions = await request(

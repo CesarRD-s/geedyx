@@ -130,6 +130,7 @@ model Role {
   companyId   String
   code        String
   name        String
+  description String           @default("")
   isSystem    Boolean          @default(false)
   company     Company          @relation(fields: [companyId], references: [id])
   users       UserRole[]
@@ -138,6 +139,7 @@ model Role {
   updatedAt   DateTime         @updatedAt
 
   @@unique([companyId, code])
+  @@unique([companyId, name])
 }
 
 model Permission {

@@ -144,18 +144,31 @@ Implementado en la siguiente rebanada:
 - Activación, desactivación y bloqueo administrativo con motivo y revocación de
   sesiones asociadas.
 - Protección del último Owner activo.
-- Roles de sistema `OWNER`, `ADMIN` y `USER`, con asignación por usuario y
-  validación server-side.
+- Perfiles base Propietario, Administrador y Usuario, más perfiles propios de
+  la empresa con acciones agrupadas por módulo y descripciones para el usuario.
+- Alta de cuentas con uno o varios perfiles, combinación de accesos y cambios
+  posteriores con validación server-side y auditoría.
+- Administración de perfiles limitada a quienes tienen acceso para gestionarla;
+  los perfiles personalizados no pueden administrar otros perfiles ni otorgar
+  la titularidad de la empresa.
+- Catálogo preparado para habilitar acciones de cada módulo cuando ese módulo
+  ya esté implementado; las acciones futuras permanecen ocultas.
 - Consulta y revocación de sesiones propias y sesiones de usuarios autorizados.
 - Regeneración de contraseña temporal con expiración y revocación de sesiones.
 - Consulta administrativa de auditoría con filtros por módulo, acción, resultado
   y entidad o requestId.
 
-La recuperación controlada, los límites secundarios por origen y la
-reautenticación para cambios sobre Owners permanecen pendientes para cerrar el
-módulo completo.
+La reautenticación con contraseña actual para cambios sobre cuentas Owner ya
+está implementada en el API y en las pantallas administrativas. La recuperación
+controlada y los límites secundarios por origen siguen pendientes para cerrar
+el módulo completo.
 
 Estado de esta rebanada: `VALIDACIÓN`.
+
+El modelo funcional de accesos está documentado en
+[`RBAC-ACCESS-MODEL.md`](./RBAC-ACCESS-MODEL.md). La rebanada pasa a completada
+cuando también se revise visualmente la creación de perfiles, la asignación al
+crear cuentas, la combinación de perfiles y los rechazos por falta de acceso.
 
 #### Shell inicial del espacio de trabajo
 
@@ -237,15 +250,15 @@ Productos y catálogo
 | Orden | Módulo | Dependencias principales | Estado inicial | Evidencia de cierre |
 | ---: | --- | --- | --- | --- |
 | 0 | Base técnica del monorepo | Ninguna | `COMPLETADO` | `pnpm validate` pasa; `/health/live` 200 y `/health/ready` 503 seguro sin PostgreSQL. |
-| 1 | Autenticación y usuarios | Base técnica | `IMPLEMENTACIÓN` | Login, sesiones y primera rebanada de usuarios con contraseña temporal; activación, RBAC completo, rate limits, recuperación y administración avanzada pendientes. |
+| 1 | Autenticación y usuarios | Base técnica | `IMPLEMENTACIÓN` | Login, sesiones, administración de usuarios, RBAC y contraseñas temporales implementados; recuperación controlada y límites secundarios por origen pendientes. |
 | 2 | Configuración general | Instalación, identidad | `VALIDACIÓN` | Empresa, regionalización, configuración pendiente, permisos y auditoría inicial implementados; preferencias individuales y restablecimiento avanzado pendientes. |
 | 3 | Instalación inicial | Base técnica, identidad mínima | `COMPLETADO` | Setup PENDING/COMPLETED, primer Owner transaccional, idempotencia, UI y e2e. |
-| 4 | Productos y catálogo | Identidad, configuración | `VALIDACIÓN` | Categorías, producto base con primera variante, precio inicial, permisos, vistas iniciales y auditoría implementados; paginación, selector de cantidad, scroll horizontal para tablas, variantes avanzadas, multimedia y archivado UI pendientes. |
+| 4 | Productos y catálogo | Identidad, configuración | `VALIDACIÓN` | Categorías, producto base con primera variante, precio inicial, permisos, vistas iniciales, auditoría y controles de paginación implementados; variantes avanzadas, multimedia y archivado UI pendientes. |
 | 5 | Inventario operativo | Productos | `PENDIENTE` | Saldos, movimientos inmutables, ajustes, disponibilidad y pruebas transaccionales. |
 | 6 | Clientes y proveedores | Identidad, configuración | `PENDIENTE` | Registros comerciales, estados, permisos, relaciones y auditoría. |
 | 7 | Ventas, comprobantes y pagos | Productos, inventario, clientes | `PENDIENTE` | Venta interna, efectivo/transferencia, comprobante, cancelación/devolución. |
 | 8 | Reportes operativos | Ventas, inventario, pagos | `PENDIENTE` | Ventas, inventario y pagos con filtros por contexto regional. |
-| 9 | Auditoría transversal | Todos los módulos | `VALIDACIÓN` | Registro central inmutable, consulta administrativa y filtros iniciales implementados; paginación, selector de cantidad y detalle avanzado pendientes. |
+| 9 | Auditoría transversal | Todos los módulos | `VALIDACIÓN` | Registro central inmutable, consulta administrativa, filtros y paginación implementados; detalle avanzado pendiente. |
 | 10 | Panel operativo | Configuración, ventas, inventario, auditoría | `PENDIENTE` | Indicadores, actividad, alertas, acciones rápidas y permisos. |
 
 ## Evidencia actual

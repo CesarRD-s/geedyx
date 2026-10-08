@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import type { Response } from 'express';
@@ -17,6 +12,7 @@ import type {
   UserPreferences,
 } from '@geedyx/contracts';
 import type { AppEnvironment } from '../config/environment';
+import { assertValidTimeZone } from '../config/time-zone';
 import { PrismaService } from '../prisma/prisma.service';
 import { hashPassword, verifyPassword } from './password';
 import { createOpaqueToken, hashOpaqueToken } from './auth.utils';
@@ -324,7 +320,7 @@ export class AuthService {
     requestId: string | undefined,
   ): Promise<UserPreferences> {
     if (dto.timeZone !== undefined && dto.timeZone !== null) {
-      this.assertValidTimeZone(dto.timeZone);
+      assertValidTimeZone(dto.timeZone);
     }
 
     const updated = await this.prisma.$transaction(async (tx) => {
@@ -866,6 +862,7 @@ export class AuthService {
       effectiveLanguage: this.normalizeLanguage(user.language ?? user.company.locale),
       effectiveTimeZone: user.timeZone ?? user.company.timeZone,
       roles: user.roles.map(({ role }) => role.code),
+      roleNames: user.roles.map(({ role }) => role.name),
       permissions: [...permissions].sort(),
     };
   }
@@ -887,17 +884,6 @@ export class AuthService {
 
   private normalizeLanguage(language: string): 'es' | 'en' {
     return language === 'en' ? 'en' : 'es';
-  }
-
-  private assertValidTimeZone(timeZone: string): void {
-    try {
-      new Intl.DateTimeFormat('en-US', { timeZone }).format();
-    } catch {
-      throw new BadRequestException({
-        code: 'INVALID_TIME_ZONE',
-        detail: 'La zona horaria no es válida.',
-      });
-    }
   }
 
   private toActiveSession(session: {

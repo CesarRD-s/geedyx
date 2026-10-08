@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Headers,
   HttpCode,
@@ -22,9 +23,11 @@ import type { AuthenticatedRequest } from '../auth/auth.types';
 import type { RequestWithId } from '../http/request-id.middleware';
 import { PaginationDto } from '../http/pagination.dto';
 import { CreateUserDto } from './dto/create-user.dto';
+import { CreateRoleDto } from './dto/create-role.dto';
 import { IssueTemporaryPasswordDto } from './dto/issue-temporary-password.dto';
 import { UpdateUserRolesDto } from './dto/update-user-roles.dto';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
+import { UpdateRoleDto } from './dto/update-role.dto';
 import { UsersService } from './users.service';
 
 @Controller('users')
@@ -45,6 +48,50 @@ export class UsersController {
   @RequirePermission('roles.manage')
   listRoles(@Req() request: AuthenticatedRequest) {
     return this.usersService.listRoles(request.auth!.user.id);
+  }
+
+  @Post('roles')
+  @HttpCode(HttpStatus.CREATED)
+  @RequirePermission('roles.manage')
+  createRole(
+    @Body() dto: CreateRoleDto,
+    @Headers(CSRF_HEADER) csrfHeader: string | undefined,
+    @Req() request: AuthenticatedRequest & RequestWithId & Request,
+  ) {
+    assertCsrf(request, csrfHeader, this.authService.getCsrfCookieName());
+    return this.usersService.createRole(request.auth!.user.id, dto, request.requestId);
+  }
+
+  @Patch('roles/:roleId')
+  @RequirePermission('roles.manage')
+  updateRole(
+    @Param('roleId') roleId: string,
+    @Body() dto: UpdateRoleDto,
+    @Headers(CSRF_HEADER) csrfHeader: string | undefined,
+    @Req() request: AuthenticatedRequest & RequestWithId & Request,
+  ) {
+    assertCsrf(request, csrfHeader, this.authService.getCsrfCookieName());
+    return this.usersService.updateRole(
+      request.auth!.user.id,
+      roleId,
+      dto,
+      request.requestId,
+    );
+  }
+
+  @Delete('roles/:roleId')
+  @RequirePermission('roles.manage')
+  deleteRole(
+    @Param('roleId') roleId: string,
+    @Headers(CSRF_HEADER) csrfHeader: string | undefined,
+    @Req() request: AuthenticatedRequest & RequestWithId & Request,
+  ) {
+    assertCsrf(request, csrfHeader, this.authService.getCsrfCookieName());
+    return this.usersService.deleteRole(
+      request.auth!.user.id,
+      roleId,
+      request.requestId,
+    );
   }
 
   @Post()

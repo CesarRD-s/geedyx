@@ -24,6 +24,7 @@ import { RevokeSessionDto } from './dto/revoke-session.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { UpdatePreferencesDto } from './dto/update-preferences.dto';
 import { assertCsrf, CSRF_HEADER } from './csrf';
+import { AllowPendingPasswordChange } from './allow-pending-password-change.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -57,6 +58,7 @@ export class AuthController {
 
   @Get('me')
   @UseGuards(SessionGuard)
+  @AllowPendingPasswordChange()
   getCurrentSession(@Req() request: AuthenticatedRequest) {
     return request.auth;
   }
@@ -85,6 +87,7 @@ export class AuthController {
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   @UseGuards(SessionGuard)
+  @AllowPendingPasswordChange()
   async logout(
     @Headers(CSRF_HEADER) csrfHeader: string | undefined,
     @Req() request: AuthenticatedRequest,
@@ -139,6 +142,7 @@ export class AuthController {
   @Post('password')
   @HttpCode(HttpStatus.OK)
   @UseGuards(SessionGuard)
+  @AllowPendingPasswordChange()
   async changePassword(
     @Body() dto: ChangePasswordDto,
     @Headers(CSRF_HEADER) csrfHeader: string | undefined,

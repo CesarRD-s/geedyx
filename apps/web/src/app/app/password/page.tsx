@@ -139,7 +139,7 @@ export default function PasswordPage() {
                 Cambia tu contraseña
               </h1>
               <p className={cn(['text-sm text-secondary'])}>
-                Esta contraseña temporal debe cambiarse antes de continuar.
+                Elige una contraseña segura para continuar.
               </p>
             </div>
           </div>

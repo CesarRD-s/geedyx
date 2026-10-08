@@ -181,6 +181,10 @@ requisito de cambio y se revocan las demás sesiones activas del usuario.
 
 Geedyx utilizará autorización basada en roles (RBAC) con permisos atómicos. La relación será:
 
+Las decisiones de producto para los perfiles personalizados, la combinación de
+accesos, el alcance por empresa y la expansión futura del catálogo están en
+[`RBAC-ACCESS-MODEL.md`](./RBAC-ACCESS-MODEL.md).
+
 ```text
 Usuario -> uno o varios roles -> conjunto de permisos
 ```

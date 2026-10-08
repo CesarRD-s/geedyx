@@ -1,6 +1,7 @@
 import { config } from 'dotenv';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
+import { PERMISSION_CATALOG } from '@geedyx/contracts';
 import { resolve } from 'node:path';
 
 config({ path: resolve(process.cwd(), '../.env') });
@@ -11,38 +12,6 @@ const adapter = new PrismaPg({
     'postgresql://geedyx:geedyx@localhost:5432/geedyx?schema=public',
 });
 const prisma = new PrismaClient({ adapter });
-
-const permissionCodes = [
-  'dashboard.read',
-  'configuration.read',
-  'configuration.update',
-  'configuration.reset',
-  'users.read',
-  'users.manage',
-  'roles.manage',
-  'sessions.read',
-  'sessions.revoke',
-  'products.read',
-  'products.manage',
-  'products.prices.manage',
-  'inventory.read',
-  'inventory.receive',
-  'inventory.adjust',
-  'inventory.threshold.update',
-  'customers.read',
-  'customers.manage',
-  'suppliers.read',
-  'suppliers.manage',
-  'sales.read',
-  'sales.create',
-  'sales.cancel',
-  'sales.return',
-  'payments.read',
-  'payments.confirm',
-  'reports.read',
-  'audit.read',
-  'system_health.read',
-];
 
 async function main(): Promise<void> {
   try {
@@ -57,14 +26,17 @@ async function main(): Promise<void> {
       },
     });
 
-    for (const code of permissionCodes) {
+    for (const permission of PERMISSION_CATALOG) {
       await prisma.permission.upsert({
         where: {
-          code,
+          code: permission.code,
         },
-        update: {},
+        update: {
+          description: permission.description,
+        },
         create: {
-          code,
+          code: permission.code,
+          description: permission.description,
         },
       });
     }

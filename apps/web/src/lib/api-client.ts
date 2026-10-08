@@ -9,6 +9,7 @@ import type {
   ProductsResponse,
   PasswordChanged,
   RolesResponse,
+  RoleSummary,
   SessionsResponse,
   OwnerCreated,
   ProblemDetails,
@@ -243,9 +244,55 @@ export function getRoles(): Promise<RolesResponse> {
   return request<RolesResponse>('/users/roles');
 }
 
+export async function createRole(payload: {
+  description: string;
+  name: string;
+  permissionCodes: string[];
+}): Promise<RoleSummary> {
+  const csrf = await getCsrfToken();
+  return request<RoleSummary>('/users/roles', {
+    body: JSON.stringify(payload),
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': csrf.token,
+    },
+    method: 'POST',
+  });
+}
+
+export async function updateRole(
+  roleId: string,
+  payload: {
+    description: string;
+    name: string;
+    permissionCodes: string[];
+  },
+): Promise<RoleSummary> {
+  const csrf = await getCsrfToken();
+  return request<RoleSummary>(`/users/roles/${roleId}`, {
+    body: JSON.stringify(payload),
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': csrf.token,
+    },
+    method: 'PATCH',
+  });
+}
+
+export async function deleteRole(roleId: string): Promise<{ deleted: true }> {
+  const csrf = await getCsrfToken();
+  return request<{ deleted: true }>(`/users/roles/${roleId}`, {
+    headers: { 'X-CSRF-Token': csrf.token },
+    method: 'DELETE',
+  });
+}
+
 export async function createUser(payload: {
   displayName: string;
   email: string;
+  roleCodes: string[];
+  reason?: string;
+  currentPassword?: string;
 }): Promise<UserCreated> {
   const csrf = await getCsrfToken();
   return request<UserCreated>('/users', {
@@ -260,7 +307,11 @@ export async function createUser(payload: {
 
 export async function updateUserStatus(
   userId: string,
-  payload: { status: 'ACTIVE' | 'DISABLED' | 'LOCKED'; reason: string },
+  payload: {
+    currentPassword?: string;
+    status: 'ACTIVE' | 'DISABLED' | 'LOCKED';
+    reason: string;
+  },
 ): Promise<UserUpdated> {
   const csrf = await getCsrfToken();
   return request<UserUpdated>(`/users/${userId}/status`, {
@@ -275,7 +326,11 @@ export async function updateUserStatus(
 
 export async function updateUserRoles(
   userId: string,
-  payload: { roleCodes: string[]; reason: string },
+  payload: {
+    currentPassword?: string;
+    roleCodes: string[];
+    reason: string;
+  },
 ): Promise<UserUpdated> {
   const csrf = await getCsrfToken();
   return request<UserUpdated>(`/users/${userId}/roles`, {
@@ -291,10 +346,11 @@ export async function updateUserRoles(
 export async function issueTemporaryPassword(
   userId: string,
   reason: string,
+  currentPassword?: string,
 ): Promise<TemporaryPasswordIssued> {
   const csrf = await getCsrfToken();
   return request<TemporaryPasswordIssued>(`/users/${userId}/temporary-password`, {
-    body: JSON.stringify({ reason }),
+    body: JSON.stringify({ currentPassword, reason }),
     headers: {
       'Content-Type': 'application/json',
       'X-CSRF-Token': csrf.token,

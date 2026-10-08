@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { CompanyConfiguration } from '@geedyx/contracts';
+import { assertValidTimeZone } from '../config/time-zone';
 import { PrismaService } from '../prisma/prisma.service';
 import type { UpdateConfigurationDto } from './dto/update-configuration.dto';
 
@@ -46,6 +47,10 @@ export class ConfigurationService {
         code: 'CONFIGURATION_NAME_REQUIRED',
         detail: 'El nombre del negocio es obligatorio.',
       });
+    }
+
+    if (data.timeZone !== undefined && data.timeZone !== null) {
+      assertValidTimeZone(data.timeZone);
     }
 
     const updated = await this.prisma.$transaction(async (tx) => {

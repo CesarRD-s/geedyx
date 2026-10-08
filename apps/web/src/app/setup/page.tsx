@@ -459,9 +459,6 @@ export default function SetupPage() {
       <SetupShell>
         <SetupCard>
           <div className={cn(['space-y-2'])}>
-            <p className={cn(['text-sm font-medium text-success-strong'])}>
-              Preparación completada
-            </p>
             <h1 className={cn(['text-2xl font-semibold tracking-tight'])}>
               Todo está listo
             </h1>

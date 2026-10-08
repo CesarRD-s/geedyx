@@ -66,6 +66,7 @@ export type AuthUser = {
   effectiveLanguage: 'es' | 'en';
   effectiveTimeZone: string | null;
   roles: string[];
+  roleNames: string[];
   permissions: string[];
 };
 
@@ -81,6 +82,7 @@ export type ManagedUser = {
   status: 'ACTIVE' | 'DISABLED' | 'LOCKED';
   passwordChangeRequired: boolean;
   roles: string[];
+  roleNames: string[];
   createdAt: string;
 };
 
@@ -93,12 +95,24 @@ export type RoleSummary = {
   id: string;
   code: string;
   name: string;
+  description: string;
   isSystem: boolean;
   permissions: string[];
+  memberCount: number;
+};
+
+export type PermissionOption = {
+  code: string;
+  moduleKey: string;
+  moduleLabel: string;
+  label: string;
+  description: string;
+  assignable: boolean;
 };
 
 export type RolesResponse = {
   roles: RoleSummary[];
+  permissions: PermissionOption[];
 };
 
 export type ManagedSession = ActiveSession & {

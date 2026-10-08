@@ -7,6 +7,7 @@ import {
 import { createHash } from 'node:crypto';
 import { Prisma } from '@prisma/client';
 import type { OwnerCreated, SetupStatus } from '@geedyx/contracts';
+import { PERMISSION_CATALOG } from '@geedyx/contracts';
 import { PrismaService } from '../prisma/prisma.service';
 import { hashPassword } from '../auth/password';
 import { getErrorDiagnostics } from '../http/error-diagnostics';
@@ -172,22 +173,38 @@ export class SetupService {
           const permissionCodes = new Map(
             permissions.map((permission) => [permission.code, permission.id]),
           );
+          const availablePermissionCodes = new Set<string>(
+            PERMISSION_CATALOG.filter((permission) => permission.available).map(
+              (permission) => permission.code,
+            ),
+          );
           const roleDefinitions = [
             {
               code: 'OWNER',
-              name: 'Owner',
-              permissionCodes: permissions.map((permission) => permission.code),
+              name: 'Propietario de la empresa',
+              description:
+                'Administra la empresa, sus accesos y todas las operaciones disponibles.',
+              permissionCodes: permissions
+                .map((permission) => permission.code)
+                .filter((code) => availablePermissionCodes.has(code)),
             },
             {
               code: 'ADMIN',
-              name: 'Admin',
+              name: 'Administrador',
+              description:
+                'Administra las cuentas, la configuración y las operaciones de la empresa.',
               permissionCodes: permissions
                 .map((permission) => permission.code)
-                .filter((code) => code !== 'system_health.read'),
+                .filter(
+                  (code) =>
+                    availablePermissionCodes.has(code) && code !== 'system_health.read',
+                ),
             },
             {
               code: 'USER',
-              name: 'Usuario',
+              name: 'Usuario de consulta',
+              description:
+                'Consulta la información disponible para las tareas de su puesto.',
               permissionCodes: [
                 'dashboard.read',
                 'products.read',
@@ -197,7 +214,7 @@ export class SetupService {
                 'sales.read',
                 'payments.read',
                 'reports.read',
-              ],
+              ].filter((code) => availablePermissionCodes.has(code)),
             },
           ];
           for (const definition of roleDefinitions) {
@@ -206,6 +223,7 @@ export class SetupService {
                 companyId: company.id,
                 code: definition.code,
                 name: definition.name,
+                description: definition.description,
                 isSystem: true,
               },
             });

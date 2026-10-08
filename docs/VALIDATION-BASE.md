@@ -204,8 +204,87 @@ typecheck, 8 pruebas dirigidas y builds de API y Web. Las pruebas nuevas cubren
 la persistencia de preferencias, la herencia desde la empresa, la auditoría del
 cambio y el rechazo de una zona horaria inválida.
 
-La prueba de integración `pnpm api:smoke` se intentó ejecutar, pero el entorno
-actual no tenía la API escuchando y no fue posible levantar PostgreSQL porque
-Docker no está disponible en esta sesión. Queda pendiente repetir el smoke con
-PostgreSQL activo para confirmar en runtime las rutas de preferencias y los
-parámetros de paginación.
+La prueba de integración `pnpm api:smoke` se ejecutó contra una base PostgreSQL
+temporal y aislada en el puerto `5433`. Aplicó las migraciones y el seed antes
+del smoke; la base persistente `geedyx-postgres-1` en el puerto `5432` no se
+modificó. El smoke terminó correctamente, incluidos los escenarios de
+preferencias, autorización Owner, cambios obligatorios de contraseña,
+paginación, límites de sesión y bloqueo por intentos fallidos.
+
+## Auditoría de usuarios y seguridad — 2026-10-07
+
+`pnpm format` y `pnpm validate` completaron correctamente: Prettier, ESLint,
+TypeScript, 15 pruebas unitarias, generación de Prisma, compilación NestJS y
+compilación de Next.js con Webpack. Next.js 16.3.4 falló al resolver el módulo
+interno de `next/font/google` al usar Turbopack; Webpack compiló el mismo código
+y generó las rutas de la aplicación.
+
+La suite unitaria cubre el bloqueo server-side por cambio obligatorio de
+contraseña, la validación de zona horaria global, el listado de roles sin
+escrituras y las protecciones Owner frente a una acción de Admin o sin
+reautenticación.
+
+El smoke de PostgreSQL cubrió el rechazo de cambios de contraseña pendientes en
+rutas API, zona horaria inválida, paginación de usuarios, autorización Owner
+con contraseña correcta e incorrecta y rechazo de un intento de Admin contra
+un Owner. Terminó correctamente con una base temporal en `PENDING`; Docker
+Desktop estaba disponible y la base persistente no se tocó.
+
+La validación visual se hizo en la Web local con un Owner de prueba conectado a
+esa base temporal. El login llegó al panel y `/app/users` mostró las acciones
+para cuentas distintas de la sesión actual. El diálogo de bloqueo explicó la
+revocación de sesiones; al confirmar, la cuenta cambió a `Bloqueado` y mostró
+la acción `Activar`. El diálogo de acciones sensibles sobre un Owner presentó
+campos de contraseña actual y motivo. En `/app/users/roles`, la lista mostró
+los tres roles del sistema; el diálogo de asignación mostró selección de cuenta,
+permisos y paginación. Esta base tenía cuatro cuentas, así que la segunda página
+se confirmó mediante el smoke de API, no visualmente.
+
+La consola del navegador no registró errores ni advertencias durante estos
+recorridos. La API y la Web usaron la base temporal en `5433`; el contenedor
+persistente `geedyx-postgres-1` en `5432` conservó su estado `COMPLETED` y no
+fue modificado.
+
+## Navegación por etiquetas — 2026-10-07
+
+Cada módulo muestra una etiqueta estática sobre sus opciones, sin controles
+desplegables ni sangría. Cada opción tiene su propio icono y fila de altura fija;
+solo la opción que corresponde a la ruta actual recibe `aria-current` y el
+estilo activo. En modo compacto, la etiqueta ocupa el mismo espacio vertical y
+se representa con una raya; las opciones conservan sus iconos y sus posiciones.
+
+La validación visual comprobó la alineación de etiquetas/rayas y opciones al
+cambiar entre ambos modos y al desplazarse hasta el final. El contenedor del
+menú conservó la misma altura en ambos modos; las 17 opciones mostraron iconos
+distintos y `/app/products/categories` dejó una sola opción activa. La consola
+del navegador no registró errores ni advertencias.
+
+En modo compacto se oculta solo el indicador del scrollbar; `overflow-y: auto`
+mantiene el desplazamiento. Al pasar el puntero sobre la barra, esta se expande
+y vuelve a mostrar el scrollbar mientras se desplaza.
+
+Después de este ajuste, `pnpm format` y `pnpm validate` terminaron
+correctamente: lint, TypeScript, 15 pruebas unitarias y compilaciones de API y
+Web.
+
+## Perfiles de acceso personalizados — 2026-10-07
+
+La migración `20261007160000_custom_access_profiles` se aplicó desde cero en
+PostgreSQL temporal en `5433`, junto con el seed. El smoke `pnpm api:smoke`
+terminó correctamente e incluyó el catálogo de acciones disponibles, creación
+de perfil personalizado, rechazo de nombres duplicados sin distinguir
+mayúsculas, edición, rechazo de permisos de administración de perfiles,
+creación de una cuenta con varios perfiles y combinación efectiva de sus
+acciones. También confirmó que un perfil asignado no se elimina, que sí puede
+eliminarse al retirarlo de todas las cuentas y que el perfil base no concede
+acciones de módulos futuros.
+
+La revisión visual comprobó la lista de perfiles base y personalizados, el
+formulario de acciones agrupadas por módulo, la reautenticación y motivo para
+otorgar el perfil Propietario, y el alta de cuenta con varios perfiles y una
+vista previa de las áreas resultantes. El smoke confirmó la persistencia del
+alta y la asignación; durante la revisión visual el formulario de alta no se
+envió.
+
+La base temporal y la API se detuvieron al finalizar. La base persistente
+`geedyx-postgres-1` en `5432` no se modificó.

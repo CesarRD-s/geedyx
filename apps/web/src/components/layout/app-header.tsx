@@ -24,6 +24,22 @@ function getUserInitials(displayName: string): string {
     .join('');
 }
 
+function formatCurrentTime(
+  value: Date,
+  locale: string,
+  timeZone: string | null,
+  options: Intl.DateTimeFormatOptions,
+): string {
+  try {
+    return new Intl.DateTimeFormat(locale, {
+      ...options,
+      ...(timeZone ? { timeZone } : {}),
+    }).format(value);
+  } catch {
+    return new Intl.DateTimeFormat(locale, options).format(value);
+  }
+}
+
 export function AppHeader({
   logoutPending,
   menuButtonRef,
@@ -41,28 +57,18 @@ export function AppHeader({
     return () => window.clearInterval(timer);
   }, []);
 
+  const locale = session.user.effectiveLanguage === 'en' ? 'en-US' : 'es-HN';
+  const timeZone = session.user.effectiveTimeZone;
   const timeLabel = currentTime
-    ? new Intl.DateTimeFormat(
-        session.user.effectiveLanguage === 'en' ? 'en-US' : 'es-HN',
-        {
-          dateStyle: 'medium',
-          timeStyle: 'short',
-          ...(session.user.effectiveTimeZone
-            ? { timeZone: session.user.effectiveTimeZone }
-            : {}),
-        },
-      ).format(currentTime)
+    ? formatCurrentTime(currentTime, locale, timeZone, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      })
     : 'Cargando hora…';
   const hourLabel = currentTime
-    ? new Intl.DateTimeFormat(
-        session.user.effectiveLanguage === 'en' ? 'en-US' : 'es-HN',
-        {
-          timeStyle: 'short',
-          ...(session.user.effectiveTimeZone
-            ? { timeZone: session.user.effectiveTimeZone }
-            : {}),
-        },
-      ).format(currentTime)
+    ? formatCurrentTime(currentTime, locale, timeZone, {
+        timeStyle: 'short',
+      })
     : 'Cargando…';
 
   return (

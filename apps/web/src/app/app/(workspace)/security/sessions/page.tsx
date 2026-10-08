@@ -3,10 +3,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { MonitorSmartphone } from 'lucide-react';
+import { LogOut, MonitorSmartphone } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import type { ActiveSession, AuthSession } from '@geedyx/contracts';
+import { RowActionsMenu } from '../../../../../components/data/row-actions-menu';
 import {
   ConfirmDialog,
   FeedbackAlert,
@@ -87,50 +88,53 @@ export default function SessionsPage() {
         <FeedbackAlert>No hay sesiones activas para mostrar.</FeedbackAlert>
       ) : (
         <section
-          className={cn([
-            'space-y-3 rounded-xl border border-border bg-surface p-5 shadow-sm',
-          ])}
+          className={cn(['rounded-xl border border-border bg-surface p-5 shadow-sm'])}
         >
-          {sessionsQuery.data.sessions.map((session) => (
-            <article
-              className={cn([
-                'flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border bg-surface-subtle p-4',
-              ])}
-              key={session.id}
-            >
-              <div className={cn(['flex items-start gap-3'])}>
-                <span
-                  className={cn([
-                    'grid h-10 w-10 shrink-0 place-items-center rounded-full bg-accent-muted text-accent',
-                  ])}
-                >
-                  <MonitorSmartphone aria-hidden="true" className={cn(['h-5 w-5'])} />
-                </span>
-                <div>
-                  <h2 className={cn(['font-medium'])}>{sessionName(session)}</h2>
-                  <p className={cn(['mt-1 text-sm text-secondary'])}>
-                    {session.ipAddress ?? 'Origen no disponible'}
-                  </p>
-                  <p className={cn(['mt-1 text-xs text-muted'])}>
-                    Actividad{' '}
-                    {format(new Date(session.lastActivityAt), 'dd/MM/yyyy HH:mm', {
-                      locale: es,
-                    })}
-                  </p>
-                </div>
-              </div>
-              <button
+          <div className={cn(['divide-y divide-border'])}>
+            {sessionsQuery.data.sessions.map((session) => (
+              <article
                 className={cn([
-                  'inline-flex items-center gap-2 rounded-full border border-border-strong px-3 py-2',
-                  'text-sm font-medium transition hover:bg-surface',
+                  'flex flex-wrap items-center justify-between gap-4 py-4',
+                  'first:pt-0 last:pb-0',
                 ])}
-                onClick={() => setSessionToRevoke(session.id)}
-                type="button"
+                key={session.id}
               >
-                Cerrar sesión
-              </button>
-            </article>
-          ))}
+                <div className={cn(['flex items-start gap-3'])}>
+                  <span
+                    className={cn([
+                      'grid h-10 w-10 shrink-0 place-items-center rounded-full bg-accent-muted text-accent',
+                    ])}
+                  >
+                    <MonitorSmartphone aria-hidden="true" className={cn(['h-5 w-5'])} />
+                  </span>
+                  <div>
+                    <h2 className={cn(['font-medium'])}>{sessionName(session)}</h2>
+                    <p className={cn(['mt-1 text-sm text-secondary'])}>
+                      {session.ipAddress ?? 'Origen no disponible'}
+                    </p>
+                    <p className={cn(['mt-1 text-xs text-muted'])}>
+                      Actividad{' '}
+                      {format(new Date(session.lastActivityAt), 'dd/MM/yyyy HH:mm', {
+                        locale: es,
+                      })}
+                    </p>
+                  </div>
+                </div>
+                <RowActionsMenu
+                  accessibleName={`Acciones de la sesión: ${sessionName(session)}`}
+                  className={cn(['mr-3'])}
+                  items={[
+                    {
+                      Icon: LogOut,
+                      label: 'Cerrar sesión',
+                      onSelect: () => setSessionToRevoke(session.id),
+                      tone: 'danger',
+                    },
+                  ]}
+                />
+              </article>
+            ))}
+          </div>
         </section>
       )}
       <ConfirmDialog

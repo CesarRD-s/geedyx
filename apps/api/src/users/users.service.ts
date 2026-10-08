@@ -1,28 +1,36 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { Prisma } from '@prisma/client';
 import type {
   ManagedUser,
+  RoleSummary,
   RolesResponse,
   TemporaryPasswordIssued,
   UserCreated,
   UserUpdated,
   UsersResponse,
 } from '@geedyx/contracts';
-import { hashPassword } from '../auth/password';
+import { PERMISSION_CATALOG } from '@geedyx/contracts';
+import { hashPassword, verifyPassword } from '../auth/password';
 import { createTemporaryPassword } from '../auth/auth.utils';
 import { PrismaService } from '../prisma/prisma.service';
 import { paginationMeta, PaginationDto } from '../http/pagination.dto';
 import type { CreateUserDto } from './dto/create-user.dto';
+import type { CreateRoleDto } from './dto/create-role.dto';
 import type { IssueTemporaryPasswordDto } from './dto/issue-temporary-password.dto';
 import type { UpdateUserRolesDto } from './dto/update-user-roles.dto';
 import type { UpdateUserStatusDto } from './dto/update-user-status.dto';
+import type { UpdateRoleDto } from './dto/update-role.dto';
 
 const TEMPORARY_PASSWORD_DURATION_MS = 24 * 60 * 60 * 1000;
+const SERIALIZATION_RETRY_LIMIT = 3;
 
 const USER_LIST_INCLUDE = {
   roles: {
@@ -30,15 +38,49 @@ const USER_LIST_INCLUDE = {
       role: {
         select: {
           code: true,
+          name: true,
         },
       },
     },
   },
 } satisfies Prisma.UserInclude;
 
+const ROLE_MANAGEMENT_INCLUDE = {
+  permissions: {
+    include: {
+      permission: {
+        select: {
+          code: true,
+        },
+      },
+    },
+  },
+  _count: {
+    select: {
+      users: true,
+    },
+  },
+} satisfies Prisma.RoleInclude;
+
 type UserWithRoles = Prisma.UserGetPayload<{
   include: typeof USER_LIST_INCLUDE;
 }>;
+
+type RoleWithPermissions = Prisma.RoleGetPayload<{
+  include: typeof ROLE_MANAGEMENT_INCLUDE;
+}>;
+
+const visiblePermissionDefinitions = PERMISSION_CATALOG.filter(
+  (permission) => permission.visible && permission.available,
+);
+const visiblePermissionCodes = new Set<string>(
+  visiblePermissionDefinitions.map((permission) => permission.code),
+);
+const assignablePermissionCodes = new Set<string>(
+  visiblePermissionDefinitions
+    .filter((permission) => permission.assignable)
+    .map((permission) => permission.code),
+);
 
 @Injectable()
 export class UsersService {
@@ -76,6 +118,17 @@ export class UsersService {
   ): Promise<UserCreated> {
     const displayName = dto.displayName.trim();
     const email = dto.email.trim().toLowerCase();
+    const requestedCodes = this.normalizeRoleCodes(dto.roleCodes);
+    const ownerSensitive = requestedCodes.includes('OWNER');
+    if (ownerSensitive && (dto.reason?.trim().length ?? 0) < 3) {
+      throw new BadRequestException({
+        code: 'OWNER_ACTION_REASON_REQUIRED',
+        detail: 'Escribe el motivo para asignar la titularidad de la empresa.',
+      });
+    }
+    const ownerReauthenticated = ownerSensitive
+      ? await this.assertOwnerReauthentication(actorUserId, dto.currentPassword)
+      : false;
     const temporaryPassword = createTemporaryPassword();
     const passwordHash = await hashPassword(temporaryPassword);
     const temporaryPasswordExpiresAt = new Date(
@@ -89,6 +142,25 @@ export class UsersService {
             where: { id: actorUserId },
             select: { companyId: true },
           });
+          await this.assertActorCanManageRoles(tx, actorUserId);
+          const roles = await tx.role.findMany({
+            where: {
+              companyId: actor.companyId,
+              code: { in: requestedCodes },
+            },
+          });
+          if (roles.length !== requestedCodes.length) {
+            throw new NotFoundException({
+              code: 'ROLE_NOT_FOUND',
+              detail: 'Uno de los perfiles seleccionados ya no está disponible.',
+            });
+          }
+          if (ownerSensitive) {
+            if (!ownerReauthenticated) {
+              await this.assertOwnerReauthentication(actorUserId, dto.currentPassword);
+            }
+            await this.assertActorIsOwner(tx, actorUserId);
+          }
           const user = await tx.user.create({
             data: {
               companyId: actor.companyId,
@@ -98,6 +170,16 @@ export class UsersService {
               passwordChangeRequired: true,
               passwordExpiresAt: temporaryPasswordExpiresAt,
             },
+            include: USER_LIST_INCLUDE,
+          });
+          await tx.userRole.createMany({
+            data: roles.map((role) => ({
+              userId: user.id,
+              roleId: role.id,
+            })),
+          });
+          const createdUser = await tx.user.findUniqueOrThrow({
+            where: { id: user.id },
             include: USER_LIST_INCLUDE,
           });
           await tx.auditEvent.create({
@@ -111,13 +193,15 @@ export class UsersService {
               entityId: user.id,
               requestId,
               metadata: {
+                roles: requestedCodes,
                 temporaryPasswordExpiresAt: temporaryPasswordExpiresAt.toISOString(),
+                ...(ownerSensitive ? { reason: dto.reason?.trim() } : {}),
               },
             },
           });
 
           return {
-            user: this.toManagedUser(user),
+            user: this.toManagedUser(createdUser),
             temporaryPassword,
             temporaryPasswordExpiresAt: temporaryPasswordExpiresAt.toISOString(),
           };
@@ -145,17 +229,50 @@ export class UsersService {
     requestId: string | undefined,
   ): Promise<UserUpdated> {
     const { actor, target } = await this.getActorAndTarget(actorUserId, targetUserId);
+    const targetIsOwner = target.roles.some(({ role }) => role.code === 'OWNER');
+    const ownerReauthenticated = targetIsOwner
+      ? await this.assertOwnerReauthentication(actorUserId, dto.currentPassword)
+      : false;
     if (actor.id === target.id && dto.status !== 'ACTIVE') {
       throw new ConflictException({
         code: 'SELF_STATUS_CHANGE_NOT_ALLOWED',
         detail: 'No puedes desactivar o bloquear tu propia cuenta.',
       });
     }
-    await this.assertOwnerCanChangeStatus(target, dto.status);
+    const user = await this.withSerializableRetry(async (tx) => {
+      const currentTarget = await tx.user.findFirst({
+        where: {
+          id: target.id,
+          companyId: actor.companyId,
+        },
+        include: USER_LIST_INCLUDE,
+      });
+      if (!currentTarget) {
+        throw new NotFoundException({
+          code: 'USER_NOT_FOUND',
+          detail: 'El usuario no existe en esta empresa.',
+        });
+      }
 
-    const user = await this.prisma.$transaction(async (tx) => {
+      const currentTargetIsOwner = currentTarget.roles.some(
+        ({ role }) => role.code === 'OWNER',
+      );
+      if (currentTargetIsOwner) {
+        if (!ownerReauthenticated) {
+          await this.assertOwnerReauthentication(actorUserId, dto.currentPassword);
+        }
+        await this.assertActorIsOwner(tx, actorUserId);
+      }
+      if (actor.id === currentTarget.id && dto.status !== 'ACTIVE') {
+        throw new ConflictException({
+          code: 'SELF_STATUS_CHANGE_NOT_ALLOWED',
+          detail: 'No puedes desactivar o bloquear tu propia cuenta.',
+        });
+      }
+      await this.assertOwnerCanChangeStatus(tx, currentTarget, dto.status);
+
       const updated = await tx.user.update({
-        where: { id: target.id },
+        where: { id: currentTarget.id },
         data: {
           status: dto.status,
           ...(dto.status === 'ACTIVE'
@@ -173,7 +290,7 @@ export class UsersService {
       });
       if (dto.status !== 'ACTIVE') {
         await tx.session.updateMany({
-          where: { userId: target.id, revokedAt: null },
+          where: { userId: currentTarget.id, revokedAt: null },
           data: {
             revokedAt: new Date(),
             revokedReason: `USER_${dto.status}`,
@@ -188,7 +305,7 @@ export class UsersService {
           action: `USER_${dto.status}`,
           outcome: 'SUCCESS',
           entityType: 'User',
-          entityId: target.id,
+          entityId: currentTarget.id,
           requestId,
           metadata: { reason: dto.reason },
         },
@@ -205,46 +322,74 @@ export class UsersService {
     requestId: string | undefined,
   ): Promise<UserUpdated> {
     const { actor, target } = await this.getActorAndTarget(actorUserId, targetUserId);
-    await this.ensureSystemRoles(actor.companyId);
     const requestedCodes = [
       ...new Set(dto.roleCodes.map((code) => code.trim().toUpperCase())),
     ];
-    const roles = await this.prisma.role.findMany({
-      where: {
-        companyId: actor.companyId,
-        code: { in: requestedCodes },
-      },
-    });
-    if (roles.length !== requestedCodes.length) {
-      throw new NotFoundException({
-        code: 'ROLE_NOT_FOUND',
-        detail: 'Uno de los roles seleccionados no existe.',
-      });
-    }
+    const initiallyOwnerSensitive =
+      target.roles.some(({ role }) => role.code === 'OWNER') ||
+      requestedCodes.includes('OWNER');
+    const ownerReauthenticated = initiallyOwnerSensitive
+      ? await this.assertOwnerReauthentication(actorUserId, dto.currentPassword)
+      : false;
 
-    const actorRoleCodes = await this.roleCodesFor(actor.id);
-    const currentRoleCodes = await this.roleCodesFor(target.id);
-    const ownerChanging =
-      currentRoleCodes.includes('OWNER') !== requestedCodes.includes('OWNER');
-    if (ownerChanging && !actorRoleCodes.includes('OWNER')) {
-      throw new ForbiddenException({
-        code: 'OWNER_ROLE_REQUIRES_OWNER',
-        detail: 'Solo un Owner puede administrar el rol Owner.',
+    const user = await this.withSerializableRetry(async (tx) => {
+      const currentTarget = await tx.user.findFirst({
+        where: {
+          id: target.id,
+          companyId: actor.companyId,
+        },
+        include: USER_LIST_INCLUDE,
       });
-    }
-    if (ownerChanging) {
-      await this.assertOwnerRoleInvariant(target.id, requestedCodes);
-    }
+      if (!currentTarget) {
+        throw new NotFoundException({
+          code: 'USER_NOT_FOUND',
+          detail: 'El usuario no existe en esta empresa.',
+        });
+      }
 
-    const user = await this.prisma.$transaction(async (tx) => {
-      await tx.userRole.deleteMany({ where: { userId: target.id } });
+      const currentRoleCodes = currentTarget.roles.map(({ role }) => role.code);
+      const ownerSensitive =
+        currentRoleCodes.includes('OWNER') || requestedCodes.includes('OWNER');
+      if (ownerSensitive) {
+        if (!ownerReauthenticated) {
+          await this.assertOwnerReauthentication(actorUserId, dto.currentPassword);
+        }
+        await this.assertActorIsOwner(tx, actorUserId);
+      }
+      if (requestedCodes.includes('OWNER') && currentTarget.status !== 'ACTIVE') {
+        throw new ConflictException({
+          code: 'OWNER_MUST_BE_ACTIVE',
+          detail: 'Solo se puede asignar el rol Owner a una cuenta activa.',
+        });
+      }
+
+      const roles = await tx.role.findMany({
+        where: {
+          companyId: actor.companyId,
+          code: { in: requestedCodes },
+        },
+      });
+      if (roles.length !== requestedCodes.length) {
+        throw new NotFoundException({
+          code: 'ROLE_NOT_FOUND',
+          detail: 'Uno de los roles seleccionados no existe.',
+        });
+      }
+      if (currentRoleCodes.includes('OWNER') && !requestedCodes.includes('OWNER')) {
+        await this.assertOwnerRoleInvariant(tx, currentTarget);
+      }
+
+      await tx.userRole.deleteMany({ where: { userId: currentTarget.id } });
       if (roles.length > 0) {
         await tx.userRole.createMany({
-          data: roles.map((role) => ({ userId: target.id, roleId: role.id })),
+          data: roles.map((role) => ({
+            userId: currentTarget.id,
+            roleId: role.id,
+          })),
         });
       }
       const updated = await tx.user.findUniqueOrThrow({
-        where: { id: target.id },
+        where: { id: currentTarget.id },
         include: USER_LIST_INCLUDE,
       });
       await tx.auditEvent.create({
@@ -255,7 +400,7 @@ export class UsersService {
           action: 'USER_ROLES_UPDATED',
           outcome: 'SUCCESS',
           entityType: 'User',
-          entityId: target.id,
+          entityId: currentTarget.id,
           requestId,
           metadata: {
             reason: dto.reason,
@@ -270,27 +415,225 @@ export class UsersService {
 
   async listRoles(actorUserId: string): Promise<RolesResponse> {
     const companyId = await this.companyIdFor(actorUserId);
-    await this.ensureSystemRoles(companyId);
     const roles = await this.prisma.role.findMany({
       where: { companyId },
-      include: {
-        permissions: {
-          include: {
-            permission: true,
-          },
-        },
-      },
+      include: ROLE_MANAGEMENT_INCLUDE,
       orderBy: [{ isSystem: 'desc' }, { name: 'asc' }],
     });
     return {
-      roles: roles.map((role) => ({
-        id: role.id,
-        code: role.code,
-        name: role.name,
-        isSystem: role.isSystem,
-        permissions: role.permissions.map(({ permission }) => permission.code).sort(),
+      roles: roles.map((role) => this.toRoleSummary(role)),
+      permissions: visiblePermissionDefinitions.map((permission) => ({
+        code: permission.code,
+        moduleKey: permission.moduleKey,
+        moduleLabel: permission.moduleLabel,
+        label: permission.label,
+        description: permission.description,
+        assignable: permission.assignable,
       })),
     };
+  }
+
+  async createRole(
+    actorUserId: string,
+    dto: CreateRoleDto,
+    requestId: string | undefined,
+  ): Promise<RoleSummary> {
+    const companyId = await this.companyIdFor(actorUserId);
+    const name = dto.name.trim();
+    const description = dto.description.trim();
+    const permissionCodes = this.normalizePermissionCodes(dto.permissionCodes);
+    this.assertAssignablePermissions(permissionCodes);
+    const permissions = await this.prisma.permission.findMany({
+      where: { code: { in: permissionCodes } },
+      select: { id: true, code: true },
+    });
+    if (permissions.length !== permissionCodes.length) {
+      throw new BadRequestException({
+        code: 'PERMISSION_NOT_AVAILABLE',
+        detail: 'Uno de los accesos seleccionados ya no está disponible.',
+      });
+    }
+
+    try {
+      return await this.withSerializableRetry(async (tx) => {
+        await this.assertRoleNameAvailable(tx, companyId, name);
+        const role = await tx.role.create({
+          data: {
+            companyId,
+            code: `CUSTOM_${randomUUID().toUpperCase()}`,
+            name,
+            description,
+            isSystem: false,
+          },
+        });
+        await tx.rolePermission.createMany({
+          data: permissions.map((permission) => ({
+            roleId: role.id,
+            permissionId: permission.id,
+          })),
+        });
+        await tx.auditEvent.create({
+          data: {
+            companyId,
+            actorUserId,
+            module: 'users',
+            action: 'ROLE_CREATED',
+            outcome: 'SUCCESS',
+            entityType: 'Role',
+            entityId: role.id,
+            requestId,
+            metadata: {
+              name,
+              permissionCodes,
+            },
+          },
+        });
+        const createdRole = await tx.role.findUniqueOrThrow({
+          where: { id: role.id },
+          include: ROLE_MANAGEMENT_INCLUDE,
+        });
+        return this.toRoleSummary(createdRole);
+      });
+    } catch (error) {
+      this.rethrowRoleNameConflict(error);
+      throw error;
+    }
+  }
+
+  async updateRole(
+    actorUserId: string,
+    roleId: string,
+    dto: UpdateRoleDto,
+    requestId: string | undefined,
+  ): Promise<RoleSummary> {
+    const companyId = await this.companyIdFor(actorUserId);
+    const name = dto.name.trim();
+    const description = dto.description.trim();
+    const permissionCodes = this.normalizePermissionCodes(dto.permissionCodes);
+    this.assertAssignablePermissions(permissionCodes);
+    const permissions = await this.prisma.permission.findMany({
+      where: { code: { in: permissionCodes } },
+      select: { id: true, code: true },
+    });
+    if (permissions.length !== permissionCodes.length) {
+      throw new BadRequestException({
+        code: 'PERMISSION_NOT_AVAILABLE',
+        detail: 'Uno de los accesos seleccionados ya no está disponible.',
+      });
+    }
+
+    try {
+      return await this.withSerializableRetry(async (tx) => {
+        const role = await tx.role.findFirst({
+          where: {
+            id: roleId,
+            companyId,
+          },
+        });
+        if (!role) {
+          throw new NotFoundException({
+            code: 'ROLE_NOT_FOUND',
+            detail: 'El perfil de acceso ya no está disponible.',
+          });
+        }
+        if (role.isSystem) {
+          throw new ConflictException({
+            code: 'SYSTEM_ROLE_IMMUTABLE',
+            detail: 'Los perfiles base no se pueden modificar.',
+          });
+        }
+        await this.assertRoleNameAvailable(tx, companyId, name, roleId);
+        await tx.role.update({
+          where: { id: role.id },
+          data: { name, description },
+        });
+        await tx.rolePermission.deleteMany({ where: { roleId } });
+        await tx.rolePermission.createMany({
+          data: permissions.map((permission) => ({
+            roleId,
+            permissionId: permission.id,
+          })),
+        });
+        await tx.auditEvent.create({
+          data: {
+            companyId,
+            actorUserId,
+            module: 'users',
+            action: 'ROLE_UPDATED',
+            outcome: 'SUCCESS',
+            entityType: 'Role',
+            entityId: roleId,
+            requestId,
+            metadata: {
+              name,
+              permissionCodes,
+            },
+          },
+        });
+        const updatedRole = await tx.role.findUniqueOrThrow({
+          where: { id: roleId },
+          include: ROLE_MANAGEMENT_INCLUDE,
+        });
+        return this.toRoleSummary(updatedRole);
+      });
+    } catch (error) {
+      this.rethrowRoleNameConflict(error);
+      throw error;
+    }
+  }
+
+  async deleteRole(
+    actorUserId: string,
+    roleId: string,
+    requestId: string | undefined,
+  ): Promise<{ deleted: true }> {
+    const companyId = await this.companyIdFor(actorUserId);
+    await this.withSerializableRetry(async (tx) => {
+      const role = await tx.role.findFirst({
+        where: {
+          id: roleId,
+          companyId,
+        },
+        include: {
+          _count: {
+            select: { users: true },
+          },
+        },
+      });
+      if (!role) {
+        throw new NotFoundException({
+          code: 'ROLE_NOT_FOUND',
+          detail: 'El perfil de acceso ya no está disponible.',
+        });
+      }
+      if (role.isSystem) {
+        throw new ConflictException({
+          code: 'SYSTEM_ROLE_IMMUTABLE',
+          detail: 'Los perfiles base no se pueden eliminar.',
+        });
+      }
+      if (role._count.users > 0) {
+        throw new ConflictException({
+          code: 'ROLE_IN_USE',
+          detail: 'Quita este perfil de las cuentas antes de eliminarlo.',
+        });
+      }
+      await tx.auditEvent.create({
+        data: {
+          companyId,
+          actorUserId,
+          module: 'users',
+          action: 'ROLE_DELETED',
+          outcome: 'SUCCESS',
+          entityType: 'Role',
+          entityId: role.id,
+          requestId,
+          metadata: { name: role.name },
+        },
+      });
+      await tx.role.delete({ where: { id: role.id } });
+    });
+    return { deleted: true };
   }
 
   async issueTemporaryPassword(
@@ -306,12 +649,38 @@ export class UsersService {
         detail: 'Utiliza el cambio normal de contraseña para tu cuenta.',
       });
     }
+    const targetIsOwner = target.roles.some(({ role }) => role.code === 'OWNER');
+    const ownerReauthenticated = targetIsOwner
+      ? await this.assertOwnerReauthentication(actorUserId, dto.currentPassword)
+      : false;
     const temporaryPassword = createTemporaryPassword();
     const passwordExpiresAt = new Date(Date.now() + TEMPORARY_PASSWORD_DURATION_MS);
     const passwordHash = await hashPassword(temporaryPassword);
-    const user = await this.prisma.$transaction(async (tx) => {
+    const user = await this.withSerializableRetry(async (tx) => {
+      const currentTarget = await tx.user.findFirst({
+        where: {
+          id: target.id,
+          companyId: actor.companyId,
+        },
+        include: USER_LIST_INCLUDE,
+      });
+      if (!currentTarget) {
+        throw new NotFoundException({
+          code: 'USER_NOT_FOUND',
+          detail: 'El usuario no existe en esta empresa.',
+        });
+      }
+      const currentTargetIsOwner = currentTarget.roles.some(
+        ({ role }) => role.code === 'OWNER',
+      );
+      if (currentTargetIsOwner) {
+        if (!ownerReauthenticated) {
+          await this.assertOwnerReauthentication(actorUserId, dto.currentPassword);
+        }
+        await this.assertActorIsOwner(tx, actorUserId);
+      }
       const updated = await tx.user.update({
-        where: { id: target.id },
+        where: { id: currentTarget.id },
         data: {
           passwordHash,
           passwordChangeRequired: true,
@@ -320,7 +689,7 @@ export class UsersService {
         include: USER_LIST_INCLUDE,
       });
       await tx.session.updateMany({
-        where: { userId: target.id, revokedAt: null },
+        where: { userId: currentTarget.id, revokedAt: null },
         data: {
           revokedAt: new Date(),
           revokedReason: 'TEMPORARY_PASSWORD_ISSUED',
@@ -334,7 +703,7 @@ export class UsersService {
           action: 'TEMPORARY_PASSWORD_ISSUED',
           outcome: 'SUCCESS',
           entityType: 'User',
-          entityId: target.id,
+          entityId: currentTarget.id,
           requestId,
           metadata: {
             reason: dto.reason,
@@ -383,84 +752,202 @@ export class UsersService {
     return actor.companyId;
   }
 
-  private async ensureSystemRoles(companyId: string): Promise<void> {
-    const permissions = await this.prisma.permission.findMany({
-      select: { code: true, id: true },
-    });
-    const permissionIds = new Map(
-      permissions.map((permission) => [permission.code, permission.id]),
-    );
-    const definitions = [
-      {
-        code: 'OWNER',
-        name: 'Owner',
-        permissionCodes: permissions.map((permission) => permission.code),
-      },
-      {
-        code: 'ADMIN',
-        name: 'Admin',
-        permissionCodes: permissions
-          .map((permission) => permission.code)
-          .filter((code) => code !== 'system_health.read'),
-      },
-      {
-        code: 'USER',
-        name: 'Usuario',
-        permissionCodes: [
-          'dashboard.read',
-          'products.read',
-          'inventory.read',
-          'customers.read',
-          'suppliers.read',
-          'sales.read',
-          'payments.read',
-          'reports.read',
-        ],
-      },
-    ];
-    await this.prisma.$transaction(async (tx) => {
-      for (const definition of definitions) {
-        const role = await tx.role.upsert({
-          where: {
-            companyId_code: {
-              companyId,
-              code: definition.code,
-            },
-          },
-          update: {
-            name: definition.name,
-            isSystem: true,
-          },
-          create: {
-            companyId,
-            code: definition.code,
-            name: definition.name,
-            isSystem: true,
-          },
-        });
-        const rolePermissions = definition.permissionCodes.flatMap((code) => {
-          const permissionId = permissionIds.get(code);
-          return permissionId ? [{ roleId: role.id, permissionId }] : [];
-        });
-        if (rolePermissions.length > 0) {
-          await tx.rolePermission.createMany({
-            data: rolePermissions,
-            skipDuplicates: true,
-          });
-        }
-      }
-    });
+  private normalizeRoleCodes(roleCodes: string[]): string[] {
+    return [...new Set(roleCodes.map((code) => code.trim().toUpperCase()))];
   }
 
-  private async roleCodesFor(userId: string): Promise<string[]> {
-    const rows = await this.prisma.userRole.findMany({
-      where: { userId },
-      select: { role: { select: { code: true } } },
+  private normalizePermissionCodes(permissionCodes: string[]): string[] {
+    return [...new Set(permissionCodes.map((code) => code.trim().toLowerCase()))];
+  }
+
+  private assertAssignablePermissions(permissionCodes: string[]): void {
+    const unavailableCodes = permissionCodes.filter(
+      (code) => !assignablePermissionCodes.has(code),
+    );
+    if (permissionCodes.length === 0 || unavailableCodes.length > 0) {
+      throw new BadRequestException({
+        code: 'PERMISSION_NOT_AVAILABLE',
+        detail: 'Elige al menos un acceso disponible para el perfil.',
+      });
+    }
+  }
+
+  private async assertRoleNameAvailable(
+    tx: Prisma.TransactionClient,
+    companyId: string,
+    name: string,
+    excludedRoleId?: string,
+  ): Promise<void> {
+    const existingRole = await tx.role.findFirst({
+      where: {
+        companyId,
+        name: {
+          equals: name,
+          mode: 'insensitive',
+        },
+        ...(excludedRoleId ? { id: { not: excludedRoleId } } : {}),
+      },
+      select: { id: true },
     });
-    return rows.map(({ role }) => role.code);
+    if (existingRole) {
+      throw new ConflictException({
+        code: 'ROLE_NAME_ALREADY_EXISTS',
+        detail: 'Ya existe un perfil con ese nombre.',
+      });
+    }
+  }
+
+  private rethrowRoleNameConflict(error: unknown): void {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    ) {
+      const target = Array.isArray(error.meta?.target)
+        ? error.meta.target.join(',')
+        : String(error.meta?.target ?? '');
+      if (target.includes('name') || target.includes('Role_companyId_name_key')) {
+        throw new ConflictException({
+          code: 'ROLE_NAME_ALREADY_EXISTS',
+          detail: 'Ya existe un perfil con ese nombre.',
+        });
+      }
+    }
+  }
+
+  private toRoleSummary(role: RoleWithPermissions): RoleSummary {
+    return {
+      id: role.id,
+      code: role.code,
+      name: role.name,
+      description: role.description,
+      isSystem: role.isSystem,
+      permissions: role.permissions
+        .map(({ permission }) => permission.code)
+        .filter((code) => visiblePermissionCodes.has(code))
+        .sort(),
+      memberCount: role._count.users,
+    };
+  }
+
+  private async assertOwnerReauthentication(
+    actorUserId: string,
+    currentPassword: string | undefined,
+  ): Promise<boolean> {
+    const actor = await this.prisma.user.findUnique({
+      where: { id: actorUserId },
+      select: {
+        passwordHash: true,
+        roles: {
+          select: {
+            role: {
+              select: { code: true },
+            },
+          },
+        },
+      },
+    });
+    const actorIsOwner = actor?.roles.some(({ role }) => role.code === 'OWNER');
+    if (!actor || !actorIsOwner) {
+      throw new ForbiddenException({
+        code: 'OWNER_ROLE_REQUIRES_OWNER',
+        detail: 'Solo un Owner puede realizar esta operación.',
+      });
+    }
+    if (!currentPassword) {
+      throw new BadRequestException({
+        code: 'REAUTHENTICATION_REQUIRED',
+        detail: 'Confirma tu contraseña actual para continuar.',
+      });
+    }
+    if (!(await verifyPassword(actor.passwordHash, currentPassword))) {
+      throw new UnauthorizedException({
+        code: 'REAUTHENTICATION_FAILED',
+        detail: 'La contraseña actual no es válida.',
+      });
+    }
+    return true;
+  }
+
+  private async assertActorIsOwner(
+    tx: Prisma.TransactionClient,
+    actorUserId: string,
+  ): Promise<void> {
+    const ownerRole = await tx.userRole.findFirst({
+      where: {
+        userId: actorUserId,
+        role: { code: 'OWNER' },
+      },
+      select: { userId: true },
+    });
+    if (!ownerRole) {
+      throw new ForbiddenException({
+        code: 'OWNER_ROLE_REQUIRES_OWNER',
+        detail: 'Solo un Owner puede realizar esta operación.',
+      });
+    }
+  }
+
+  private async assertActorCanManageRoles(
+    tx: Prisma.TransactionClient,
+    actorUserId: string,
+  ): Promise<void> {
+    const roleManager = await tx.userRole.findFirst({
+      where: {
+        userId: actorUserId,
+        role: {
+          is: {
+            permissions: {
+              some: {
+                permission: {
+                  is: { code: 'roles.manage' },
+                },
+              },
+            },
+          },
+        },
+      },
+      select: { userId: true },
+    });
+    if (!roleManager) {
+      throw new ForbiddenException({
+        code: 'ROLE_MANAGEMENT_REQUIRED',
+        detail: 'No puedes asignar perfiles de acceso.',
+      });
+    }
+  }
+
+  private async withSerializableRetry<T>(
+    operation: (tx: Prisma.TransactionClient) => Promise<T>,
+  ): Promise<T> {
+    for (let attempt = 0; attempt < SERIALIZATION_RETRY_LIMIT; attempt += 1) {
+      try {
+        return await this.prisma.$transaction(operation, {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        });
+      } catch (error) {
+        const isSerializationFailure =
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2034';
+        if (!isSerializationFailure) {
+          throw error;
+        }
+        if (attempt < SERIALIZATION_RETRY_LIMIT - 1) {
+          continue;
+        }
+        throw new ConflictException({
+          code: 'CONCURRENT_USER_UPDATE',
+          detail: 'La cuenta cambió en otra operación. Inténtalo de nuevo.',
+        });
+      }
+    }
+    throw new ConflictException({
+      code: 'CONCURRENT_USER_UPDATE',
+      detail: 'La cuenta cambió en otra operación. Inténtalo de nuevo.',
+    });
   }
 
   private async assertOwnerCanChangeStatus(
+    tx: Prisma.TransactionClient,
     target: UserWithRoles,
     nextStatus: UpdateUserStatusDto['status'],
   ): Promise<void> {
@@ -470,7 +957,7 @@ export class UsersService {
     ) {
       return;
     }
-    const activeOwners = await this.prisma.user.count({
+    const activeOwners = await tx.user.count({
       where: {
         companyId: target.companyId,
         status: 'ACTIVE',
@@ -486,20 +973,16 @@ export class UsersService {
   }
 
   private async assertOwnerRoleInvariant(
-    targetUserId: string,
-    requestedCodes: string[],
+    tx: Prisma.TransactionClient,
+    target: UserWithRoles,
   ): Promise<void> {
-    if (requestedCodes.includes('OWNER')) return;
-    const target = await this.prisma.user.findUniqueOrThrow({
-      where: { id: targetUserId },
-      select: { companyId: true, status: true },
-    });
-    const activeOwners = await this.prisma.user.count({
+    if (target.status !== 'ACTIVE') return;
+    const activeOwners = await tx.user.count({
       where: {
         companyId: target.companyId,
         status: 'ACTIVE',
         roles: { some: { role: { code: 'OWNER' } } },
-        id: { not: targetUserId },
+        id: { not: target.id },
       },
     });
     if (target.status === 'ACTIVE' && activeOwners === 0) {
@@ -518,6 +1001,7 @@ export class UsersService {
       status: user.status,
       passwordChangeRequired: user.passwordChangeRequired,
       roles: user.roles.map(({ role }) => role.code),
+      roleNames: user.roles.map(({ role }) => role.name),
       createdAt: user.createdAt.toISOString(),
     };
   }

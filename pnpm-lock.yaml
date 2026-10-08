@@ -175,6 +175,9 @@ importers:
 
   database:
     dependencies:
+      '@geedyx/contracts':
+        specifier: workspace:*
+        version: link:../packages/contracts
       '@prisma/adapter-pg':
         specifier: 7.10.0
         version: 7.10.0
