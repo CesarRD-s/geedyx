@@ -8,7 +8,7 @@
     "migrate": "prisma migrate dev --schema prisma/schema.prisma",
     "migrate:deploy": "prisma migrate deploy --schema prisma/schema.prisma",
     "status": "prisma migrate status --schema prisma/schema.prisma",
-    "seed": "tsx scripts/seed.ts",
+    "seed": "pnpm --filter @geedyx/contracts build && tsx scripts/seed.ts",
     "reset": "tsx scripts/reset.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
